@@ -1,0 +1,6 @@
+{
+  "name": "咸鱼多账号商品快速发布系统",
+  "description": "基于 PHP + MySQL 的咸鱼闲鱼多账号游戏商品快速生成、文案替换、一键复制、多引擎搜图及跨设备隐藏重置管理系统。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

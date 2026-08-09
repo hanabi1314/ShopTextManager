@@ -1,0 +1,2974 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品文案管理系统</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* =========================================================
+       Geometric Balance Design Theme (几何平衡黑黄酷炫风)
+       主色调：咸鱼黄 (#FFDA44) | 辅助色：纯黑 (#000000 / #1a1a1a) | 灰度背景 (#f7f7f7)
+       ========================================================= */
+    :root {
+      --xianyu-yellow: #FFDA44;
+      --xianyu-yellow-hover: #f5cf2d;
+      --xianyu-black: #000000;
+      --xianyu-dark-bg: #1a1a1a;
+      --xianyu-gray-bg: #f7f7f7;
+      --xianyu-card-bg: #ffffff;
+      --xianyu-border: #000000;
+      --text-main: #1a1a1a;
+      --text-muted: #666666;
+      --danger-color: #ef4444;
+      --success-color: #10b981;
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --shadow-geo: 4px 4px 0px 0px #000000;
+      --shadow-geo-hover: 6px 6px 0px 0px #000000;
+      --shadow-geo-sm: 2px 2px 0px 0px #000000;
+      --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    body {
+      background-color: var(--xianyu-gray-bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 顶部 Navigation Header - 几何黄黑风格 */
+    header {
+      background-color: var(--xianyu-yellow);
+      color: var(--xianyu-black);
+      padding: 14px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 3px solid var(--xianyu-black);
+      box-shadow: 0 4px 0px rgba(0, 0, 0, 0.05);
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      background-color: var(--xianyu-black);
+      color: var(--xianyu-yellow);
+      font-weight: 900;
+      font-size: 15px;
+      padding: 4px 12px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+      transform: skewX(-12deg);
+      display: inline-block;
+      box-shadow: 2px 2px 0px rgba(0,0,0,0.15);
+    }
+
+    .logo-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--xianyu-black);
+      letter-spacing: -0.3px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .user-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background-color: var(--xianyu-black);
+      color: #ffffff;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: 2px 2px 0px rgba(0,0,0,0.2);
+    }
+
+    .user-pill .badge-admin {
+      background-color: var(--xianyu-yellow);
+      color: var(--xianyu-black);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    /* 通用几何硬朗按钮 */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 18px;
+      font-size: 14px;
+      font-weight: 800;
+      border-radius: 8px;
+      border: 2px solid var(--xianyu-black);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      white-space: nowrap;
+      box-shadow: var(--shadow-geo-sm);
+    }
+
+    .btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0px 0px #000000;
+    }
+
+    .btn-black {
+      background-color: var(--xianyu-black);
+      color: #ffffff;
+    }
+
+    .btn-black:hover {
+      background-color: #2a2a2a;
+      color: var(--xianyu-yellow);
+    }
+
+    .btn-xianyu {
+      background-color: var(--xianyu-yellow);
+      color: var(--xianyu-black);
+    }
+
+    .btn-xianyu:hover {
+      background-color: var(--xianyu-yellow-hover);
+    }
+
+    .btn-outline {
+      background-color: #ffffff;
+      color: var(--xianyu-black);
+    }
+
+    .btn-outline:hover {
+      background-color: #f0f0f0;
+    }
+
+    .btn-danger {
+      background-color: #fee2e2;
+      color: #dc2626;
+      border-color: var(--xianyu-black);
+    }
+
+    .btn-danger:hover {
+      background-color: #fecaca;
+    }
+
+    .btn-secondary {
+      background-color: #e5e7eb;
+      color: var(--xianyu-black);
+    }
+
+    .btn-secondary:hover {
+      background-color: #d1d5db;
+    }
+
+    main {
+      max-width: 1200px;
+      width: 100%;
+      margin: 24px auto;
+      padding: 0 16px;
+      flex: 1;
+    }
+
+    /* 账号与模板管理栏 */
+    .account-bar {
+      background-color: var(--xianyu-card-bg);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      box-shadow: var(--shadow-geo);
+      margin-bottom: 24px;
+      border: 2px solid var(--xianyu-black);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .account-bar-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .account-info-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .account-key-tag {
+      background-color: var(--xianyu-black);
+      color: var(--xianyu-yellow);
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 15px;
+    }
+
+    .stats-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 16px;
+      background-color: var(--xianyu-black);
+      color: #ffffff;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: var(--shadow-geo-sm);
+      font-family: monospace;
+    }
+
+    .stats-badge strong {
+      color: var(--xianyu-yellow);
+    }
+
+    .stats-badge .highlight {
+      color: #ff6b6b;
+    }
+
+    /* 模板编辑区域 */
+    .template-box {
+      background-color: #f1f5f9;
+      border: 2px dashed #94a3b8;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      line-height: 1.6;
+      color: #334155;
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-family: monospace;
+      position: relative;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .template-box .placeholder-tag {
+      background-color: var(--xianyu-yellow);
+      color: var(--xianyu-black);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 900;
+      border: 1px solid var(--xianyu-black);
+      display: inline-block;
+      margin: 0 2px;
+    }
+
+    /* 主界面 Tab 切换选项卡 */
+    .main-tabs-header {
+      display: flex;
+      border-bottom: 3px solid var(--xianyu-black);
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .main-tab-btn {
+      padding: 12px 24px;
+      font-size: 15px;
+      font-weight: 900;
+      background-color: #e2e8f0;
+      border: 2px solid var(--xianyu-black);
+      border-bottom: none;
+      border-radius: 12px 12px 0 0;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .main-tab-btn.active {
+      background-color: var(--xianyu-yellow);
+      color: var(--xianyu-black);
+      transform: translateY(2px);
+      box-shadow: none;
+    }
+
+    /* 搜图与过滤栏 */
+    .filter-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      flex: 1;
+      max-width: 400px;
+      min-width: 260px;
+    }
+
+    .search-input-wrapper i {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--xianyu-black);
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px 12px 42px;
+      border-radius: var(--radius-md);
+      border: 2px solid var(--xianyu-black);
+      outline: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      background-color: #ffffff;
+      box-shadow: var(--shadow-geo-sm);
+    }
+
+    .search-input:focus {
+      border-color: var(--xianyu-black);
+      background-color: #fffde6;
+    }
+
+    /* 游戏商品卡片网格 - 几何平衡强对比 */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+      gap: 24px;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background-color: var(--xianyu-card-bg);
+      border-radius: var(--radius-lg);
+      border: 2px solid var(--xianyu-black);
+      box-shadow: var(--shadow-geo);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-geo-hover);
+    }
+
+    .card-header {
+      padding: 14px 18px;
+      background-color: var(--xianyu-black);
+      color: var(--xianyu-yellow);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--xianyu-black);
+    }
+
+    .card-header.hidden-mode {
+      background-color: #334155;
+      color: #cbd5e1;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--xianyu-yellow);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: 0.2px;
+    }
+
+    .card-header.hidden-mode .card-title {
+      color: #ffffff;
+    }
+
+    .card-body {
+      padding: 18px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      background-color: #ffffff;
+    }
+
+    /* 最终生成的文案显示区域 - 暗黑风格 */
+    .text-preview-box {
+      background-color: var(--xianyu-dark-bg);
+      color: #ffffff;
+      border: 1px solid #333333;
+      border-radius: var(--radius-md);
+      padding: 14px;
+      font-size: 13px;
+      font-family: monospace;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 160px;
+      overflow-y: auto;
+      user-select: text;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: auto;
+      padding-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    .btn-publish {
+      flex: 1;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 900;
+      background-color: var(--xianyu-yellow);
+      color: var(--xianyu-black);
+      border-radius: var(--radius-md);
+      border: 2px solid var(--xianyu-black);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: var(--shadow-geo-sm);
+      transition: all 0.15s ease;
+    }
+
+    .btn-publish:hover {
+      background-color: var(--xianyu-yellow-hover);
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px 0px #000000;
+    }
+
+    /* 搜图小按钮入口 */
+    .search-engines-row {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .btn-engine-sm {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid var(--xianyu-black);
+      background-color: #f8fafc;
+      color: var(--xianyu-black);
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      text-decoration: none;
+    }
+
+    .btn-engine-sm:hover {
+      background-color: var(--xianyu-yellow);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      background-color: var(--xianyu-card-bg);
+      border-radius: var(--radius-lg);
+      border: 2px dashed var(--xianyu-black);
+      box-shadow: var(--shadow-geo);
+    }
+
+    .empty-state i {
+      font-size: 52px;
+      color: var(--xianyu-black);
+      margin-bottom: 16px;
+    }
+
+    .empty-state h3 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    /* 分页控制器样式 */
+    .pagination-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background-color: #ffffff;
+      border: 2px solid var(--xianyu-black);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-geo-sm);
+      margin-top: 10px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .pagination-pages {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .page-btn {
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 800;
+      border-radius: 6px;
+      border: 2px solid var(--xianyu-black);
+      background-color: #ffffff;
+      cursor: pointer;
+    }
+
+    .page-btn.active {
+      background-color: var(--xianyu-yellow);
+    }
+
+    .page-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .page-select {
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 800;
+      border-radius: 6px;
+      border: 2px solid var(--xianyu-black);
+      background-color: #ffffff;
+      color: var(--xianyu-black);
+      cursor: pointer;
+      outline: none;
+      box-shadow: 2px 2px 0px 0px #000000;
+      transition: all 0.15s ease;
+    }
+
+    .page-select:focus {
+      background-color: #fffde6;
+    }
+
+    /* Modal 弹出窗样式 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      padding: 16px;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-card {
+      background-color: #ffffff;
+      border-radius: 24px;
+      border: 3px solid var(--xianyu-black);
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-modal);
+      transform: scale(0.95);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      background-color: var(--xianyu-black);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--xianyu-yellow);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #a1a1aa;
+      font-size: 24px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .modal-close:hover {
+      color: #ffffff;
+    }
+
+    .modal-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* 搜图引擎按钮组 */
+    .search-engines-box {
+      background-color: #f8fafc;
+      padding: 18px;
+      border-radius: var(--radius-md);
+      border: 2px solid var(--xianyu-black);
+    }
+
+    .search-engines-title {
+      font-size: 12px;
+      font-weight: 900;
+      color: var(--xianyu-black);
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .engine-btn-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .btn-engine {
+      padding: 14px 8px;
+      border-radius: var(--radius-md);
+      border: 2px solid var(--xianyu-black);
+      background-color: #ffffff;
+      color: var(--xianyu-black);
+      font-size: 13px;
+      font-weight: 800;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      box-shadow: var(--shadow-geo-sm);
+    }
+
+    .btn-engine i {
+      font-size: 22px;
+    }
+
+    .btn-engine:hover {
+      background-color: rgba(255, 218, 68, 0.3);
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px 0px #000000;
+    }
+
+    .modal-footer {
+      padding: 18px 24px;
+      background-color: #f8fafc;
+      border-top: 2px solid var(--xianyu-black);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    /* 管理面板 Tab 选项卡 */
+    .tab-header {
+      display: flex;
+      border-bottom: 2px solid var(--xianyu-black);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 800;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      border-bottom: 4px solid transparent;
+      margin-bottom: -2px;
+    }
+
+    .tab-btn.active {
+      color: var(--xianyu-black);
+      border-bottom-color: var(--xianyu-yellow);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* 表单与列表样式 */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .form-input, .form-textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      border: 2px solid var(--xianyu-black);
+      font-size: 14px;
+      outline: none;
+      font-weight: 600;
+    }
+
+    .form-input:focus, .form-textarea:focus {
+      background-color: #fffde6;
+    }
+
+    .list-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 13px;
+    }
+
+    .list-table th, .list-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .list-table th {
+      background-color: #f1f5f9;
+      font-weight: 800;
+      color: var(--xianyu-black);
+      border-bottom: 2px solid var(--xianyu-black);
+    }
+
+    .dashboard-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .dash-card {
+      background-color: #f8fafc;
+      border: 2px solid var(--xianyu-black);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      box-shadow: var(--shadow-geo-sm);
+    }
+
+    .dash-card .num {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--xianyu-black);
+    }
+
+    .dash-card .label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    /* Toast 消息提示 */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast-item {
+      background-color: var(--xianyu-black);
+      color: #ffffff;
+      border: 2px solid var(--xianyu-yellow);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn 0.2s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .published-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+      background-color: #ffffff;
+      border: 2px solid var(--xianyu-black);
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-geo-sm);
+    }
+
+    .published-header-info {
+      font-weight: 800;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--xianyu-black);
+    }
+
+    @media (max-width: 640px) {
+      header {
+        padding: 10px 14px;
+      }
+
+      .header-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      .logo-area {
+        justify-content: space-between;
+        width: 100%;
+      }
+
+      .logo-title {
+        font-size: 15px;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .header-actions .btn .btn-text {
+        display: none;
+      }
+
+      .header-actions .btn {
+        padding: 8px 12px;
+        font-size: 15px;
+      }
+
+      .user-pill {
+        font-size: 12px;
+        padding: 6px 10px;
+        flex: 1;
+        justify-content: center;
+      }
+
+      .account-bar {
+        padding: 14px;
+        gap: 12px;
+      }
+
+      .account-bar-top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      .account-bar-top button {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .main-tabs-header {
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        display: flex;
+        gap: 8px;
+        padding-bottom: 4px;
+      }
+
+      .main-tab-btn {
+        flex: 1 0 auto;
+        padding: 10px 12px;
+        font-size: 13px;
+        text-align: center;
+        justify-content: center;
+      }
+
+      .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      .search-input-wrapper {
+        max-width: 100%;
+        width: 100%;
+      }
+
+      .stats-badge {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+        font-size: 12px;
+        padding: 8px 10px;
+      }
+
+      .cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px;
+      }
+
+      .published-header-bar {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+      }
+
+      .published-header-bar button {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .pagination-bar {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 12px;
+      }
+
+      .pagination-pages {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .modal-card {
+        max-width: 95vw;
+        margin: 10px auto;
+        border-radius: 16px;
+      }
+
+      .modal-header {
+        padding: 14px 16px;
+      }
+
+      .modal-body {
+        padding: 14px 16px;
+        gap: 14px;
+      }
+
+      .tab-header {
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        display: flex;
+        gap: 6px;
+      }
+
+      .tab-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+
+      .engine-btn-group, .dashboard-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部导航 Header -->
+  <header>
+    <div class="header-container">
+      <div class="logo-area">
+        <span class="logo-badge">咸鱼助手</span>
+        <span class="logo-title">商品文案管理系统</span>
+      </div>
+
+      <div class="header-actions">
+        <!-- 登录账号信息指示牌 -->
+        <div class="user-pill" id="userPill">
+          <i class="fa-solid fa-user"></i>
+          <span>用户名: <strong id="currentAccountKeyDisplay" style="color: var(--xianyu-yellow);">未登录</strong></span>
+          <span id="adminBadgeTag" class="badge-admin" style="display:none;">ADMIN</span>
+        </div>
+
+        <!-- 管理员控制台 (仅 admin 可见) -->
+        <button class="btn btn-black" id="adminConsoleBtn" onclick="openAdminModal()" style="display: none;" title="管理员控制台">
+          <i class="fa-solid fa-gauge-high"></i> <span class="btn-text">管理员控制台</span>
+        </button>
+
+        <!-- 退出登录按钮 -->
+        <button class="btn btn-danger" id="logoutBtn" onclick="logout()" style="display: none;" title="退出登录">
+          <i class="fa-solid fa-right-from-bracket"></i> <span class="btn-text">退出登录</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主内容区 -->
+  <main>
+
+    <!-- 账号控制与模板视图 -->
+    <div class="account-bar">
+      <div class="account-bar-top">
+        <div class="account-info-group">
+          <span><i class="fa-solid fa-id-badge"></i> 当前登录用户 Key:</span>
+          <span class="account-key-tag" id="barAccountKeyDisplay">admin</span>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <!-- 修改当前模板按钮 -->
+          <button class="btn btn-xianyu" onclick="openEditMyTemplateModal()">
+            <i class="fa-solid fa-pen-to-square"></i> 编辑我的文案模板
+          </button>
+        </div>
+      </div>
+
+      <!-- 当前账号文案模板预览 -->
+      <div class="template-box" id="templatePreviewBox">
+        <!-- 模板生成与变量替代渲染区 -->
+      </div>
+    </div>
+
+    <!-- 主界面 View 切换选项卡 (待发布 vs 已隐藏商品) -->
+    <div class="main-tabs-header">
+      <button class="main-tab-btn active" id="tabUnpublishedBtn" onclick="switchMainTab('unpublished')">
+        <i class="fa-solid fa-store"></i> 待发布商品 (<span id="unpublishedTabCount">0</span>)
+      </button>
+      <button class="main-tab-btn" id="tabPublishedBtn" onclick="switchMainTab('published')">
+        <i class="fa-solid fa-eye-slash"></i> 已隐藏商品 (<span id="publishedTabCount">0</span>)
+      </button>
+    </div>
+
+    <!-- 过滤器与搜图控制栏 -->
+    <div class="filter-bar">
+      <div class="search-input-wrapper" style="position: relative; display: flex; align-items: center; flex: 1;">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="gameSearchInput" class="search-input" placeholder="输入游戏中文/英文名称搜索..." oninput="onSearchInput()">
+        <button id="clearSearchBtn" onclick="clearSearch()" style="display: none; position: absolute; right: 12px; background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 14px; padding: 4px;" title="清空搜索">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button class="btn btn-outline" onclick="copyAllCurrentPageTexts()" style="padding: 8px 14px; font-size: 12px; border-radius: 8px; background: #ffffff;">
+          <i class="fa-solid fa-file-export" style="color: var(--xianyu-yellow-dark);"></i> 批量复制本页文案
+        </button>
+
+        <div class="stats-badge" id="statsBadge">
+          已隐藏发布的商品: <strong id="publishedCount">0</strong> 款 / 待发布: <strong id="remainingCount" class="highlight">0</strong> 款
+        </div>
+      </div>
+    </div>
+
+    <!-- 选项卡 1: 待发布游戏商品网格 -->
+    <div id="unpublishedSection">
+      <div class="cards-grid" id="cardsGrid">
+        <!-- 动态未发布卡片 -->
+      </div>
+    </div>
+
+    <!-- 选项卡 2: 已隐藏/已发布文案网格 (支持分页) -->
+    <div id="publishedSection" style="display: none;">
+      <!-- 已隐藏分页专属重置栏 -->
+      <div class="published-header-bar">
+        <div class="published-header-info">
+          <i class="fa-solid fa-eye-slash" style="color: var(--xianyu-black);"></i>
+          <span>当前账号【<strong id="hiddenTabAccountKeyTag">admin</strong>】已归档隐藏的商品</span>
+        </div>
+        <button class="btn btn-outline" onclick="resetCurrentAccountGames()">
+          <i class="fa-solid fa-rotate-left"></i> 一键恢复本账号所有隐藏商品
+        </button>
+      </div>
+
+      <div class="cards-grid" id="hiddenCardsGrid">
+        <!-- 动态已隐藏文案卡片 -->
+      </div>
+    </div>
+
+    <!-- 通用分页控制条 -->
+    <div class="pagination-bar" id="paginationBar">
+      <div style="font-size: 13px; font-weight: 700; color: #475569;" id="pageStatsText">
+        共 0 条商品，显示第 0-0 条
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="pagination-pages" id="pageButtonsContainer">
+          <!-- 动态数字页码 -->
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700;">
+          <span>每页:</span>
+          <select id="pageSizeSelect" style="padding: 4px 8px; border-radius: 6px; border: 2px solid var(--xianyu-black); font-weight: 800;" onchange="changePageSize()">
+            <option value="6">6条</option>
+            <option value="12" selected>12条</option>
+            <option value="24">24条</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast 消息容器 -->
+  <div id="toast-container"></div>
+
+  <!-- ========================================================
+       Modal 1: 强制免密登录模态框 (无账号切换下拉框)
+       ======================================================== -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-user-lock"></i> 用户登录
+        </div>
+        <button class="modal-close" id="loginModalCloseBtn" onclick="closeModal('loginModal')" style="display:none;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="background-color: #fffde6; border: 2px solid var(--xianyu-black); padding: 12px; border-radius: 8px; font-size: 13px; line-height: 1.5; color: #1a1a1a;">
+          <i class="fa-solid fa-circle-info" style="color: #d97706;"></i>
+          请输入您的<strong>用户名</strong>（如 <code>admin</code> 或您的子账号）进行登录。
+        </div>
+
+        <div class="form-group" style="margin-top: 10px;">
+          <label class="form-label">用户名:</label>
+          <input type="text" id="loginUsernameInput" class="form-input" placeholder="例如: admin 或 account_a" value="admin" onkeydown="if(event.key==='Enter') submitLogin()" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-xianyu" style="width: 100%; padding: 12px; font-size: 15px;" onclick="submitLogin()">
+          <i class="fa-solid fa-right-to-bracket"></i> 登 录 进入系统
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       Modal 2: 修改自身文案模板 Modal
+       ======================================================== -->
+  <div class="modal-overlay" id="editTemplateModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-file-pen"></i> 修改我的文案模板
+        </div>
+        <button class="modal-close" onclick="closeModal('editTemplateModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="myTemplateTagsTip" style="background-color: #fff9db; border: 1px solid #ffe066; padding: 12px; border-radius: 8px; font-size: 13px; color: #856404;">
+          <strong>统一变量标签：</strong><br>
+          • <code>{{VAR_1}}</code>：自动替换为商品的<strong>主名称/中文名/品牌</strong>（如：黑神话：悟空）<br>
+          • <code>{{VAR_2}}</code>：自动替换为商品的<strong>副名称/英文名/型号</strong>（如：Black Myth: Wukong）<br>
+          • <code>{{VAR}}</code>：自动替换为<strong>组合完整名称</strong>（如：黑神话：悟空 (Black Myth: Wukong)）
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">当前模板内容：</label>
+          <textarea id="myTemplateTextarea" class="form-textarea" rows="8" placeholder="在此输入你的专属发布文案..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" style="margin-right: auto; padding: 6px 12px; font-size: 12px;" onclick="restoreOriginalMyTemplateText()">
+          <i class="fa-solid fa-rotate-left"></i> 恢复修改前
+        </button>
+        <button class="btn btn-secondary" onclick="closeModal('editTemplateModal')">取消</button>
+        <button class="btn btn-xianyu" onclick="saveMyTemplate()">保存并更新界面</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       Modal 3: 发布与一键搜图 Modal
+       ======================================================== -->
+  <div class="modal-overlay" id="publishModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-paper-plane"></i> 商品已复制并准备搜图发布
+        </div>
+        <button class="modal-close" onclick="closeModal('publishModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="background-color: #d1fae5; border: 2px solid var(--xianyu-black); padding: 12px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 10px; color: #065f46; font-weight: 800;">
+          <i class="fa-solid fa-circle-check" style="font-size: 20px;"></i>
+          <span>最终套用文案已自动复制到剪贴板！可直接粘贴到咸鱼宝贝描述中！</span>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 6px;">生成的套用文案预览：</label>
+          <div class="text-preview-box" id="modalTextPreview"></div>
+        </div>
+
+        <!-- 搜图引擎快捷入口 -->
+        <div class="search-engines-box">
+          <div class="search-engines-title" id="modalSearchTitle">
+            <i class="fa-solid fa-images"></i> 一键快捷搜游戏海报/封面图片:
+          </div>
+          <div class="engine-btn-group">
+            <a href="#" target="_blank" id="bingSearchBtn" class="btn-engine">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <span>微软 Bing 搜图</span>
+            </a>
+            <a href="#" target="_blank" id="baiduSearchBtn" class="btn-engine">
+              <i class="fa-solid fa-paw"></i>
+              <span>百度图片搜索</span>
+            </a>
+            <a href="#" target="_blank" id="googleSearchBtn" class="btn-engine">
+              <i class="fa-brands fa-google"></i>
+              <span>谷歌图片搜索</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-xianyu" onclick="confirmModalPublishAndHide()">
+          <i class="fa-solid fa-check"></i> 完成发布并隐藏此卡片
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       Modal 4: 管理员控制台与仪表板 Modal (仅 admin 可用)
+       ======================================================== -->
+  <div class="modal-overlay" id="adminModal">
+    <div class="modal-card" style="max-width: 800px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-gears"></i> 管理员数据中心与全功能控制台
+        </div>
+        <button class="modal-close" onclick="closeModal('adminModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- 选项卡按钮组 -->
+        <div class="tab-header">
+          <button class="tab-btn active" onclick="switchAdminTab(event, 'dashboard')">
+            <i class="fa-solid fa-chart-pie"></i> 运行仪表板
+          </button>
+          <button class="tab-btn" onclick="switchAdminTab(event, 'batchImport')">
+            <i class="fa-solid fa-file-import"></i> 批量导入商品
+          </button>
+          <button class="tab-btn" onclick="switchAdminTab(event, 'accountsManage')">
+            <i class="fa-solid fa-users-gear"></i> 用户名与模板管理
+          </button>
+          <button class="tab-btn" onclick="switchAdminTab(event, 'gamesManage')">
+            <i class="fa-solid fa-boxes-packing"></i> 单个商品管理
+          </button>
+        </div>
+
+        <!-- Tab 1: 仪表板 Dashboard -->
+        <div class="tab-content active" id="adminTab-dashboard">
+
+          <!-- 系统预设模式 / 行业场景套件切换 -->
+          <div style="background-color: #fffde6; border: 2px solid var(--xianyu-black); padding: 14px; border-radius: 10px; margin-bottom: 20px; box-shadow: var(--shadow-geo-sm);">
+            <div style="font-weight: 800; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+              <span><i class="fa-solid fa-sliders" style="color: var(--xianyu-black);"></i> 系统当前预设模式 / 行业场景套件:</span>
+              <span class="logo-badge" id="currentSceneBadge">🎮 Steam游戏安装包模式</span>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <select id="sceneModeSelect" class="form-input" style="flex: 1; font-weight: 800; border: 2px solid var(--xianyu-black); background: #ffffff;" onchange="changeSceneMode(this.value)">
+                <option value="game_mode">🎮 咸鱼 Steam游戏安装包/虚拟商品模式 (系统默认预设)</option>
+                <option value="digital_mode">📱 数码二手/3C电子商品模式</option>
+                <option value="fashion_mode">👗 服饰潮牌/中古闲置模式</option>
+                <option value="custom_mode">⚙️ 通用电商/自由自定义模式</option>
+              </select>
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 8px;">
+              💡 <strong>开箱即用保障：</strong>系统默认启用“Steam游戏安装包模式”。切换场景后，表格列名、输入提示、文案变量及搜图建议词将实时联动适应。
+            </div>
+          </div>
+
+          <div class="dashboard-cards">
+            <div class="dash-card">
+              <div class="num" id="dashTotalGames">0</div>
+              <div class="label">数据库商品总数</div>
+            </div>
+            <div class="dash-card">
+              <div class="num" id="dashTotalAccounts">0</div>
+              <div class="label">登记在册用户名</div>
+            </div>
+            <div class="dash-card">
+              <div class="num" id="dashTotalPublishes">0</div>
+              <div class="label">累计发布商品次数</div>
+            </div>
+          </div>
+
+          <label class="form-label" style="margin-top: 16px;">📊 各用户名已发布商品统计：</label>
+          <table class="list-table">
+            <thead>
+              <tr>
+                <th>用户名</th>
+                <th>已发布归档数量</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody id="dashAccountTableBody">
+              <!-- 动态统计列表 -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tab 2: 一键批量导入商品 -->
+        <div class="tab-content" id="adminTab-batchImport">
+          <div id="batchImportTip" style="background-color: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; border-left: 4px solid var(--xianyu-yellow);">
+            <strong>支持格式规范：</strong> 每行一款商品，使用 <code>[参数1]+[参数2]</code> 格式（例如 <code>[幻兽帕鲁]+[Palworld]</code>），支持 <code>\n</code> 换行符。<br>
+            例如：<br>
+            <code>[黑神话：悟空]+[Black Myth: Wukong]</code><br>
+            <code>[幻兽帕鲁]+[Palworld]</code><br>
+            <code>[赛博朋克2077]+[Cyberpunk 2077]</code>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">粘贴批量商品清单：</label>
+            <textarea id="batchImportTextarea" class="form-textarea" rows="8" placeholder="[黑神话：悟空]+[Black Myth: Wukong]&#10;[幻兽帕鲁]+[Palworld]&#10;[赛博朋克2077]+[Cyberpunk 2077]"></textarea>
+          </div>
+
+          <button class="btn btn-xianyu" onclick="submitBatchImportGames()">
+            <i class="fa-solid fa-upload"></i> 一键解析并批量写入库
+          </button>
+        </div>
+
+        <!-- Tab 3: 用户名与模板管理 -->
+        <div class="tab-content" id="adminTab-accountsManage">
+          <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border: 2px solid var(--xianyu-black); margin-bottom: 20px;">
+            <div style="font-weight: 800; font-size: 14px; margin-bottom: 10px;"><i class="fa-solid fa-user-plus"></i> 添加新账号：</div>
+            <div style="margin-bottom: 10px;">
+              <input type="text" id="newAccountKeyInput" class="form-input" placeholder="用户名 (如: account_c)">
+            </div>
+            <textarea id="newAccountTemplateInput" class="form-textarea" rows="3" placeholder="初始模板内容 (留空使用默认模板)"></textarea>
+            <button class="btn btn-xianyu" style="margin-top: 10px;" onclick="submitCreateAccount()">确认添加账号</button>
+          </div>
+
+          <label class="form-label">所有用户名列表：</label>
+          <table class="list-table">
+            <thead>
+              <tr>
+                <th>用户名</th>
+                <th>动作</th>
+              </tr>
+            </thead>
+            <tbody id="adminAccountsTableBody">
+              <!-- 账号列表 -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tab 4: 单个游戏管理 -->
+        <div class="tab-content" id="adminTab-gamesManage">
+          <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+            <input type="text" id="singleGameCnInput" class="form-input" style="flex: 1; min-width: 160px;" placeholder="中文游戏名称 (如: 幻兽帕鲁)">
+            <input type="text" id="singleGameEnInput" class="form-input" style="flex: 1; min-width: 160px;" placeholder="英文游戏名称 (如: Palworld)">
+            <button class="btn btn-xianyu" onclick="submitSingleGameAdd()"><i class="fa-solid fa-plus"></i> 添加游戏</button>
+          </div>
+
+          <div style="margin-bottom: 12px; position: relative;">
+            <input type="text" id="adminGameSearchInput" class="form-input" style="padding-left: 32px;" placeholder="🔍 快速搜索游戏列表 (中文/英文)..." oninput="renderAdminGamesTable()">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px;"></i>
+          </div>
+
+          <table class="list-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th id="adminTableColCnHeader">中文名称</th>
+                <th id="adminTableColEnHeader">英文名称</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="adminGamesTableBody">
+              <!-- 单个游戏管理表格 -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('adminModal')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: 修改用户名 Modal -->
+  <div class="modal-overlay" id="editUsernameModal">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-pen-to-square"></i> 修改用户名
+        </div>
+        <button class="modal-close" onclick="closeModal('editUsernameModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 13px; margin-bottom: 10px; color: var(--text-muted);">
+          原用户名: <strong id="editOldUsernameDisplay" style="color: var(--xianyu-black);"></strong>
+        </div>
+        <div class="form-group">
+          <label class="form-label">请输入新的用户名:</label>
+          <input type="text" id="editNewUsernameInput" class="form-input" placeholder="输入新的用户名..." onkeydown="if(event.key==='Enter') confirmEditUsername()" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('editUsernameModal')">取消</button>
+        <button class="btn btn-xianyu" onclick="confirmEditUsername()">确认修改</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 6: 确认删除账号 Modal -->
+  <div class="modal-overlay" id="confirmDeleteAccountModal">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title" style="color: #ef4444;">
+          <i class="fa-solid fa-triangle-exclamation"></i> 确认删除账号
+        </div>
+        <button class="modal-close" onclick="closeModal('confirmDeleteAccountModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 14px; line-height: 1.6; color: var(--text-main);">
+          确定要彻底删除账号【<strong id="deleteAccountTargetName" style="color: #ef4444;"></strong>】吗？删除后不可撤销。
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('confirmDeleteAccountModal')">取消</button>
+        <button class="btn btn-danger" onclick="confirmDeleteAccount()">确认删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 7: 确认删除游戏 Modal -->
+  <div class="modal-overlay" id="confirmDeleteGameModal">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title" style="color: #ef4444;">
+          <i class="fa-solid fa-triangle-exclamation"></i> 确认删除游戏
+        </div>
+        <button class="modal-close" onclick="closeModal('confirmDeleteGameModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 14px; line-height: 1.6; color: var(--text-main);">
+          确定要从全局游戏库中彻底删除【<strong id="deleteGameTargetName" style="color: #ef4444;"></strong>】吗？
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('confirmDeleteGameModal')">取消</button>
+        <button class="btn btn-danger" onclick="confirmDeleteGame()">确认删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 8: 管理员查看/修改用户模板 Modal -->
+  <div class="modal-overlay" id="adminEditTemplateModal">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-file-pen"></i> 修改用户文案模板
+        </div>
+        <button class="modal-close" onclick="closeModal('adminEditTemplateModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">
+          正在查看并修改用户【<strong id="adminEditTemplateTargetUser" style="color: var(--xianyu-black);"></strong>】的专用文案模板：
+        </div>
+        <div class="form-group">
+          <label class="form-label">文案模板内容：</label>
+          <textarea id="adminEditTemplateTextarea" class="form-textarea" rows="8" placeholder="在这里编辑该用户的文案模板..."></textarea>
+        </div>
+        <div style="background-color: #f1f5f9; padding: 10px; border-radius: 6px; font-size: 12px; color: #475569; line-height: 1.5;">
+          💡 <strong>占位符说明:</strong><br>
+          • <code>{{GAME_CN}}</code> - 替换为游戏中文名称<br>
+          • <code>{{GAME_EN}}</code> - 替换为游戏英文名称<br>
+          • <code>{{GAME}}</code> - 自动组合中文+英文名称
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" style="margin-right: auto; padding: 6px 12px; font-size: 12px;" onclick="restoreOriginalAdminTemplateText()">
+          <i class="fa-solid fa-rotate-left"></i> 恢复修改前
+        </button>
+        <button class="btn btn-secondary" onclick="closeModal('adminEditTemplateModal')">取消</button>
+        <button class="btn btn-xianyu" onclick="confirmAdminSaveTemplate()">保存修改</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 9: 确认一键恢复当前账号所有隐藏商品 Modal -->
+  <div class="modal-overlay" id="confirmResetAccountGamesModal">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title" style="color: var(--xianyu-black);">
+          <i class="fa-solid fa-rotate-left"></i> 确认一键恢复商品
+        </div>
+        <button class="modal-close" onclick="closeModal('confirmResetAccountGamesModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 14px; line-height: 1.6; color: var(--text-main);">
+          确定要将账号【<strong id="resetAccountGamesTargetName" style="color: var(--xianyu-black);"></strong>】所有已隐藏的商品全部重新恢复到待发布列表吗？
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('confirmResetAccountGamesModal')">取消</button>
+        <button class="btn btn-xianyu" onclick="confirmResetCurrentAccountGames()">确认恢复</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript 核心逻辑 -->
+  <script>
+    // ========================================================
+    // 全局状态数据管理 & 预设场景套件 (Preset-First Architecture)
+    // ========================================================
+    const SCENE_PROFILES = {
+      game_mode: {
+        key: 'game_mode',
+        name: '🎮 咸鱼 Steam游戏安装包/虚拟商品模式 (系统默认预设)',
+        badge: '🎮 Steam游戏安装包模式',
+        mainTitleLabel: '游戏中文名',
+        subTitleLabel: '游戏英文名',
+        mainInputPlaceholder: '例如: 黑神话：悟空',
+        subInputPlaceholder: '例如: Black Myth: Wukong',
+        searchPlaceholder: '输入游戏中文/英文名称搜索...',
+        tags: [
+          { tag: '{{VAR_1}}', desc: '商品主名称/中文名（如：黑神话：悟空）' },
+          { tag: '{{VAR_2}}', desc: '商品副名称/英文名（如：Black Myth: Wukong）' },
+          { tag: '{{VAR}}', desc: '完整组合名称（如：黑神话：悟空 (Black Myth: Wukong)）' }
+        ],
+        defaultTemplate: "【{{VAR_1}} ({{VAR_2}}) Steam正品游戏安装包 离线版/中文版】\n⚡ 自动发货 | 包含全套完整安装包+DLC扩展+终身更新\n✅ 送详细视频教程+远程协助安装 简体中文 免Steam繁琐步骤\n✅ 拍下即发 极速下载 随时随地畅玩！",
+        searchSuffix: '海报 封面',
+        searchTitle: '一键快捷搜游戏海报/封面图片',
+        batchImportPlaceholder: "[黑神话：悟空]+[Black Myth: Wukong]\n[幻兽帕鲁]+[Palworld]\n[艾尔登法环]+[Elden Ring]\n[赛博朋克2077]+[Cyberpunk 2077]",
+        batchImportTip: "<strong>支持格式规范：</strong> 每行一款 Steam 游戏，格式为：<code>[中文名]+[英文名]</code>（例如 <code>[幻兽帕鲁]+[Palworld]</code>），支持 <code>\\n</code> 换行。"
+      },
+      digital_mode: {
+        key: 'digital_mode',
+        name: '📱 数码二手/3C电子商品模式',
+        badge: '📱 数码/二手模式',
+        mainTitleLabel: '品牌/设备名称',
+        subTitleLabel: '型号/成色规格',
+        mainInputPlaceholder: '例如: 苹果 iPhone 15 Pro',
+        subInputPlaceholder: '例如: 256G 深空黑 99新',
+        searchPlaceholder: '输入品牌名称 / 型号规格搜索...',
+        tags: [
+          { tag: '{{VAR_1}}', desc: '品牌或设备主名称（如：苹果 iPhone 15 Pro）' },
+          { tag: '{{VAR_2}}', desc: '型号或成色规格（如：256G 深空黑 99新）' },
+          { tag: '{{VAR}}', desc: '设备组合全名（如：苹果 iPhone 15 Pro (256G 99新)）' }
+        ],
+        defaultTemplate: "【{{VAR_1}} {{VAR_2}} 99新/二手急售】\n⚡ 原装正品 | 现货秒发 | 支持验货\n✅ 成色状态：{{VAR}}，无拆无修，功能完好\n✅ 配件齐全，包邮顺丰，先到先得！",
+        searchSuffix: '外观 实拍图',
+        searchTitle: '一键快捷搜设备实拍图/官方渲染图',
+        batchImportPlaceholder: "[苹果 iPhone 15 Pro]+[256G 深空黑 99新]\n[联想 拯救者Y9000P]+[i9/32G/1T/RTX4060]\n[索尼 WH-1000XM5]+[黑色 95新]",
+        batchImportTip: "<strong>支持格式规范：</strong> 每行一款商品，格式为：<code>[品牌/设备名]+[规格型号]</code>（例如 <code>[苹果 iPhone 15 Pro]+[256G 99新]</code>），支持 <code>\\n</code> 换行。"
+      },
+      fashion_mode: {
+        key: 'fashion_mode',
+        name: '👗 服饰潮牌/中古闲置模式',
+        badge: '👗 服饰/潮牌模式',
+        mainTitleLabel: '商品/品牌名称',
+        subTitleLabel: '颜色/尺码材质',
+        mainInputPlaceholder: '例如: Essentials 连帽卫衣',
+        subInputPlaceholder: '例如: 燕麦灰 L码 纯棉',
+        searchPlaceholder: '输入品牌 / 颜色尺码搜索...',
+        tags: [
+          { tag: '{{VAR_1}}', desc: '服装品牌或主品名（如：Essentials 连帽卫衣）' },
+          { tag: '{{VAR_2}}', desc: '颜色/尺码/细节（如：燕麦灰 L码）' },
+          { tag: '{{VAR}}', desc: '组合全名（如：Essentials 连帽卫衣 (燕麦灰 L码)）' }
+        ],
+        defaultTemplate: "【正品现货 {{VAR_1}} / {{VAR_2}} 】\n✨ 潮流精选 | 质感十足 | 现货专拍\n✅ 细节材质：{{VAR}}\n✅ 保真支持鉴定，包邮顺丰，私信看细节图",
+        searchSuffix: '上身图 细节',
+        searchTitle: '一键快捷搜服饰上身图/细节图',
+        batchImportPlaceholder: "[Essentials 连帽卫衣]+[燕麦灰 L码]\n[始祖鸟 Arc'teryx 冲锋衣]+[黑色 M码]\n[Nike Dunk Low]+[熊猫配色 42码 99新]",
+        batchImportTip: "<strong>支持格式规范：</strong> 每行一款服饰，格式为：<code>[品牌/商品名]+[颜色/尺码/细节]</code>（例如 <code>[Essentials 连帽卫衣]+[燕麦灰 L码]</code>），支持 <code>\\n</code> 换行。"
+      },
+      custom_mode: {
+        key: 'custom_mode',
+        name: '⚙️ 通用电商/自由自定义模式',
+        badge: '⚙️ 通用自定义模式',
+        mainTitleLabel: '商品主标题',
+        subTitleLabel: '副标题/规格参数',
+        mainInputPlaceholder: '例如: 高品质人体工学椅',
+        subInputPlaceholder: '例如: 网布可躺 带脚踏',
+        searchPlaceholder: '输入商品主标题 / 副标题搜索...',
+        tags: [
+          { tag: '{{VAR_1}}', desc: '商品主标题/核心名称' },
+          { tag: '{{VAR_2}}', desc: '副标题/附加规格参数' },
+          { tag: '{{VAR}}', desc: '主副标题组合名称' }
+        ],
+        defaultTemplate: "【{{VAR_1}} {{VAR_2}}】\n⚡ 现货特惠 | 品质保障 | 快速发货\n✅ 规格说明：{{VAR}}\n✅ 欢迎沟通询问，下单即发！",
+        searchSuffix: '产品图',
+        searchTitle: '一键快捷搜商品主图/渲染图',
+        batchImportPlaceholder: "[高品质人体工学椅]+[网布可躺带脚踏]\n[智能保温杯]+[500ml 316不锈钢]\n[便携式户外蓝牙音箱]+[防水续航12小时]",
+        batchImportTip: "<strong>支持格式规范：</strong> 每行一件商品，格式为：<code>[主标题]+[副标题/参数]</code>（例如 <code>[高品质人体工学椅]+[网布可躺带脚踏]</code>），支持 <code>\\n</code> 换行。"
+      }
+    };
+
+    let currentSceneMode = localStorage.getItem('xianyu_scene_mode') || 'game_mode';
+    let currentUser = null;
+    let accountsList = [];
+    let gamesList = [];
+    let activePublishGame = null;
+
+    // 主视图状态与分页状态
+    let currentMainTab = 'unpublished'; // 'unpublished' | 'published'
+    let currentPage = 1;
+    let pageSize = 12;
+
+    // 切换场景模式 (Scene Profile)
+    function changeSceneMode(newMode) {
+      if (!SCENE_PROFILES[newMode]) return;
+      currentSceneMode = newMode;
+      localStorage.setItem('xianyu_scene_mode', newMode);
+      applySceneModeUI();
+      renderTemplatePreview();
+      renderMainView();
+      if (typeof showToast === 'function') {
+        showToast(`已切换为【${SCENE_PROFILES[newMode].badge}】！UI及变量已实时重载`);
+      }
+    }
+
+    // 应用场景 UI 标签与提示语
+    function applySceneModeUI() {
+      const profile = SCENE_PROFILES[currentSceneMode] || SCENE_PROFILES.game_mode;
+
+      // 1. Badge & Select
+      const badgeEl = document.getElementById('currentSceneBadge');
+      if (badgeEl) badgeEl.innerText = profile.badge;
+
+      const selectEl = document.getElementById('sceneModeSelect');
+      if (selectEl) selectEl.value = currentSceneMode;
+
+      // 2. Search input
+      const searchInput = document.getElementById('gameSearchInput');
+      if (searchInput) searchInput.placeholder = profile.searchPlaceholder;
+
+      // 3. User Template Modal Tags Tip
+      const myTagsTip = document.getElementById('myTemplateTagsTip');
+      if (myTagsTip) {
+        let tagsHtml = `<strong>支持变量标签（对应【${profile.badge}】）：</strong><br>`;
+        profile.tags.forEach(t => {
+          tagsHtml += `• <code>${t.tag}</code>：${t.desc}<br>`;
+        });
+        myTagsTip.innerHTML = tagsHtml;
+      }
+
+      // 4. Admin Template Modal Tags Tip
+      const adminTagsTip = document.getElementById('adminTemplateTagsTip');
+      if (adminTagsTip) {
+        let tagsHtml = `💡 <strong>【${profile.badge}】占位符说明:</strong><br>`;
+        profile.tags.forEach(t => {
+          tagsHtml += `• <code>${t.tag}</code> - ${t.desc}<br>`;
+        });
+        adminTagsTip.innerHTML = tagsHtml;
+      }
+
+      // 5. Batch Import Tab
+      const importTip = document.getElementById('batchImportTip');
+      if (importTip) importTip.innerHTML = profile.batchImportTip;
+
+      const importArea = document.getElementById('batchImportTextarea');
+      if (importArea) importArea.placeholder = profile.batchImportPlaceholder;
+
+      // 6. Single Game Admin Tab Inputs & Table Header
+      const singleCn = document.getElementById('singleGameCnInput');
+      if (singleCn) singleCn.placeholder = `${profile.mainTitleLabel} (${profile.mainInputPlaceholder})`;
+
+      const singleEn = document.getElementById('singleGameEnInput');
+      if (singleEn) singleEn.placeholder = `${profile.subTitleLabel} (${profile.subInputPlaceholder})`;
+
+      const adminSearch = document.getElementById('adminGameSearchInput');
+      if (adminSearch) adminSearch.placeholder = `🔍 快速搜索商品列表 (${profile.mainTitleLabel}/${profile.subTitleLabel})...`;
+
+      const singleCnHeader = document.getElementById('adminTableColCnHeader');
+      if (singleCnHeader) singleCnHeader.innerText = profile.mainTitleLabel;
+
+      const singleEnHeader = document.getElementById('adminTableColEnHeader');
+      if (singleEnHeader) singleEnHeader.innerText = profile.subTitleLabel;
+
+      const searchTitleEl = document.getElementById('modalSearchTitle');
+      if (searchTitleEl) searchTitleEl.innerHTML = `<i class="fa-solid fa-images"></i> ${profile.searchTitle}:`;
+    }
+
+    // API 请求基础路径
+    const API_BASE = '/api.php';
+
+    // 页面初始化加载
+    document.addEventListener('DOMContentLoaded', async () => {
+      applySceneModeUI();
+      await loadAccounts();
+
+      // 检查是否有存储的登录状态
+      const savedUserKey = localStorage.getItem('xianyu_logged_key');
+      if (savedUserKey) {
+        await performLogin(savedUserKey, true);
+      } else {
+        // 未登录则弹出登录 Modal
+        openLoginModal(true);
+      }
+    });
+
+    // ========================================================
+    // 1. 账号与登录接口处理
+    // ========================================================
+
+    // 核心登录函数 (免密)
+    async function performLogin(username, quiet = false) {
+      if (!username) return;
+
+      try {
+        const res = await fetch(`${API_BASE}?action=login&username=${encodeURIComponent(username)}`);
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          currentUser = data.user;
+          localStorage.setItem('xianyu_logged_key', currentUser.account_key);
+          updateUserUI();
+
+          if (!quiet) {
+            showToast(`已成功登录账号 Key: ${currentUser.account_key}`);
+          }
+
+          closeModal('loginModal');
+
+          // 加载当前账号的游戏库状态
+          await loadGames();
+        } else {
+          showToast(data.message || '登录失败', true);
+          openLoginModal(true);
+        }
+      } catch (e) {
+        console.error(e);
+        showToast('登录接口通信错误', true);
+        openLoginModal(true);
+      }
+    }
+
+    // 打开登录 Modal (forceRequired 时隐藏关闭按钮)
+    function openLoginModal(forceRequired = false) {
+      const closeBtn = document.getElementById('loginModalCloseBtn');
+      if (forceRequired) {
+        closeBtn.style.display = 'none';
+      } else {
+        closeBtn.style.display = 'block';
+      }
+      openModal('loginModal');
+    }
+
+    // 提交免密登录
+    function submitLogin() {
+      const username = document.getElementById('loginUsernameInput').value.trim();
+      if (!username) {
+        showToast('请输入账号 Key (用户名)', true);
+        return;
+      }
+      performLogin(username);
+    }
+
+    // 退出登录
+    function logout() {
+      localStorage.removeItem('xianyu_logged_key');
+      currentUser = null;
+      document.getElementById('currentAccountKeyDisplay').innerText = '未登录';
+      document.getElementById('barAccountKeyDisplay').innerText = '-';
+      document.getElementById('adminBadgeTag').style.display = 'none';
+      document.getElementById('adminConsoleBtn').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'none';
+
+      showToast('已退出登录');
+      openLoginModal(true);
+    }
+
+    // 更新界面顶部的登录指示与 UI 状态
+    function updateUserUI() {
+      if (!currentUser) return;
+
+      document.getElementById('currentAccountKeyDisplay').innerText = currentUser.account_key;
+      document.getElementById('barAccountKeyDisplay').innerText = currentUser.account_key;
+
+      const hiddenTag = document.getElementById('hiddenTabAccountKeyTag');
+      if (hiddenTag) hiddenTag.innerText = currentUser.account_key;
+
+      const adminBadge = document.getElementById('adminBadgeTag');
+      const adminConsoleBtn = document.getElementById('adminConsoleBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      logoutBtn.style.display = 'inline-flex';
+
+      if (currentUser.is_admin) {
+        adminBadge.style.display = 'inline-block';
+        adminConsoleBtn.style.display = 'inline-flex';
+      } else {
+        adminBadge.style.display = 'none';
+        adminConsoleBtn.style.display = 'none';
+      }
+
+      // 更新主界面模板预览框
+      renderTemplatePreview();
+    }
+
+    // 获取所有账号列表
+    async function loadAccounts() {
+      try {
+        const res = await fetch(`${API_BASE}?action=get_accounts`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          accountsList = data.accounts || [];
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // ========================================================
+    // 2. 主选项卡与视图渲染逻辑 (待发布 vs 已隐藏分页)
+    // ========================================================
+
+    function switchMainTab(tabName) {
+      currentMainTab = tabName;
+      currentPage = 1; // 重置页码
+
+      document.getElementById('tabUnpublishedBtn').classList.toggle('active', tabName === 'unpublished');
+      document.getElementById('tabPublishedBtn').classList.toggle('active', tabName === 'published');
+
+      document.getElementById('unpublishedSection').style.display = (tabName === 'unpublished') ? 'block' : 'none';
+      document.getElementById('publishedSection').style.display = (tabName === 'published') ? 'block' : 'none';
+
+      renderMainView();
+    }
+
+    function onSearchInput() {
+      currentPage = 1;
+      renderMainView();
+    }
+
+    function changePageSize() {
+      pageSize = parseInt(document.getElementById('pageSizeSelect').value, 10);
+      currentPage = 1;
+      renderMainView();
+    }
+
+    // 渲染模板显示框 (带变量高亮与场景 Badge)
+    function renderTemplatePreview() {
+      const box = document.getElementById('templatePreviewBox');
+      if (!currentUser || !currentUser.template_text) {
+        box.innerHTML = '<em>未设置模板</em>';
+        return;
+      }
+
+      let textHtml = escapeHtml(currentUser.template_text)
+        .replace(/(\{\{[A-Z0-9_]+\}\})/g, '<span class="placeholder-tag">$1</span>');
+
+      const profile = SCENE_PROFILES[currentSceneMode] || SCENE_PROFILES.game_mode;
+
+      box.innerHTML = `<div><strong>当前账号【${currentUser.account_key}】应用中的文案模版 <span style="font-size: 11px; background: var(--xianyu-black); color: var(--xianyu-yellow); padding: 2px 6px; border-radius: 4px; margin-left: 6px;">${profile.badge}</span>:</strong></div>\n${textHtml}`;
+    }
+
+    // 加载游戏数据
+    async function loadGames() {
+      if (!currentUser) return;
+
+      try {
+        const res = await fetch(`${API_BASE}?action=get_games&account_key=${encodeURIComponent(currentUser.account_key)}`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          gamesList = data.games || [];
+          renderMainView();
+        }
+      } catch (e) {
+        console.error('loadGames error:', e);
+      }
+    }
+
+    const DEFAULT_TEMPLATE_TEXT = "【{{VAR_1}} ({{VAR_2}}) Steam正品游戏安装包 离线版/中文版】\n⚡ 自动发货 | 包含全套完整安装包+DLC扩展+终身更新\n✅ 送详细视频教程+远程协助安装 简体中文 免Steam繁琐步骤\n✅ 拍下即发 极速下载 随时随地畅玩！";
+
+    let originalMyTemplateText = '';
+    let originalAdminTemplateText = '';
+
+    // 恢复为本次修改前的模板文本 (用户个人 Modal)
+    function restoreOriginalMyTemplateText() {
+      const textarea = document.getElementById('myTemplateTextarea');
+      if (textarea) {
+        textarea.value = originalMyTemplateText;
+        showToast('已恢复为本次修改之前的模板文本');
+      }
+    }
+
+    // 恢复为本次修改前的模板文本 (管理员 Modal)
+    function restoreOriginalAdminTemplateText() {
+      const textarea = document.getElementById('adminEditTemplateTextarea');
+      if (textarea) {
+        textarea.value = originalAdminTemplateText;
+        showToast('已恢复为本次修改之前的模板文本');
+      }
+    }
+
+    // 辅助工具：生成场景适配的搜图 Key
+    function getSearchQuery(mainVal, subVal) {
+      const profile = SCENE_PROFILES[currentSceneMode] || SCENE_PROFILES.game_mode;
+      const term = `${mainVal || ''} ${subVal || ''} ${profile.searchSuffix}`.trim();
+      return encodeURIComponent(term);
+    }
+
+    // 替换模板变量生成最终文本 (Dynamic Fallback Engine)
+    function generateGameText(game) {
+      if (!currentUser) return '';
+      const template = currentUser.template_text || '';
+      const mainVal = (game.game_name_cn || '').trim();
+      const subVal = (game.game_name_en || '').trim();
+      const comboVal = subVal ? `${mainVal} (${subVal})` : mainVal;
+
+      let result = template
+        // 1. 统一通用变量
+        .replace(/\{\{VAR_1\}\}/g, mainVal)
+        .replace(/\{\{VAR\}\}/g, comboVal)
+        // 2. 各模式兼容变量
+        .replace(/\{\{GAME_CN\}\}/g, mainVal)
+        .replace(/\{\{GAME\}\}/g, comboVal)
+        .replace(/\{\{BRAND\}\}/g, mainVal)
+        .replace(/\{\{CONDITION\}\}/g, comboVal)
+        .replace(/\{\{COLOR\}\}/g, mainVal)
+        .replace(/\{\{MATERIAL\}\}/g, comboVal)
+        .replace(/\{\{TITLE_MAIN\}\}/g, mainVal)
+        .replace(/\{\{SPEC\}\}/g, comboVal);
+
+      if (subVal) {
+        result = result
+          .replace(/\{\{VAR_2\}\}/g, subVal)
+          .replace(/\{\{GAME_EN\}\}/g, subVal)
+          .replace(/\{\{MODEL\}\}/g, subVal)
+          .replace(/\{\{SIZE\}\}/g, subVal)
+          .replace(/\{\{TITLE_SUB\}\}/g, subVal);
+      } else {
+        // 当副名称/英文名为空时，智能清理脱靶空括号或多余空格
+        result = result
+          .replace(/[\(（]\s*\{\{VAR_2\}\}\s*[\)）]/g, '')
+          .replace(/\s*\{\{VAR_2\}\}/g, '')
+          .replace(/[\(（]\s*\{\{GAME_EN\}\}\s*[\)）]/g, '')
+          .replace(/\s*\{\{GAME_EN\}\}/g, '')
+          .replace(/[\(（]\s*\{\{MODEL\}\}\s*[\)）]/g, '')
+          .replace(/\s*\{\{MODEL\}\}/g, '')
+          .replace(/[\(（]\s*\{\{SIZE\}\}\s*[\)）]/g, '')
+          .replace(/\s*\{\{SIZE\}\}/g, '')
+          .replace(/[\(（]\s*\{\{TITLE_SUB\}\}\s*[\)）]/g, '')
+          .replace(/\s*\{\{TITLE_SUB\}\}/g, '');
+      }
+
+      return result;
+    }
+
+    // 渲染主内容区域 (根据 Tab 和搜索词)
+    function renderMainView() {
+      const searchKeyword = document.getElementById('gameSearchInput').value.trim().toLowerCase();
+
+      const unpublishedGames = gamesList.filter(g => !g.is_published);
+      const publishedGames = gamesList.filter(g => g.is_published);
+
+      document.getElementById('unpublishedTabCount').innerText = unpublishedGames.length;
+      document.getElementById('publishedTabCount').innerText = publishedGames.length;
+
+      document.getElementById('publishedCount').innerText = publishedGames.length;
+      document.getElementById('remainingCount').innerText = unpublishedGames.length;
+
+      if (currentMainTab === 'unpublished') {
+        renderUnpublishedGrid(unpublishedGames, searchKeyword);
+      } else {
+        renderPublishedGridWithPagination(publishedGames, searchKeyword);
+      }
+    }
+
+    // 渲染待发布商品网格 (支持分页)
+    function renderUnpublishedGrid(unpublishedGames, searchKeyword) {
+      const grid = document.getElementById('cardsGrid');
+
+      const filtered = unpublishedGames.filter(g => {
+        if (!searchKeyword) return true;
+        const cn = (g.game_name_cn || '').toLowerCase();
+        const en = (g.game_name_en || '').toLowerCase();
+        return cn.includes(searchKeyword) || en.includes(searchKeyword);
+      });
+
+      const totalItems = filtered.length;
+      const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = Math.min(startIndex + pageSize, totalItems);
+      const pageItems = filtered.slice(startIndex, endIndex);
+
+      // 更新通用分页指示文案
+      const statsText = totalItems > 0 
+        ? `共 ${totalItems} 条待发布文案，正在显示第 ${startIndex + 1} - ${endIndex} 条 (第 ${currentPage}/${totalPages} 页)`
+        : `无匹配的待发布文案`;
+      document.getElementById('pageStatsText').innerText = statsText;
+
+      // 渲染数字页码按钮
+      renderPaginationControls(totalPages);
+
+      if (totalItems === 0) {
+        const hasHiddenGames = gamesList.some(g => g.is_published);
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <i class="fa-solid fa-square-check" style="color: var(--xianyu-yellow-dark); font-size: 40px; margin-bottom: 12px;"></i>
+            <h3 style="font-size: 16px; margin-bottom: 6px;">无待发布的商品文案</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+              ${searchKeyword ? '未在待发布列表中搜索到匹配的游戏名称。' : '当前账号的所有游戏均已复制发布并加入已隐藏文案库！'}
+            </p>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+              <button class="btn btn-xianyu" onclick="switchMainTab('published')">
+                <i class="fa-solid fa-eye-slash"></i> 前往【已隐藏商品】查看
+              </button>
+              ${hasHiddenGames ? `
+                <button class="btn btn-outline" onclick="resetCurrentAccountGames()">
+                  <i class="fa-solid fa-rotate-left"></i> 一键恢复本账号所有隐藏商品
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = pageItems.map(g => {
+        const finalText = generateGameText(g);
+        return `
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fa-solid fa-gamepad"></i>
+                <span>${escapeHtml(g.game_name_cn)}</span>
+              </div>
+              <span style="font-size: 12px; opacity: 0.8; font-family: monospace;">${escapeHtml(g.game_name_en || '')}</span>
+            </div>
+            <div class="card-body">
+              <div class="text-preview-box">${escapeHtml(finalText)}</div>
+              <div class="card-actions">
+                <button class="btn btn-publish" onclick="openPublishModal(${g.id})">
+                  <i class="fa-solid fa-copy"></i> 一键复制文案并搜图
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 渲染已隐藏/已发布文案网格 (支持分页)
+    function renderPublishedGridWithPagination(publishedGames, searchKeyword) {
+      const grid = document.getElementById('hiddenCardsGrid');
+
+      const filtered = publishedGames.filter(g => {
+        if (!searchKeyword) return true;
+        const cn = (g.game_name_cn || '').toLowerCase();
+        const en = (g.game_name_en || '').toLowerCase();
+        return cn.includes(searchKeyword) || en.includes(searchKeyword);
+      });
+
+      const totalItems = filtered.length;
+      const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = Math.min(startIndex + pageSize, totalItems);
+      const pageItems = filtered.slice(startIndex, endIndex);
+
+      // 更新分页指示文案
+      const statsText = totalItems > 0 
+        ? `共 ${totalItems} 条已隐藏文案，正在显示第 ${startIndex + 1} - ${endIndex} 条 (第 ${currentPage}/${totalPages} 页)`
+        : `无匹配的已隐藏文案`;
+      document.getElementById('pageStatsText').innerText = statsText;
+
+      // 渲染数字页码按钮
+      renderPaginationControls(totalPages);
+
+      if (totalItems === 0) {
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <i class="fa-solid fa-box-open"></i>
+            <h3>尚无已隐藏/已发布的商品文案</h3>
+            <p>当您在待发布列表中点击“一键复制文案并搜图”后，商品将自动记录归档在此处。</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = pageItems.map(g => {
+        const finalText = generateGameText(g);
+        const searchKey = getSearchQuery(g.game_name_cn, g.game_name_en || '');
+        const bingUrl = `https://cn.bing.com/images/search?q=${searchKey}`;
+        const baiduUrl = `https://image.baidu.com/search/index?tn=baiduimage&word=${searchKey}`;
+        const googleUrl = `https://www.google.com/search?tbm=isch&q=${searchKey}`;
+
+        return `
+          <div class="card">
+            <div class="card-header hidden-mode">
+              <div class="card-title">
+                <i class="fa-solid fa-eye-slash"></i>
+                <span>${escapeHtml(g.game_name_cn)}</span>
+              </div>
+              <span style="font-size: 11px; opacity: 0.8; font-family: monospace;">[已隐藏/已归档]</span>
+            </div>
+            <div class="card-body">
+              <div class="text-preview-box">${escapeHtml(finalText)}</div>
+              
+              <div class="search-engines-row">
+                <a href="${bingUrl}" target="_blank" class="btn-engine-sm" title="Bing 搜图"><i class="fa-solid fa-magnifying-glass"></i> Bing</a>
+                <a href="${baiduUrl}" target="_blank" class="btn-engine-sm" title="百度搜图"><i class="fa-solid fa-paw"></i> 百度</a>
+                <a href="${googleUrl}" target="_blank" class="btn-engine-sm" title="谷歌搜图"><i class="fa-brands fa-google"></i> 谷歌</a>
+              </div>
+
+              <div class="card-actions">
+                <button class="btn btn-outline" style="flex: 1; padding: 8px; font-size: 13px;" onclick="copyToClipboardText('${escapeJsString(finalText)}', this)">
+                  <i class="fa-solid fa-copy"></i> 复制文案
+                </button>
+                <button class="btn btn-danger" style="flex: 1; padding: 8px; font-size: 13px;" onclick="unpublishSingleGame(${g.id})">
+                  <i class="fa-solid fa-arrow-rotate-left"></i> 取消隐藏
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderPaginationControls(totalPages) {
+      const container = document.getElementById('pageButtonsContainer');
+      if (!container) return;
+
+      if (totalPages <= 1) {
+        container.innerHTML = `
+          <button class="page-btn" disabled><i class="fa-solid fa-chevron-left"></i> 上一页</button>
+          <select class="page-select" disabled>
+            <option value="1">第 1 / 1 页</option>
+          </select>
+          <button class="page-btn" disabled>下一页 <i class="fa-solid fa-chevron-right"></i></button>
+        `;
+        return;
+      }
+
+      let optionsHtml = '';
+      for (let p = 1; p <= totalPages; p++) {
+        optionsHtml += `<option value="${p}" ${p === currentPage ? 'selected' : ''}>第 ${p} / ${totalPages} 页</option>`;
+      }
+
+      let html = '';
+      html += `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})"><i class="fa-solid fa-chevron-left"></i> 上一页</button>`;
+      html += `<select class="page-select" onchange="goToPage(Number(this.value))">${optionsHtml}</select>`;
+      html += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">下一页 <i class="fa-solid fa-chevron-right"></i></button>`;
+
+      container.innerHTML = html;
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      renderMainView();
+    }
+
+    // ========================================================
+    // 3. 发布与复制 Modal 逻辑
+    // ========================================================
+
+    function openPublishModal(gameId) {
+      const game = gamesList.find(g => g.id === gameId);
+      if (!game) return;
+
+      activePublishGame = game;
+      const finalText = generateGameText(game);
+
+      // 自动写入剪贴板
+      copyToClipboard(finalText);
+
+      document.getElementById('modalTextPreview').innerText = finalText;
+
+      // 组装搜图搜索引擎 URL
+      const searchKey = getSearchQuery(game.game_name_cn, game.game_name_en || '');
+      document.getElementById('bingSearchBtn').href = `https://cn.bing.com/images/search?q=${searchKey}`;
+      document.getElementById('baiduSearchBtn').href = `https://image.baidu.com/search/index?tn=baiduimage&word=${searchKey}`;
+      document.getElementById('googleSearchBtn').href = `https://www.google.com/search?tbm=isch&q=${searchKey}`;
+
+      openModal('publishModal');
+    }
+
+    // 完成发布并隐藏卡片
+    async function confirmModalPublishAndHide() {
+      if (!activePublishGame || !currentUser) return;
+
+      try {
+        const res = await fetch(`${API_BASE}?action=publish_game`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account_key: currentUser.account_key,
+            game_id: activePublishGame.id
+          })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          showToast(`已成功发布并将【${activePublishGame.game_name_cn}】归档隐藏！`);
+          activePublishGame.is_published = true;
+          renderMainView();
+          closeModal('publishModal');
+        } else {
+          showToast(data.message || '发布失败', true);
+        }
+      } catch (e) {
+        console.error(e);
+        showToast('发布接口出现错误', true);
+      }
+    }
+
+    // 取消隐藏单个游戏
+    async function unpublishSingleGame(gameId) {
+      if (!currentUser) return;
+
+      try {
+        const res = await fetch(`${API_BASE}?action=unpublish_game`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account_key: currentUser.account_key,
+            game_id: gameId
+          })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          showToast('已成功取消隐藏，商品已恢复至待发布列表！');
+          const game = gamesList.find(g => g.id === gameId);
+          if (game) game.is_published = false;
+          renderMainView();
+        } else {
+          showToast(data.message || '操作失败', true);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // 打开一键恢复确认 Modal
+    function resetCurrentAccountGames() {
+      if (!currentUser) return;
+      document.getElementById('resetAccountGamesTargetName').innerText = currentUser.account_key;
+      openModal('confirmResetAccountGamesModal');
+    }
+
+    // 确认执行恢复重置该账号的所有已隐藏游戏
+    async function confirmResetCurrentAccountGames() {
+      if (!currentUser) return;
+
+      try {
+        const res = await fetch(`${API_BASE}?action=reset_account_games`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account_key: currentUser.account_key })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          showToast(`已成功恢复账号【${currentUser.account_key}】所有隐藏的游戏商品！`);
+          closeModal('confirmResetAccountGamesModal');
+          await loadGames();
+        } else {
+          showToast(data.message || '恢复失败', true);
+        }
+      } catch (e) {
+        console.error(e);
+        showToast('恢复商品请求失败', true);
+      }
+    }
+
+    // ========================================================
+    // 4. 修改自身模板 Modal
+    // ========================================================
+
+    function openEditMyTemplateModal() {
+      if (!currentUser) return;
+      originalMyTemplateText = currentUser.template_text || '';
+      document.getElementById('myTemplateTextarea').value = originalMyTemplateText;
+      openModal('editTemplateModal');
+    }
+
+    async function saveMyTemplate() {
+      if (!currentUser) return;
+      const newTpl = document.getElementById('myTemplateTextarea').value.trim();
+      if (!newTpl) {
+        showToast('模板内容不能为空', true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}?action=update_template`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account_key: currentUser.account_key,
+            template_text: newTpl
+          })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          currentUser.template_text = newTpl;
+          updateUserUI();
+          renderMainView();
+          showToast('模板修改成功，对应文案已同步更新！');
+          closeModal('editTemplateModal');
+        } else {
+          showToast(data.message || '更新失败', true);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // ========================================================
+    // 5. 管理员控制台与仪表板 Modal 逻辑
+    // ========================================================
+
+    async function openAdminModal() {
+      if (!currentUser || !currentUser.is_admin) {
+        showToast('只有 admin 角色可以进入管理员控制台', true);
+        return;
+      }
+
+      applySceneModeUI();
+      openModal('adminModal');
+      await refreshAdminDashboard();
+      await loadAccounts();
+      renderAdminAccountsTable();
+      renderAdminGamesTable();
+    }
+
+    // 切换 Admin Modal 中的 Tab 标签
+    function switchAdminTab(e, tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+
+      const btn = (e && e.currentTarget) ? e.currentTarget : (window.event ? window.event.currentTarget : null);
+      if (btn) btn.classList.add('active');
+
+      const targetTab = document.getElementById(`adminTab-${tabName}`);
+      if (targetTab) targetTab.classList.add('active');
+
+      if (tabName === 'dashboard') refreshAdminDashboard();
+      if (tabName === 'accountsManage') renderAdminAccountsTable();
+      if (tabName === 'gamesManage') renderAdminGamesTable();
+    }
+
+    // 刷新仪表板
+    async function refreshAdminDashboard() {
+      try {
+        const res = await fetch(`${API_BASE}?action=get_dashboard_stats`);
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          const stats = data.stats;
+          document.getElementById('dashTotalGames').innerText = stats.total_games;
+          document.getElementById('dashTotalAccounts').innerText = stats.total_accounts;
+          document.getElementById('dashTotalPublishes').innerText = stats.total_publishes;
+
+          const tbody = document.getElementById('dashAccountTableBody');
+          tbody.innerHTML = stats.account_details.map(a => `
+            <tr>
+              <td><code>${escapeHtml(a.account_key)}</code></td>
+              <td><span style="color: var(--success-color); font-weight: 800;">${a.published_count}</span> 款已发布归档</td>
+              <td><span style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-size: 11px;">正常运行</span></td>
+            </tr>
+          `).join('');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // 提交批量导入游戏
+    async function submitBatchImportGames() {
+      const importText = document.getElementById('batchImportTextarea').value.trim();
+      if (!importText) {
+        showToast('请输入游戏清单', true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}?action=import_games`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ import_text: importText })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          showToast(data.message || '批量导入成功！');
+          document.getElementById('batchImportTextarea').value = '';
+          await loadGames();
+          refreshAdminDashboard();
+        } else {
+          showToast(data.message || '导入失败', true);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // 管理员：渲染账号列表
+    function renderAdminAccountsTable() {
+      const tbody = document.getElementById('adminAccountsTableBody');
+      tbody.innerHTML = accountsList.map(a => `
+        <tr>
+          <td>
+            <code>${escapeHtml(a.account_key)}</code>
+            ${a.is_admin || a.account_key === 'admin' ? '<span class="badge-admin" style="margin-left: 6px; font-size: 10px; padding: 2px 5px; background-color: var(--xianyu-yellow); color: #000; border-radius: 4px; font-weight: 800;">ADMIN</span>' : ''}
+          </td>
+          <td>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+              <button class="btn btn-xianyu" style="padding: 4px 10px; font-size: 12px;" onclick="openAdminEditTemplateModal('${escapeJsString(a.account_key)}')">
+                <i class="fa-solid fa-file-pen"></i> 查看/修改模板
+              </button>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="editAccountKey('${escapeJsString(a.account_key)}')">
+                <i class="fa-solid fa-pen-to-square"></i> 修改用户名
+              </button>
+              ${(!a.is_admin && a.account_key !== 'admin') ? `
+                <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="deleteSubAccount('${escapeJsString(a.account_key)}')">
+                  <i class="fa-solid fa-trash"></i> 删除账号
+                </button>
+              ` : '<span style="color: #94a3b8; font-size: 12px; align-self: center;">[管理账号]</span>'}
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // 管理员：查看/修改指定用户的模板 Modal
+    let targetAdminEditTemplateUser = '';
+    function openAdminEditTemplateModal(accountKey) {
+      targetAdminEditTemplateUser = accountKey;
+      const acc = accountsList.find(a => a.account_key === accountKey);
+      originalAdminTemplateText = acc ? (acc.template_text || '') : '';
+      document.getElementById('adminEditTemplateTargetUser').innerText = accountKey;
+      document.getElementById('adminEditTemplateTextarea').value = originalAdminTemplateText;
+      openModal('adminEditTemplateModal');
+    }
+
+    async function confirmAdminSaveTemplate() {
+      if (!targetAdminEditTemplateUser) return;
+      const newTpl = document.getElementById('adminEditTemplateTextarea').value.trim();
+      if (!newTpl) {
+        showToast('模板内容不能为空', true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}?action=update_template`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account_key: targetAdminEditTemplateUser,
+            template_text: newTpl
+          })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          showToast(`用户【${targetAdminEditTemplateUser}】的模板已成功更新！`);
+          closeModal('adminEditTemplateModal');
+
+          if (currentUser && currentUser.account_key === targetAdminEditTemplateUser) {
+            currentUser.template_text = newTpl;
+            updateUserUI();
+            renderMainView();
+          }
+
+          await loadAccounts();
+          renderAdminAccountsTable();
+        } else {
+          showToast(data.message || '更新模板失败', true);
+        }
+      } catch (e) {
+        console.error(e);
+        showToast('修改模板请求失败', true);
+      }
+    }
+
+    // 管理员：修改用户名 Modal 弹窗逻辑
+    let targetEditOldUsername = '';
+    function editAccountKey(oldKey) {
+      targetEditOldUsername = oldKey;
+      document.getElementById('editOldUsernameDisplay').innerText = oldKey;
+      document.getElementById('editNewUsernameInput').value = oldKey;
+      openModal('editUsernameModal');
+    }
+
+    async function confirmEditUsername() {
+      const newKey = document.getElementById('editNewUsernameInput').value.trim();
+      if (!newKey) {
+        showToast('用户名不能为空', true);
+        return;
+      }
+      if (newKey === targetEditOldUsername) {
+        closeModal('editUsernameModal');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}?action=update_account_key`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            old_account_key: targetEditOldUsername,
+            new_account_key: newKey
+          })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          showToast(`账号已成功更名为【${newKey}】！`);
+          closeModal('editUsernameModal');
+
+          if (currentUser && currentUser.account_key === targetEditOldUsername) {
+            currentUser.account_key = newKey;
+            localStorage.setItem('xianyu_logged_key', newKey);
+            updateUserUI();
+            await loadGames();
+          }
+
+          await loadAccounts();
+          renderAdminAccountsTable();
+          refreshAdminDashboard();
+        } else {
+          showToast(data.message || '修改失败', true);
+        }
+      } catch (e) {
+        console.error(e);
+        showToast('修改用户名请求失败', true);
+      }
+    }
+
+    // 提交创建新账号
+    async function submitCreateAccount() {
+      const key = document.getElementById('newAccountKeyInput').value.trim();
+      const template = document.getElementById('newAccountTemplateInput').value.trim();
+
+      if (!key) {
+        showToast('请填写用户名', true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}?action=add_account`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account_key: key,
+            template_text: template
+          })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          showToast('新账号创建成功！');
+          document.getElementById('newAccountKeyInput').value = '';
+          document.getElementById('newAccountTemplateInput').value = '';
+
+          await loadAccounts();
+          renderAdminAccountsTable();
+          refreshAdminDashboard();
+        } else {
+          showToast(data.message || '创建失败', true);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // 删除账号 Modal 弹窗逻辑
+    let targetDeleteAccountKey = '';
+    function deleteSubAccount(accountKey) {
+      targetDeleteAccountKey = accountKey;
+      document.getElementById('deleteAccountTargetName').innerText = accountKey;
+      openModal('confirmDeleteAccountModal');
+    }
+
+    async function confirmDeleteAccount() {
+      if (!targetDeleteAccountKey) return;
+
+      try {
+        const res = await fetch(`${API_BASE}?action=delete_account`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account_key: targetDeleteAccountKey })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          showToast(`账号【${targetDeleteAccountKey}】已成功删除`);
+          closeModal('confirmDeleteAccountModal');
+          await loadAccounts();
+          renderAdminAccountsTable();
+          refreshAdminDashboard();
+        } else {
+          showToast(data.message || '删除失败', true);
+        }
+      } catch (e) {
+        console.error(e);
+        showToast('删除账号请求失败', true);
+      }
+    }
+
+    // 单个游戏管理
+    function renderAdminGamesTable() {
+      const tbody = document.getElementById('adminGamesTableBody');
+      const search = (document.getElementById('adminGameSearchInput')?.value || '').trim().toLowerCase();
+
+      const filtered = gamesList.filter(g => {
+        if (!search) return true;
+        const cn = (g.game_name_cn || '').toLowerCase();
+        const en = (g.game_name_en || '').toLowerCase();
+        return cn.includes(search) || en.includes(search);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">未找到匹配的游戏数据</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(g => `
+        <tr>
+          <td>${g.id}</td>
+          <td><strong>${escapeHtml(g.game_name_cn)}</strong></td>
+          <td><code>${escapeHtml(g.game_name_en || '-')}</code></td>
+          <td>
+            <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="deleteSingleGame(${g.id}, '${escapeJsString(g.game_name_cn)}')">
+              <i class="fa-solid fa-trash"></i> 删除
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function submitSingleGameAdd() {
+      const cn = document.getElementById('singleGameCnInput').value.trim();
+      const en = document.getElementById('singleGameEnInput').value.trim();
+
+      if (!cn) {
+        showToast('游戏中文名不能为空', true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}?action=add_game`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ game_name_cn: cn, game_name_en: en })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          showToast('游戏添加成功');
+          document.getElementById('singleGameCnInput').value = '';
+          document.getElementById('singleGameEnInput').value = '';
+          await loadGames();
+          renderAdminGamesTable();
+          refreshAdminDashboard();
+        } else {
+          showToast(data.message || '添加游戏失败', true);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // 删除游戏 Modal 弹窗逻辑
+    let targetDeleteGameId = null;
+    function deleteSingleGame(gameId, gameName) {
+      targetDeleteGameId = gameId;
+      document.getElementById('deleteGameTargetName').innerText = gameName || `ID: ${gameId}`;
+      openModal('confirmDeleteGameModal');
+    }
+
+    async function confirmDeleteGame() {
+      if (!targetDeleteGameId) return;
+
+      try {
+        const res = await fetch(`${API_BASE}?action=delete_game`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ game_id: targetDeleteGameId })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          showToast('游戏已成功删除');
+          closeModal('confirmDeleteGameModal');
+          await loadGames();
+          renderAdminGamesTable();
+          refreshAdminDashboard();
+        } else {
+          showToast(data.message || '删除失败', true);
+        }
+      } catch (e) {
+        console.error(e);
+        showToast('删除游戏请求失败', true);
+      }
+    }
+
+    // 清空搜索框
+    function clearSearch() {
+      const searchInput = document.getElementById('gameSearchInput');
+      if (searchInput) {
+        searchInput.value = '';
+        const clearBtn = document.getElementById('clearSearchBtn');
+        if (clearBtn) clearBtn.style.display = 'none';
+        currentPage = 1;
+        renderMainView();
+      }
+    }
+
+    // 搜索框 input 事件回调 (带 200ms 防抖)
+    let searchDebounceTimer = null;
+    function onSearchInput() {
+      const val = document.getElementById('gameSearchInput').value;
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (clearBtn) {
+        clearBtn.style.display = val ? 'block' : 'none';
+      }
+
+      if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        currentPage = 1;
+        renderMainView();
+      }, 200);
+    }
+
+    // 批量复制当前展示页面上的所有商品文案
+    function copyAllCurrentPageTexts() {
+      const searchKeyword = document.getElementById('gameSearchInput').value.trim().toLowerCase();
+      let list = [];
+      if (currentMainTab === 'unpublished') {
+        list = gamesList.filter(g => !g.is_published);
+      } else {
+        list = gamesList.filter(g => g.is_published);
+      }
+      const filtered = list.filter(g => {
+        if (!searchKeyword) return true;
+        const cn = (g.game_name_cn || '').toLowerCase();
+        const en = (g.game_name_en || '').toLowerCase();
+        return cn.includes(searchKeyword) || en.includes(searchKeyword);
+      });
+
+      if (filtered.length === 0) {
+        showToast('当前视图下没有可批量复制的商品文案', true);
+        return;
+      }
+
+      const startIndex = (currentPage - 1) * pageSize;
+      const pageItems = filtered.slice(startIndex, startIndex + pageSize);
+
+      const allTexts = pageItems.map(g => generateGameText(g)).join('\n\n' + '='.repeat(30) + '\n\n');
+      copyToClipboard(allTexts);
+      showToast(`已成功批量复制本页 ${pageItems.length} 条商品文案！`);
+    }
+
+    // ========================================================
+    // 工具函数 (模态框、剪贴板与 Toast)
+    // ========================================================
+
+    function openModal(id) {
+      document.getElementById(id).classList.add('active');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    function copyToClipboard(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(err => {
+          fallbackCopyText(text);
+        });
+      } else {
+        fallbackCopyText(text);
+      }
+    }
+
+    function fallbackCopyText(text) {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (!successful) {
+          console.warn('execCommand copy failed');
+        }
+      } catch (err) {
+        console.error('Fallback copy exception', err);
+      }
+    }
+
+    function copyToClipboardText(text, btnElement = null) {
+      copyToClipboard(text);
+      showToast('文案已成功复制到剪贴板！');
+
+      if (btnElement && btnElement instanceof HTMLElement) {
+        const originalHtml = btnElement.innerHTML;
+        btnElement.innerHTML = '<i class="fa-solid fa-check" style="color: #10b981;"></i> 已复制!';
+        btnElement.style.borderColor = '#10b981';
+        setTimeout(() => {
+          btnElement.innerHTML = originalHtml;
+          btnElement.style.borderColor = '';
+        }, 1500);
+      }
+    }
+
+    // 全局 Esc 快捷键与 Modal 点击背景关闭事件
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const activeModals = document.querySelectorAll('.modal-overlay.active');
+        activeModals.forEach(m => {
+          if (m.id === 'loginModal') {
+            const closeBtn = document.getElementById('loginModalCloseBtn');
+            if (closeBtn && closeBtn.style.display !== 'none') {
+              closeModal('loginModal');
+            }
+          } else {
+            closeModal(m.id);
+          }
+        });
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            if (overlay.id === 'loginModal') {
+              const closeBtn = document.getElementById('loginModalCloseBtn');
+              if (closeBtn && closeBtn.style.display !== 'none') {
+                closeModal('loginModal');
+              }
+            } else {
+              closeModal(overlay.id);
+            }
+          }
+        });
+      });
+    });
+
+    function showToast(msg, isError = false) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast-item';
+      if (isError) {
+        toast.style.borderColor = '#ef4444';
+      }
+      toast.innerHTML = `<i class="fa-solid ${isError ? 'fa-circle-exclamation' : 'fa-circle-check'}"></i> <span>${escapeHtml(msg)}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeJsString(str) {
+      if (!str) return '';
+      return str
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r');
+    }
+  </script>
+</body>
+</html>
