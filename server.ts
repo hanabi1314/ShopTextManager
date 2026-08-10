@@ -107,7 +107,11 @@ async function startServer() {
 
       // 2. 获取所有账号及模板
       if (action === "get_accounts") {
-        return res.json({ status: "success", accounts });
+        const accountsData = accounts.map(a => ({
+          ...a,
+          is_admin: !!(a.is_admin || a.account_key === "admin")
+        }));
+        return res.json({ status: "success", accounts: accountsData });
       }
 
       // 3. 获取游戏列表
@@ -252,23 +256,25 @@ async function startServer() {
         return res.json({ status: "success", message: `成功批量导入 ${count} 款商品` });
       }
 
-      // 9. 添加单个游戏
+      // 9. 添加单个商品
       if (action === "add_game") {
         const { game_name_cn, game_name_en } = body;
         if (!game_name_cn || !game_name_cn.trim()) {
-          return res.status(400).json({ status: "error", message: "游戏中文名不能为空" });
+          return res.status(400).json({ status: "error", message: "商品主名称不能为空" });
         }
 
         const nextId = games.length > 0 ? Math.max(...games.map(g => g.id)) + 1 : 1;
+        const cn = game_name_cn.replace(/\\n/g, "\n").trim();
+        const en = (game_name_en || "").replace(/\\n/g, "\n").trim();
 
         games.push({
           id: nextId,
-          game_name_cn: game_name_cn.trim(),
-          game_name_en: (game_name_en || "").trim(),
+          game_name_cn: cn,
+          game_name_en: en,
           is_active: 1
         });
 
-        return res.json({ status: "success", message: "游戏添加成功" });
+        return res.json({ status: "success", message: "商品添加成功" });
       }
 
       // 10. 删除游戏
@@ -280,9 +286,9 @@ async function startServer() {
         return res.json({ status: "success", message: "游戏已彻底从数据库与已隐藏记录中删除" });
       }
 
-      // 11. 添加子账号
+      // 11. 添加账号
       if (action === "add_account") {
-        const { account_key, template_text } = body;
+        const { account_key, template_text, is_admin } = body;
         if (!account_key) {
           return res.status(400).json({ status: "error", message: "账号标识 (用户名) 不能为空" });
         }
@@ -294,22 +300,56 @@ async function startServer() {
         accounts.push({
           id: Date.now(),
           account_key: account_key.trim(),
-          template_text: template_text || "【{{VAR_1}} ({{VAR_2}}) Steam正品游戏安装包 离线版/中文版】\n⚡ 自动发货 | 包含全套完整安装包+DLC扩展+终身更新\n✅ 送详细视频教程+远程协助安装 简体中文 免Steam繁琐步骤"
+          template_text: template_text || "【{{VAR_1}} ({{VAR_2}}) Steam正品游戏安装包 离线版/中文版】\n⚡ 自动发货 | 包含全套完整安装包+DLC扩展+终身更新\n✅ 送详细视频教程+远程协助安装 简体中文 免Steam繁琐步骤",
+          is_admin: !!is_admin
         });
 
         return res.json({ status: "success", message: "账号创建成功" });
       }
 
-      // 12. 删除子账号
-      if (action === "delete_account") {
-        const { account_key } = body;
-        const acc = accounts.find(a => a.account_key === account_key);
-        if (!acc || acc.is_admin || acc.account_key === "admin") {
-          return res.status(400).json({ status: "error", message: "无法删除管理员账号" });
+      // 12. 设置或取消管理员权限 (保证至少保留一个管理员)
+      if (action === "toggle_admin") {
+        const { account_key, is_admin } = body;
+        const targetKey = (account_key || "").trim();
+        if (!targetKey) {
+          return res.status(400).json({ status: "error", message: "参数缺失" });
         }
 
-        accounts = accounts.filter(a => a.account_key !== account_key);
-        publishedLogs = publishedLogs.filter(l => l.account_key !== account_key);
+        const targetAcc = accounts.find(a => a.account_key === targetKey);
+        if (!targetAcc) {
+          return res.status(404).json({ status: "error", message: "未找到该账号" });
+        }
+
+        const totalAdmins = accounts.filter(a => !!(a.is_admin || a.account_key === "admin")).length;
+        const currentTargetIsAdmin = !!(targetAcc.is_admin || targetAcc.account_key === "admin");
+
+        if (!is_admin && currentTargetIsAdmin && totalAdmins <= 1) {
+          return res.status(400).json({ status: "error", message: "操作失败：系统中至少需要保留一个管理员账号！" });
+        }
+
+        targetAcc.is_admin = !!is_admin;
+        const msg = targetAcc.is_admin ? "已成功设置为管理员！" : "已取消该账号的管理员权限！";
+        return res.json({ status: "success", message: msg, is_admin: targetAcc.is_admin });
+      }
+
+      // 13. 删除账号 (若目标为管理员，确保系统中至少保留一个管理员)
+      if (action === "delete_account") {
+        const { account_key } = body;
+        const targetKey = (account_key || "").trim();
+        const acc = accounts.find(a => a.account_key === targetKey);
+        if (!acc) {
+          return res.status(404).json({ status: "error", message: "未找到该账号" });
+        }
+
+        const isTargetAdmin = !!(acc.is_admin || acc.account_key === "admin");
+        const totalAdmins = accounts.filter(a => !!(a.is_admin || a.account_key === "admin")).length;
+
+        if (isTargetAdmin && totalAdmins <= 1) {
+          return res.status(400).json({ status: "error", message: "无法删除：系统中至少需要保留一个管理员账号！" });
+        }
+
+        accounts = accounts.filter(a => a.account_key !== targetKey);
+        publishedLogs = publishedLogs.filter(l => l.account_key !== targetKey);
         return res.json({ status: "success", message: "账号及相关记录已成功删除" });
       }
 

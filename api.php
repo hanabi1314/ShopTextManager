@@ -1,6 +1,6 @@
 <?php
 /**
- * 咸鱼多账号商品快速发布与管理系统 - PHP 后端 API 接口
+ * 卖家多账号商品快速发布与管理系统 - PHP 后端 API 接口
  * 数据库连接配置与 RESTful 响应处理
  */
 
@@ -14,12 +14,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// 数据库连接配置
-$db_host = '127.0.0.1';
-$db_user = 'root';
-$db_pass = 'root';
-$db_name = 'xianyu_db';
-$db_port = 3306;
+// 数据库连接配置 (可直接修改以下默认值，或通过环境变量 DB_HOST / DB_USER / DB_PASS / DB_NAME 配置)
+$db_host = getenv('DB_HOST') ?: '127.0.0.1';
+$db_port = getenv('DB_PORT') ?: '3306';
+$db_name = getenv('DB_NAME') ?: 'xianyu_db';
+$db_user = getenv('DB_USER') ?: 'root';
+$db_pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : 'root';
 
 try {
     $pdo = new PDO("mysql:host={$db_host};port={$db_port};dbname={$db_name};charset=utf8mb4", $db_user, $db_pass, [
@@ -61,13 +61,14 @@ switch ($action) {
         if (!$user) {
             // 如果是 admin，自动创建 admin 初始账号
             if ($username === 'admin') {
-                $stmt = $pdo->prepare("INSERT INTO templates (account_key, template_text) VALUES (?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO templates (account_key, template_text, is_admin) VALUES (?, ?, 1)");
                 $defaultAdminTpl = "【{{VAR_1}} ({{VAR_2}}) Steam正品游戏安装包 离线版/中文版】\n⚡ 自动发货 | 包含全套完整安装包+DLC扩展+终身更新\n✅ 送详细视频教程+远程协助安装 简体中文 免Steam繁琐步骤\n✅ 拍下即发 极速下载 随时随地畅玩！";
                 $stmt->execute(['admin', $defaultAdminTpl]);
 
                 $user = [
                     'account_key' => 'admin',
-                    'template_text' => $defaultAdminTpl
+                    'template_text' => $defaultAdminTpl,
+                    'is_admin' => 1
                 ];
             } else {
                 jsonResponse(['status' => 'error', 'message' => '账号不存在，请联系管理员在控制台添加！'], 404);
@@ -90,8 +91,11 @@ switch ($action) {
     // 2. 获取账号列表及模版
     // ----------------------------------------------------
     case 'get_accounts':
-        $stmt = $pdo->query("SELECT id, account_key, template_text, created_at FROM templates ORDER BY id ASC");
+        $stmt = $pdo->query("SELECT id, account_key, template_text, is_admin, created_at FROM templates ORDER BY id ASC");
         $accounts = $stmt->fetchAll();
+        foreach ($accounts as &$a) {
+            $a['is_admin'] = ($a['account_key'] === 'admin' || !empty($a['is_admin']));
+        }
         jsonResponse(['status' => 'success', 'accounts' => $accounts]);
         break;
 
@@ -263,20 +267,24 @@ switch ($action) {
         break;
 
     // ----------------------------------------------------
-    // 9. 单个添加游戏
+    // 9. 单个添加商品
     // ----------------------------------------------------
     case 'add_game':
         $game_name_cn = trim($input['game_name_cn'] ?? '');
         $game_name_en = trim($input['game_name_en'] ?? '');
 
         if (empty($game_name_cn)) {
-            jsonResponse(['status' => 'error', 'message' => '游戏中文名不能为空'], 400);
+            jsonResponse(['status' => 'error', 'message' => '商品主名称不能为空'], 400);
         }
+
+        // 支持 \n 字符串与真实换行符
+        $game_name_cn = str_replace('\n', "\n", $game_name_cn);
+        $game_name_en = str_replace('\n', "\n", $game_name_en);
 
         $stmt = $pdo->prepare("INSERT INTO games (game_name_cn, game_name_en, is_active) VALUES (?, ?, 1)");
         $stmt->execute([$game_name_cn, $game_name_en]);
 
-        jsonResponse(['status' => 'success', 'message' => '游戏添加成功']);
+        jsonResponse(['status' => 'success', 'message' => '商品添加成功']);
         break;
 
     // ----------------------------------------------------
@@ -295,23 +303,24 @@ switch ($action) {
         break;
 
     // ----------------------------------------------------
-    // 11. 添加新子账号
+    // 11. 添加新账号 (支持设置是否为管理员)
     // ----------------------------------------------------
     case 'add_account':
         $account_key = trim($input['account_key'] ?? '');
         $template_text = trim($input['template_text'] ?? '');
+        $is_admin = !empty($input['is_admin']) ? 1 : 0;
 
         if (empty($account_key)) {
             jsonResponse(['status' => 'error', 'message' => '账号标识 (用户名) 不能为空'], 400);
         }
 
         if (empty($template_text)) {
-            $template_text = "【{{GAME_CN}} ({{GAME_EN}}) 独立服务器开服出租】\n⚡ 秒级开服 | 极速延迟 | 7x24小时稳定";
+            $template_text = "【{{VAR_1}} ({{VAR_2}}) Steam正品游戏安装包 离线版/中文版】\n⚡ 自动发货 | 包含全套完整安装包+DLC扩展+终身更新\n✅ 送详细视频教程+远程协助安装 简体中文 免Steam繁琐步骤";
         }
 
         try {
-            $stmt = $pdo->prepare("INSERT INTO templates (account_key, template_text) VALUES (?, ?)");
-            $stmt->execute([$account_key, $template_text]);
+            $stmt = $pdo->prepare("INSERT INTO templates (account_key, template_text, is_admin) VALUES (?, ?, ?)");
+            $stmt->execute([$account_key, $template_text, $is_admin]);
             jsonResponse(['status' => 'success', 'message' => '账号创建成功']);
         } catch (Exception $e) {
             jsonResponse(['status' => 'error', 'message' => '账号标识 (用户名) 已存在，请换一个'], 400);
@@ -319,16 +328,74 @@ switch ($action) {
         break;
 
     // ----------------------------------------------------
-    // 12. 删除子账号
+    // 12. 设置或取消管理员权限 (保证至少保留一个管理员)
+    // ----------------------------------------------------
+    case 'toggle_admin':
+        $account_key = trim($input['account_key'] ?? '');
+        $is_admin = !empty($input['is_admin']);
+
+        if (empty($account_key)) {
+            jsonResponse(['status' => 'error', 'message' => '参数缺失'], 400);
+        }
+
+        // 查询所有账号统计当前管理员总数
+        $stmtAdmins = $pdo->query("SELECT account_key, is_admin FROM templates");
+        $allAccounts = $stmtAdmins->fetchAll();
+        $adminCount = 0;
+        $targetIsAdmin = false;
+        foreach ($allAccounts as $acc) {
+            if ($acc['account_key'] === 'admin' || !empty($acc['is_admin'])) {
+                $adminCount++;
+                if ($acc['account_key'] === $account_key) {
+                    $targetIsAdmin = true;
+                }
+            }
+        }
+
+        // 如果要取消管理员且该账号本身是管理员，且当前只剩下 1 个管理员
+        if (!$is_admin && $targetIsAdmin && $adminCount <= 1) {
+            jsonResponse(['status' => 'error', 'message' => '操作失败：系统中至少需要保留一个管理员账号！'], 400);
+        }
+
+        $stmtUpdate = $pdo->prepare("UPDATE templates SET is_admin = ? WHERE account_key = ?");
+        $stmtUpdate->execute([$is_admin ? 1 : 0, $account_key]);
+
+        $msg = $is_admin ? '已成功设置为管理员！' : '已取消该账号的管理员权限！';
+        jsonResponse(['status' => 'success', 'message' => $msg, 'is_admin' => $is_admin]);
+        break;
+
+    // ----------------------------------------------------
+    // 13. 删除账号 (若目标为管理员，确保系统中至少保留一个管理员)
     // ----------------------------------------------------
     case 'delete_account':
         $account_key = trim($input['account_key'] ?? '');
-        if (empty($account_key) || $account_key === 'admin') {
-            jsonResponse(['status' => 'error', 'message' => '无法删除 admin 根账号'], 400);
+        if (empty($account_key)) {
+            jsonResponse(['status' => 'error', 'message' => '参数缺失'], 400);
+        }
+
+        // 查询所有账号统计当前管理员总数
+        $stmtAdmins = $pdo->query("SELECT account_key, is_admin FROM templates");
+        $allAccounts = $stmtAdmins->fetchAll();
+        $adminCount = 0;
+        $targetIsAdmin = false;
+        foreach ($allAccounts as $acc) {
+            if ($acc['account_key'] === 'admin' || !empty($acc['is_admin'])) {
+                $adminCount++;
+                if ($acc['account_key'] === $account_key) {
+                    $targetIsAdmin = true;
+                }
+            }
+        }
+
+        if ($targetIsAdmin && $adminCount <= 1) {
+            jsonResponse(['status' => 'error', 'message' => '无法删除：系统中至少需要保留一个管理员账号！'], 400);
         }
 
         $stmt = $pdo->prepare("DELETE FROM templates WHERE account_key = ?");
         $stmt->execute([$account_key]);
+
+        $stmtLogs = $pdo->prepare("DELETE FROM published_logs WHERE account_key = ?");
+        $stmtLogs->execute([$account_key]);
 
         jsonResponse(['status' => 'success', 'message' => '账号已成功删除']);
         break;

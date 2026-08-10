@@ -1,70 +1,68 @@
-# 闲鱼与多平台商品文案快速发布与管理系统 🚀
-## Xianyu & Multi-Platform Product Listing & Copywriting Management System
+# ShopTextManager - 多平台商品文案快速发布与管理系统 🚀
+## Multi-Platform Product Listing & Copywriting Management System
 
 [中文文档](#-中文文档) | [English Documentation](#-english-documentation)
+
+---
+
+> 🚀 **赞助推荐 / Sponsor**:
+> **NodeHK VPN** — 专为跨境电商、外贸加速、海外平台运营及游戏节点打造的高速稳定 VPN / 节点服务。
+> 官方网站：👉 [**www.nodehk.shop**](https://www.nodehk.shop/#/auth?invite=uu1fzn9t)
 
 ---
 
 <a id="-中文文档"></a>
 ## 🇨🇳 中文文档
 
-一个专为闲鱼（咸鱼）商家、二手卖家、Steam游戏安装包卖家、虚拟商品及多账号团队打造的高效商品快速发布、动态文案模板套用与一键搜图管理系统。
+**ShopTextManager** 是一个专为卖家、跨境电商、二手商家、虚拟商品/游戏安装包卖家及多账号团队打造的高效商品快速发布、动态文案模板套用、多语言切换与一键搜图管理系统。
 
-核心采用 **“开箱即用预设 + 渐进式扩展” (Preset-First Architecture)** 架构：默认开启 **“🎮 咸鱼 Steam游戏安装包/虚拟商品”** 预设，打开即用、0配置点击；同时支持一秒切换为 **“📱 数码二手/3C”**、**“👗 服饰潮牌/中古”** 或 **“⚙️ 通用电商/自定义”** 模式，全面适配各类商品发布需求！
+核心采用 **“开箱即用预设 + 渐进式扩展” (Preset-First Architecture)** 架构：默认开启 **“🎮 Steam游戏安装包/虚拟商品”** 预设，打开即用、0配置点击；同时支持一秒切换为 **“📱 数码二手/3C”**、**“👗 服饰潮牌/中古”** 或 **“⚙️ 通用电商/自定义”** 模式，全面适配各类商品发布需求！
 
 ---
 
-### 🌟 核心设计理念：开箱即用预设 + 渐进式扩展 (Preset-First)
+### 🌟 核心设计理念与新功能特性
 
-#### 1. 🎯 默认开箱即用（0 额外配置，极速体验）
+#### 1. 🌙 灰暗/明亮模式 (Dark Mode) & 🌐 中英文双语一键切换
+- **主题切换**：支持点击顶部导航栏【暗黑模式 / 明亮模式】按钮，全局极速响应深色或浅色主题，自动持久化存储用户的视觉偏好。
+- **中英文国际化 (i18n)**：全系统界面及动态表格原生支持中英文（Chinese / English）一键无缝切换，方便跨境外贸团队及国际化商家使用。
+
+#### 2. 🛡️ 完善的管理员权限管理与安全防封禁
+- **设置/取消管理员 (Admin Management)**：超级管理员可在后台直接设定或取消任意子账号的管理员权限，且系统具备**最少保留一个管理员 (Safety Guard)** 逻辑，防止因误操作导致全站失控。
+- **重名防护与账号清理**：后台支持创建新账号（可选是否设为管理员）、重命名账号或彻底删除离职账号。
+
+#### 3. 🎯 默认开箱即用 (Preset-First 架构)
 - 系统默认开启 **“🎮 Steam游戏安装包/虚拟商品模式”**。
 - 打开即可直接使用，默认变量统一归一化为 `{{VAR_1}}` (主名称/中文), `{{VAR_2}}` (副名称/英文), `{{VAR}}` (完整组合名)。
-- 点击“一键复制并搜图”直接快捷打开游戏封面/海报图片搜索。
-
-#### 2. 🎛️ 管理员一键场景套件切换 (Scene Profiles)
-在 Admin 管理员控制台中，可随心切换 4 大内置场景套件，UI 标签、示例提示、模版变量与搜图引擎后缀将**自动无缝重载**：
-- **🎮 Steam游戏安装包模式 (默认预设)**：包含 `{{VAR_1}}` (中文名/主名称), `{{VAR_2}}` (英文名/副名称), `{{VAR}}` (完整组合名)。
-- **📱 数码二手/3C电子模式**：包含 `{{VAR_1}}` (品牌/设备名), `{{VAR_2}}` (规格型号), `{{VAR}}` (组合全名)。
-- **👗 服饰潮牌/中古闲置模式**：包含 `{{VAR_1}}` (品牌/商品名), `{{VAR_2}}` (颜色/尺码/细节), `{{VAR}}` (组合全名)。
-- **⚙️ 通用电商/自由自定义模式**：包含 `{{VAR_1}}` (主标题), `{{VAR_2}}` (副标题/参数), `{{VAR}}` (组合全名)。
-
----
-
-### 🌟 核心功能特性
-
-#### 1. 🔑 免密账号管理与角色权限隔离
-- **免密一键登录**：只需输入账号名称（如 `admin` 或子账号名字 `account_a`）即可快速登录切换。
-- **角色权限隔离**：
-  - **`admin` (超级管理员)**：拥有全局最高控制权限，包含切换场景套件、查看全局运行数据仪表板、批量/单个增删商品、新增/删除子账号、管理全站用户及模板。
-  - **子账号 (普通商家账号)**：拥有专属商品清单，支持独立修改自身的专属文案模板、一键套用文案、一键批量复制、控制本账号商品的发布与隐藏状态。
-
-#### 2. 📊 Admin 全局控制台仪表板
-- **运行数据概览**：实时统计全站商品库总数、已有账号总数、累计商品发布总次数。
-- **场景模式切换 (Scene Mode Selector)**：支持一键在 4 种预设模式间无缝切换，实时重置 UI 字段与提示文案。
-- **账号发布明细**：列表直观对比各个子账号的商品发布进度与已隐藏归档数量。
-- **一键批量导入商品**：支持在控制台直接粘贴商品清单，严格采用 `[参数1]+[参数2]` 规范格式解析（例如 `[黑神话：悟空]+[Black Myth: Wukong]`），支持 `\n` 换行符一键批量入库。
-
-#### 3. 📝 智能文案模板与多场景变量替换
-- 支持全场景变量映射与后置兼容，多套变量标签同步支持。
-- **英文/副标题空值智能清洗**：当商品无副标题或英文名时，自动智能清理模版中围绕 `{{GAME_EN}}` / `{{MODEL}}` / `{{SIZE}}` 的空括号 `()` 或多余空格，确保文案始终整洁无瑕。
-- **历史修改一键恢复**：模板弹窗编辑支持【恢复修改前】快捷按钮，轻松撤销未保存的改动。
+- 支持在 Admin 管理员控制台中一键切换 4 大预设套件 (游戏/虚拟, 数码/3C, 服饰/中古, 通用/自定义)。
 
 #### 4. 🚀 一键批量复制文案与多引擎一键搜图
-- **一键复制**：点击“复制文案”直接将生成的对应咸鱼商品描述复制到剪贴板，并带有高亮反馈提示。
+- **一键复制**：点击“复制文案”直接将生成的对应商品描述复制到剪贴板，并带有高亮反馈提示。
 - **批量复制**：支持点击“批量复制本页文案”，一次性导出当前页面全部展示商品的描述。
-- **多引擎搜图**：内置 Bing、百度图片、Google 搜图引擎快捷入口，根据当前场景模式自动拼接最佳搜图词（如海报封面、外观实拍图、细节图等）。
-- **发布自动隐藏**：确认发布后该商品自动在当前账号视图隐藏，避免重复发布。提供页码下拉框快速翻页，支持一键恢复全部隐藏商品。
+- **多引擎搜图**：内置 Bing、百度图片、Google 搜图引擎快捷入口，自动匹配最佳搜图词。
+
+#### 5. 💾 数据存储架构与隔离机制 (Storage Isolation & Configuration)
+系统采用职责清晰的分层存储架构，**彻底避免存储混淆或数据误用**：
+
+| 存储层级 | 存储介质 | 存储内容 | 隔离与配置说明 |
+| :--- | :--- | :--- | :--- |
+| **核心业务库** | MySQL 数据库 (生产模式) | 商品数据、自定义文案模板、归档发布日志、管理员账号信息 | 核心数据**统一保存在数据库**中，不依赖浏览器。通过 `.env` 或 `api.php` 设置数据库连接。 |
+| **内存体验库** | Node.js 内存 (开发/预览模式) | 快速体验测试数据 | 用于零配置本地开发或 Node.js 环境体验，重启服务即恢复初始预设。 |
+| **前端偏好层** | 浏览器 LocalStorage | 深色/浅色主题状态、当前登录账号 KEY、界面语言偏好 (i18n) | **仅用于保存 UI 界面偏好**，绝不混入核心商品数据。即使清除浏览器缓存也不影响数据库数据。 |
+
+##### ⚙️ 数据库设置方式：
+- **方式 A (环境变量配置，推荐)**：拷贝 `.env.example` 为 `.env`，修改 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` 参数。
+- **方式 B (直接修改配置)**：直接编辑 `api.php` 第 18~22 行的数据库连接变量。
 
 ---
 
 ### 🛠️ 项目文件架构
 
 ```
-├── index.html        # 前端单页应用 (采用硬朗高对比黑黄酷炫风 UI & Preset-First 场景套件引擎)
+├── index.html        # 前端单页应用 (支持 Dark Mode & 中英文 i18n 切换 & 赞助展示)
 ├── server.ts         # Node.js Express 内存后端服务 (支持本地开发与 Live Preview)
 ├── api.php           # 生产环境 PHP RESTful API 后端 (支持 MySQL 交互)
 ├── schema.sql        # MySQL 数据库建表与初始化结构脚本
-├── BAOTA_TUTORIAL.md # 宝塔面板零基础一键部署教程
+├── BAOTA_TUTORIAL.md # 宝塔面板零基础一键部署教程 (中英文)
 ├── package.json      # Node.js 项目依赖与运行脚本
 ├── tsconfig.json     # TypeScript 配置文件
 └── .env.example      # 环境变量声明示例
@@ -99,32 +97,98 @@ $db_name = 'xianyu_db';
 npm install
 npm run dev
 ```
-访问 `http://localhost:3000`，输入 `admin` 体验超级管理员控制台（支持切换 Preset 场景模式），或输入 `account_a` 体验卖家流线型发布管理！
+访问 `http://localhost:3000`，输入 `admin` 体验超级管理员控制台！
 
 ---
 
 <a id="-english-documentation"></a>
 ## 🇺🇸 English Documentation
 
-An efficient multi-account product listing, dynamic copy template generator, and image search management system designed for Xianyu (Ebay/Fleamarket platform) merchants, digital resellers, and multi-account operations teams.
+**ShopTextManager** is an efficient multi-account product listing, dynamic copy template generator, i18n localization, and image search management system designed for cross-border e-commerce, eBay/Xianyu merchants, digital resellers, and multi-account operation teams.
 
-Built with **Preset-First Architecture**: Defaults to the **Game Server / Virtual Product** preset with zero setup, while supporting instant switching to **Digital/3C**, **Fashion**, or **Custom E-commerce** modes!
-
----
-
-### 🌟 Core Philosophy: Preset-First Architecture
-
-1. **Zero Configuration Default**: Out-of-the-box support for virtual goods and game server rentals with zero extra clicks.
-2. **Scene Profiles**: Admin console supports 1-click toggling between 4 pre-configured presets (Game, Digital, Fashion, Custom) with instant UI and variable auto-reloading.
+It is powered by a **Preset-First Architecture**: enabled by default with the **"🎮 Steam Game Package / Virtual Goods"** scene preset for instant out-of-the-box usage. It also allows 1-second scene switching to **"📱 Digital & 3C"**, **"👗 Fashion & Vintage"**, or **"⚙️ General E-Commerce / Custom"** modes, fully adapting to any product listing workflow!
 
 ---
 
-### 🛠️ Tech Stack & Deployment
+### 🌟 Key Features & Architecture
 
-- **Frontend**: Single Page Application inside `index.html` with Scene Profile Engine and dark/yellow high-contrast UI.
-- **Backend (Node.js)**: `server.ts` powered by Express for dev mode.
-- **Backend (PHP)**: `api.php` providing production-ready PDO MySQL RESTful API integration.
-- **Database**: MySQL 5.7 / 8.0 schema provided in `schema.sql`.
+#### 1. 🌙 Dark Mode & 🌐 Chinese/English i18n Toggle
+- **Theme Switcher**: Click the dark/light mode toggle in the top header for instant theme switching with automatic localStorage persistence.
+- **Bilingual i18n**: Native support for seamless 1-click Chinese / English switching across all UI elements, dynamic modals, and tables—ideal for cross-border e-commerce teams.
+
+#### 2. 🛡️ Robust Admin Role Management & Safety Guard
+- **Grant / Revoke Admin**: Super admins can directly promote or demote any account in the full-featured Admin Console.
+- **Safety Guard**: Built-in protection logic ensures that at least one admin account must remain active at all times, preventing accidental lockouts.
+- **Account Operations**: Full management including creating accounts (with optional admin privileges), renaming account keys, and deleting inactive user accounts.
+
+#### 3. 🎯 Preset-First Architecture (Zero Configuration Required)
+- Ships with **"🎮 Steam Game Package / Virtual Goods Mode"** enabled by default.
+- Standardized placeholder variables: `{{VAR_1}}` (Primary Name / Chinese), `{{VAR_2}}` (Secondary Name / English), and `{{VAR}}` (Combined Title).
+- Easily switch between 4 industry scene profiles in the Admin Console (Game/Virtual, Digital/3C, Fashion/Vintage, General/Custom).
+
+#### 4. 🚀 Single-Click Copy, Page Batch Export & Multi-Engine Image Search
+- **Single-Click Copy**: Instant copy of rendered product descriptions to the clipboard with visual confirmation.
+- **Batch Export**: Export copy templates for all items on the current page with a single click ("Batch Copy Page").
+- **Multi-Engine Image Search**: Direct shortcuts to Google Images, Bing Images, and Baidu Images with automatically formatted search queries.
+
+#### 5. 💾 Storage Architecture & Configuration
+The system uses a strict tiered storage architecture to **prevent data confusion or accidental misuse**:
+
+| Layer | Storage Medium | Stored Data | Isolation & Configuration |
+| :--- | :--- | :--- | :--- |
+| **Business DB** | MySQL Database (Production) | Products, copy templates, archive logs, user roles | Core business data is **stored centrally in MySQL**. Configured via `.env` or `api.php`. |
+| **In-Memory** | Node.js Memory (Dev/Preview) | Test & demonstration data | Zero-config instant usage for local Node.js testing. Resets on server restart. |
+| **UI Preferences** | Browser LocalStorage | Dark/Light theme state, active account KEY, i18n language | **Stores visual UI preferences only**. Never mixes with product business data. |
+
+##### ⚙️ Database Configuration:
+- **Option A (Environment Variables, Recommended)**: Copy `.env.example` to `.env` and set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`.
+- **Option B (Direct Config)**: Edit database connection parameters directly in `api.php` (lines 18–22).
+
+---
+
+### 🛠️ Project File Structure
+
+```
+├── index.html        # Single-page app frontend (Dark Mode, i18n, & sponsor banner)
+├── server.ts         # Express server for Node.js dev environment & Live Preview
+├── api.php           # Production PHP RESTful API backend (MySQL PDO integration)
+├── schema.sql        # MySQL database schema & initial data bootstrap script
+├── BAOTA_TUTORIAL.md # Complete aaPanel / Baota Panel deployment guide (CN & EN)
+├── package.json      # Node.js dependencies & scripts
+├── tsconfig.json     # TypeScript configuration
+└── .env.example      # Environment variable declarations
+```
+
+---
+
+### 🚀 Deployment & Database Guide
+
+> 💡 **Using aaPanel / Baota Linux Panel?**
+> Check out the step-by-step visual tutorial: 👉 [**aaPanel Deployment Guide (BAOTA_TUTORIAL.md)**](./BAOTA_TUTORIAL.md)
+
+#### 1. Database Import (Production PHP + MySQL)
+Execute `schema.sql` on your MySQL server:
+```bash
+mysql -u root -p < schema.sql
+```
+
+#### 2. Configure PHP Database Connection
+Open `api.php` and update the database settings at the top:
+```php
+$db_host = '127.0.0.1';
+$db_port = '3306';
+$db_user = 'root';
+$db_pass = 'your_password';
+$db_name = 'xianyu_db';
+```
+
+#### 3. Local Development & Testing (Node.js Environment)
+Install dependencies and launch the dev server:
+```bash
+npm install
+npm run dev
+```
+Open `http://localhost:3000` and enter `admin` to access the Super Admin Console!
 
 ---
 

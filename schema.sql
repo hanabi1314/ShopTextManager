@@ -1,5 +1,5 @@
 -- ========================================================
--- 咸鱼多账号商品快速发布与管理系统 - 数据库建表与初始数据 SQL
+-- 卖家多账号商品快速发布与管理系统 - 数据库建表与初始数据 SQL
 -- 环境要求：MySQL 5.7 / 8.0+
 -- 编码规则：utf8mb4 / utf8mb4_unicode_ci
 -- ========================================================
@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS `games` (
 CREATE TABLE IF NOT EXISTS `templates` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `account_key` VARCHAR(50) NOT NULL UNIQUE COMMENT '账号唯一标识符/登录名，如 admin, account_a',
-  `template_text` TEXT NOT NULL COMMENT '文案模板，支持 {{GAME_CN}}, {{GAME_EN}} 占位符',
+  `template_text` TEXT NOT NULL COMMENT '文案模板，支持 {{VAR_1}}, {{VAR_2}} 占位符',
+  `is_admin` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否为管理员：1是，0否',
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='账号文案模板表';
 
@@ -50,8 +51,8 @@ INSERT INTO `games` (`id`, `game_name_cn`, `game_name_en`, `is_active`) VALUES
 ON DUPLICATE KEY UPDATE `game_name_cn` = VALUES(`game_name_cn`), `game_name_en` = VALUES(`game_name_en`);
 
 -- 插入默认账号模板 (包含 admin 超级管理员 和普通子账号模板)
-INSERT INTO `templates` (`id`, `account_key`, `template_text`) VALUES
-(1, 'admin', '【{{VAR_1}} ({{VAR_2}}) Steam正品游戏安装包 离线版/中文版】\n⚡ 自动发货 | 包含全套完整安装包+DLC扩展+终身更新\n✅ 送详细视频教程+远程协助安装 简体中文 免Steam繁琐步骤\n✅ 拍下即发 极速下载 随时随地畅玩！'),
-(2, 'account_a', '【{{VAR_1}} ({{VAR_2}}) 纯净单机中文安装包】\n⚡ 官方正品Steam分流下载 | 解压即玩 | 无毒无捆绑\n✅ 包含最新版本全套DLC + 汉化补丁 + 详细图文教程\n💬 售后客服一对一指导，包教包会！'),
-(3, 'account_b', '🔥【{{VAR_1}} ({{VAR_2}}) Steam离线极速安装包】🔥\n✨ 告别下载慢！百度网盘/迅雷/直连高速分流！\n🛠️ 自带一键启动器与全成就解锁，随时畅玩！\n需要的直接联系，拍下秒发！')
-ON DUPLICATE KEY UPDATE `template_text` = VALUES(`template_text`);
+INSERT INTO `templates` (`id`, `account_key`, `template_text`, `is_admin`) VALUES
+(1, 'admin', '【{{VAR_1}} ({{VAR_2}}) Steam正品游戏安装包 离线版/中文版】\n⚡ 自动发货 | 包含全套完整安装包+DLC扩展+终身更新\n✅ 送详细视频教程+远程协助安装 简体中文 免Steam繁琐步骤\n✅ 拍下即发 极速下载 随时随地畅玩！', 1),
+(2, 'account_a', '【{{VAR_1}} ({{VAR_2}}) 纯净单机中文安装包】\n⚡ 官方正品Steam分流下载 | 解压即玩 | 无毒无捆绑\n✅ 包含最新版本全套DLC + 汉化补丁 + 详细图文教程\n💬 售后客服一对一指导，包教包会！', 0),
+(3, 'account_b', '🔥【{{VAR_1}} ({{VAR_2}}) Steam离线极速安装包】🔥\n✨ 告别下载慢！百度网盘/迅雷/直连高速分流！\n🛠️ 自带一键启动器与全成就解锁，随时畅玩！\n需要的直接联系，拍下秒发！', 0)
+ON DUPLICATE KEY UPDATE `template_text` = VALUES(`template_text`), `is_admin` = VALUES(`is_admin`);

@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>商品文案管理系统</title>
+  <title>ShopTextManager - 商品文案管理与快速发布系统</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     /* =========================================================
        Geometric Balance Design Theme (几何平衡黑黄酷炫风)
-       主色调：咸鱼黄 (#FFDA44) | 辅助色：纯黑 (#000000 / #1a1a1a) | 灰度背景 (#f7f7f7)
+       主色调：品牌黄 (#FFDA44) | 辅助色：纯黑 (#000000 / #1a1a1a) | 灰度背景 (#f7f7f7)
        ========================================================= */
     :root {
       --xianyu-yellow: #FFDA44;
@@ -28,6 +28,395 @@
       --shadow-geo-hover: 6px 6px 0px 0px #000000;
       --shadow-geo-sm: 2px 2px 0px 0px #000000;
       --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Sponsor / Ad Banner (www.nodehk.shop) */
+    .sponsor-banner {
+      background: linear-gradient(90deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+      color: #ffffff;
+      padding: 10px 16px;
+      border-bottom: 2px solid var(--xianyu-yellow);
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      position: relative;
+      z-index: 101;
+      cursor: pointer;
+    }
+    .sponsor-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .sponsor-tag {
+      background-color: var(--xianyu-yellow);
+      color: #000000;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      box-shadow: 0 0 10px rgba(255, 218, 68, 0.4);
+      white-space: nowrap;
+    }
+    .sponsor-link {
+      background-color: var(--xianyu-yellow);
+      color: #000000 !important;
+      padding: 3px 12px;
+      border-radius: 6px;
+      font-weight: 900;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .sponsor-link:hover {
+      background-color: #ffffff;
+      color: #000000 !important;
+      transform: scale(1.05);
+    }
+
+    /* Info & Tip Boxes with Dark Mode Support */
+    .tip-box-warning {
+      background-color: #fffde6;
+      border: 2px solid var(--xianyu-black);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #1a1a1a;
+    }
+    .tip-box-info {
+      background-color: #f1f5f9;
+      border-left: 4px solid var(--xianyu-yellow);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #334155;
+      line-height: 1.5;
+    }
+    .tip-box-success {
+      background-color: #d1fae5;
+      border: 2px solid var(--xianyu-black);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #065f46;
+      font-weight: 800;
+    }
+    .admin-card-box {
+      background-color: #f8fafc;
+      padding: 16px;
+      border-radius: 8px;
+      border: 2px solid var(--xianyu-black);
+      margin-bottom: 20px;
+    }
+
+    /* Dark Mode Overrides - Comprehensive Eye-Safe Slate Palette */
+    html.dark-mode {
+      --xianyu-yellow: #FFDA44;
+      --xianyu-yellow-hover: #f5cf2d;
+      --xianyu-black: #000000;
+      --xianyu-dark-bg: #0f172a;
+      --xianyu-gray-bg: #0f172a;
+      --xianyu-card-bg: #1e293b;
+      --xianyu-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger-color: #f87171;
+      --success-color: #34d399;
+    }
+
+    html.dark-mode body {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+    }
+
+    html.dark-mode header {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border-bottom-color: var(--xianyu-yellow) !important;
+    }
+
+    html.dark-mode .logo-title {
+      color: #f8fafc !important;
+    }
+
+    html.dark-mode .logo-badge {
+      background-color: var(--xianyu-yellow) !important;
+      color: #000000 !important;
+    }
+
+    html.dark-mode .user-pill {
+      background-color: #334155 !important;
+      color: #f8fafc !important;
+      border: 1px solid #475569;
+    }
+
+    html.dark-mode .published-header-info {
+      color: #f8fafc !important;
+    }
+
+    html.dark-mode .published-header-info i {
+      color: var(--xianyu-yellow) !important;
+    }
+
+    .status-badge-active {
+      background-color: #e2e8f0;
+      color: #0f172a;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      display: inline-block;
+      border: 1px solid #cbd5e1;
+    }
+
+    html.dark-mode .status-badge-active {
+      background-color: #065f46 !important;
+      color: #a7f3d0 !important;
+      border-color: #10b981 !important;
+      font-weight: 800 !important;
+    }
+
+    .badge-user {
+      margin-left: 6px;
+      font-size: 10px;
+      padding: 2px 6px;
+      background-color: #f1f5f9;
+      color: #475569;
+      border-radius: 4px;
+      font-weight: 700;
+      border: 1px solid #cbd5e1;
+    }
+
+    html.dark-mode .badge-user {
+      background-color: #334155 !important;
+      color: #cbd5e1 !important;
+      border-color: #475569 !important;
+    }
+
+    .highlight-account-key {
+      color: #0f172a;
+      font-weight: 800;
+    }
+
+    html.dark-mode .highlight-account-key {
+      color: var(--xianyu-yellow) !important;
+    }
+
+    html.dark-mode .card,
+    html.dark-mode .game-card,
+    html.dark-mode .account-bar,
+    html.dark-mode .modal-card,
+    html.dark-mode .stat-box,
+    html.dark-mode .dash-card,
+    html.dark-mode .published-header-bar,
+    html.dark-mode .filter-bar,
+    html.dark-mode .empty-state {
+      background-color: #1e293b !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+
+    html.dark-mode .card-body {
+      background-color: #1e293b !important;
+      color: #f8fafc !important;
+    }
+
+    html.dark-mode .tip-box-warning,
+    html.dark-mode .tip-box-info,
+    html.dark-mode .tip-box-success,
+    html.dark-mode .admin-card-box {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+
+    html.dark-mode .empty-state i {
+      color: var(--xianyu-yellow) !important;
+    }
+
+    html.dark-mode .empty-state h3 {
+      color: #f8fafc !important;
+    }
+
+    html.dark-mode .game-card-header {
+      background-color: #0f172a !important;
+      border-bottom-color: #334155 !important;
+    }
+
+    html.dark-mode .form-input,
+    html.dark-mode .form-textarea,
+    html.dark-mode select.form-input,
+    html.dark-mode .search-input {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border-color: #475569 !important;
+    }
+
+    html.dark-mode .btn-outline {
+      background-color: #334155 !important;
+      color: #f8fafc !important;
+      border-color: #475569 !important;
+    }
+
+    html.dark-mode .btn-outline:hover {
+      background-color: #475569 !important;
+    }
+
+    html.dark-mode .game-card-title {
+      color: #f8fafc !important;
+    }
+
+    html.dark-mode .btn-engine-sm,
+    html.dark-mode .btn-engine {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+
+    html.dark-mode .btn-engine-sm:hover,
+    html.dark-mode .btn-engine:hover {
+      background-color: var(--xianyu-yellow) !important;
+      color: #000000 !important;
+    }
+
+    html.dark-mode .search-engines-box {
+      background-color: #0f172a !important;
+      border-color: #334155 !important;
+    }
+
+    html.dark-mode .search-engines-title {
+      color: #f8fafc !important;
+    }
+
+    html.dark-mode .modal-header,
+    html.dark-mode .modal-footer {
+      background-color: #0f172a !important;
+      border-color: #334155 !important;
+    }
+
+    html.dark-mode .pagination-bar {
+      background-color: #1e293b !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+
+    html.dark-mode .page-btn {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+
+    html.dark-mode .page-btn.active {
+      background-color: var(--xianyu-yellow) !important;
+      color: #000000 !important;
+    }
+
+    html.dark-mode .page-select {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+
+    html.dark-mode table th {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border-bottom-color: #334155 !important;
+    }
+
+    html.dark-mode table td {
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+    }
+
+    html.dark-mode code, html.dark-mode pre {
+      background-color: #0f172a !important;
+      color: #38bdf8 !important;
+      border-color: #334155 !important;
+    }
+
+    html.dark-mode .template-box {
+      background-color: #0f172a !important;
+      color: #cbd5e1 !important;
+      border-color: #334155 !important;
+    }
+
+    html.dark-mode .stats-badge {
+      background-color: #334155 !important;
+      color: #f8fafc !important;
+    }
+
+    html.dark-mode .sponsor-banner {
+      background: linear-gradient(90deg, #090d16 0%, #1e1b4b 50%, #1e293b 100%) !important;
+      border-bottom-color: var(--xianyu-yellow) !important;
+    }
+
+    html.dark-mode .sponsor-tag,
+    html.dark-mode .sponsor-tag span,
+    html.dark-mode .sponsor-tag i {
+      background-color: var(--xianyu-yellow) !important;
+      color: #000000 !important;
+    }
+
+    html.dark-mode .sponsor-link,
+    html.dark-mode .sponsor-link *,
+    html.dark-mode .sponsor-link i {
+      background-color: var(--xianyu-yellow) !important;
+      color: #000000 !important;
+    }
+
+    html.dark-mode .sponsor-text {
+      color: #f8fafc !important;
+    }
+
+    html.dark-mode .tab-btn,
+    html.dark-mode .main-tab-btn {
+      background-color: #334155;
+      color: #cbd5e1;
+      border-color: #000000;
+    }
+
+    html.dark-mode .tab-btn.active,
+    html.dark-mode .main-tab-btn.active {
+      background-color: var(--xianyu-yellow);
+      color: #000000;
+    }
+
+    html.dark-mode .text-preview-box {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+
+    html.dark-mode .modal-title,
+    html.dark-mode .modal-title span {
+      color: #f8fafc !important;
+    }
+
+    html.dark-mode strong,
+    html.dark-mode span,
+    html.dark-mode label {
+      color: inherit;
+    }
+
+    html.dark-mode #pageStatsText {
+      color: #94a3b8 !important;
+    }
+
+    html.dark-mode option {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
     }
 
     * {
@@ -894,29 +1283,39 @@
 
     @media (max-width: 640px) {
       header {
-        padding: 10px 14px;
+        padding: 8px 12px;
       }
 
       .header-container {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
       }
 
       .logo-area {
-        justify-content: space-between;
-        width: 100%;
+        gap: 6px;
+      }
+
+      .logo-badge {
+        font-size: 12px;
+        padding: 2px 6px;
       }
 
       .logo-title {
-        font-size: 15px;
+        font-size: 12px;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .header-actions {
-        width: 100%;
-        justify-content: space-between;
+        width: auto;
+        justify-content: flex-end;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
       }
 
       .header-actions .btn .btn-text {
@@ -924,15 +1323,36 @@
       }
 
       .header-actions .btn {
-        padding: 8px 12px;
-        font-size: 15px;
+        padding: 6px 10px;
+        font-size: 13px;
+        border-radius: 6px;
       }
 
       .user-pill {
-        font-size: 12px;
+        font-size: 11px;
+        padding: 4px 8px;
+        flex: initial;
+      }
+
+      .user-pill .user-prefix {
+        display: none;
+      }
+
+      .sponsor-banner {
         padding: 6px 10px;
-        flex: 1;
-        justify-content: center;
+        font-size: 12px;
+      }
+
+      .sponsor-content {
+        gap: 6px;
+      }
+
+      .sponsor-text {
+        display: inline;
+        max-width: 100%;
+        white-space: normal;
+        overflow: visible;
+        vertical-align: middle;
       }
 
       .account-bar {
@@ -1051,30 +1471,49 @@
 </head>
 <body>
 
+  <!-- 赞助广告 Banner (www.nodehk.shop) - 页面顶部醒目推荐 -->
+  <div class="sponsor-banner" onclick="window.open('https://www.nodehk.shop/#/auth?invite=uu1fzn9t', '_blank')">
+    <div class="sponsor-content">
+      <span class="sponsor-tag"><i class="fa-solid fa-bolt"></i> <span data-i18n="sponsorTag">赞助推荐</span></span>
+      <span class="sponsor-text" data-i18n="sponsorDesc">🚀 NodeHK VPN - 专为跨境电商、店铺管理与网络加速打造的高速稳定 VPN 服务：</span>
+      <a href="https://www.nodehk.shop/#/auth?invite=uu1fzn9t" target="_blank" rel="noopener noreferrer" class="sponsor-link" onclick="event.stopPropagation();">www.nodehk.shop <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+    </div>
+  </div>
+
   <!-- 顶部导航 Header -->
   <header>
     <div class="header-container">
       <div class="logo-area">
-        <span class="logo-badge">咸鱼助手</span>
-        <span class="logo-title">商品文案管理系统</span>
+        <span class="logo-badge">ShopTextManager</span>
+        <span class="logo-title" data-i18n="appSubtitle">Shop Copy Studio</span>
       </div>
 
       <div class="header-actions">
         <!-- 登录账号信息指示牌 -->
         <div class="user-pill" id="userPill">
           <i class="fa-solid fa-user"></i>
-          <span>用户名: <strong id="currentAccountKeyDisplay" style="color: var(--xianyu-yellow);">未登录</strong></span>
+          <span><span class="user-prefix" data-i18n="loginUserPrefix">用户名:</span> <strong id="currentAccountKeyDisplay" style="color: var(--xianyu-yellow);">未登录</strong></span>
           <span id="adminBadgeTag" class="badge-admin" style="display:none;">ADMIN</span>
         </div>
 
+        <!-- 深色/灰暗模式切换 -->
+        <button class="btn btn-black" id="themeToggleBtn" onclick="toggleTheme()" title="切换主题 / Toggle Theme">
+          <i class="fa-solid fa-moon" id="themeIcon"></i> <span id="themeText" class="btn-text" data-i18n="themeDark">暗黑模式</span>
+        </button>
+
+        <!-- 中英文切换 -->
+        <button class="btn btn-black" id="langToggleBtn" onclick="toggleLanguage()" title="Language / 语言切换">
+          <i class="fa-solid fa-globe"></i> <span id="langText" class="btn-text">English</span>
+        </button>
+
         <!-- 管理员控制台 (仅 admin 可见) -->
         <button class="btn btn-black" id="adminConsoleBtn" onclick="openAdminModal()" style="display: none;" title="管理员控制台">
-          <i class="fa-solid fa-gauge-high"></i> <span class="btn-text">管理员控制台</span>
+          <i class="fa-solid fa-gauge-high"></i> <span class="btn-text" data-i18n="adminConsole">管理员控制台</span>
         </button>
 
         <!-- 退出登录按钮 -->
         <button class="btn btn-danger" id="logoutBtn" onclick="logout()" style="display: none;" title="退出登录">
-          <i class="fa-solid fa-right-from-bracket"></i> <span class="btn-text">退出登录</span>
+          <i class="fa-solid fa-right-from-bracket"></i> <span class="btn-text" data-i18n="logout">退出登录</span>
         </button>
       </div>
     </div>
@@ -1087,14 +1526,14 @@
     <div class="account-bar">
       <div class="account-bar-top">
         <div class="account-info-group">
-          <span><i class="fa-solid fa-id-badge"></i> 当前登录用户 Key:</span>
+          <span><i class="fa-solid fa-id-badge"></i> <span data-i18n="loggedUserKey">当前登录用户 Key:</span></span>
           <span class="account-key-tag" id="barAccountKeyDisplay">admin</span>
         </div>
 
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           <!-- 修改当前模板按钮 -->
           <button class="btn btn-xianyu" onclick="openEditMyTemplateModal()">
-            <i class="fa-solid fa-pen-to-square"></i> 编辑我的文案模板
+            <i class="fa-solid fa-pen-to-square"></i> <span data-i18n="editMyTemplateBtn">编辑我的文案模板</span>
           </button>
         </div>
       </div>
@@ -1108,10 +1547,10 @@
     <!-- 主界面 View 切换选项卡 (待发布 vs 已隐藏商品) -->
     <div class="main-tabs-header">
       <button class="main-tab-btn active" id="tabUnpublishedBtn" onclick="switchMainTab('unpublished')">
-        <i class="fa-solid fa-store"></i> 待发布商品 (<span id="unpublishedTabCount">0</span>)
+        <i class="fa-solid fa-store"></i> <span data-i18n="tabUnpublished">待发布商品</span> (<span id="unpublishedTabCount">0</span>)
       </button>
       <button class="main-tab-btn" id="tabPublishedBtn" onclick="switchMainTab('published')">
-        <i class="fa-solid fa-eye-slash"></i> 已隐藏商品 (<span id="publishedTabCount">0</span>)
+        <i class="fa-solid fa-eye-slash"></i> <span data-i18n="tabPublished">已隐藏商品</span> (<span id="publishedTabCount">0</span>)
       </button>
     </div>
 
@@ -1119,7 +1558,7 @@
     <div class="filter-bar">
       <div class="search-input-wrapper" style="position: relative; display: flex; align-items: center; flex: 1;">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="gameSearchInput" class="search-input" placeholder="输入游戏中文/英文名称搜索..." oninput="onSearchInput()">
+        <input type="text" id="gameSearchInput" class="search-input" placeholder="输入商品名称/副名搜索..." data-i18n-placeholder="searchPlaceholder" oninput="onSearchInput()">
         <button id="clearSearchBtn" onclick="clearSearch()" style="display: none; position: absolute; right: 12px; background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 14px; padding: 4px;" title="清空搜索">
           <i class="fa-solid fa-xmark"></i>
         </button>
@@ -1127,11 +1566,11 @@
 
       <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
         <button class="btn btn-outline" onclick="copyAllCurrentPageTexts()" style="padding: 8px 14px; font-size: 12px; border-radius: 8px; background: #ffffff;">
-          <i class="fa-solid fa-file-export" style="color: var(--xianyu-yellow-dark);"></i> 批量复制本页文案
+          <i class="fa-solid fa-file-export" style="color: var(--xianyu-yellow-dark);"></i> <span data-i18n="batchCopyBtn">批量复制本页文案</span>
         </button>
 
         <div class="stats-badge" id="statsBadge">
-          已隐藏发布的商品: <strong id="publishedCount">0</strong> 款 / 待发布: <strong id="remainingCount" class="highlight">0</strong> 款
+          <span data-i18n="publishedHiddenLabel">已隐藏发布的商品:</span> <strong id="publishedCount">0</strong> / <span data-i18n="unpublishedLabel">待发布:</span> <strong id="remainingCount" class="highlight">0</strong>
         </div>
       </div>
     </div>
@@ -1148,11 +1587,11 @@
       <!-- 已隐藏分页专属重置栏 -->
       <div class="published-header-bar">
         <div class="published-header-info">
-          <i class="fa-solid fa-eye-slash" style="color: var(--xianyu-black);"></i>
-          <span>当前账号【<strong id="hiddenTabAccountKeyTag">admin</strong>】已归档隐藏的商品</span>
+          <i class="fa-solid fa-eye-slash"></i>
+          <span><span data-i18n="hiddenProductsTitlePrefix">当前账号【</span><strong id="hiddenTabAccountKeyTag" class="highlight-account-key">admin</strong><span data-i18n="hiddenProductsTitleSuffix">】已归档隐藏的商品</span></span>
         </div>
         <button class="btn btn-outline" onclick="resetCurrentAccountGames()">
-          <i class="fa-solid fa-rotate-left"></i> 一键恢复本账号所有隐藏商品
+          <i class="fa-solid fa-rotate-left"></i> <span data-i18n="restoreHiddenBtn">一键恢复本账号所有隐藏商品</span>
         </button>
       </div>
 
@@ -1173,11 +1612,11 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700;">
-          <span>每页:</span>
+          <span data-i18n="perPageLabel">每页:</span>
           <select id="pageSizeSelect" style="padding: 4px 8px; border-radius: 6px; border: 2px solid var(--xianyu-black); font-weight: 800;" onchange="changePageSize()">
-            <option value="6">6条</option>
-            <option value="12" selected>12条</option>
-            <option value="24">24条</option>
+            <option value="6">6</option>
+            <option value="12" selected>12</option>
+            <option value="24">24</option>
           </select>
         </div>
       </div>
@@ -1189,30 +1628,30 @@
   <div id="toast-container"></div>
 
   <!-- ========================================================
-       Modal 1: 强制免密登录模态框 (无账号切换下拉框)
+       Modal 1: 强制免密登录模态框
        ======================================================== -->
   <div class="modal-overlay" id="loginModal">
     <div class="modal-card" style="max-width: 440px;">
       <div class="modal-header">
         <div class="modal-title">
-          <i class="fa-solid fa-user-lock"></i> 用户登录
+          <i class="fa-solid fa-user-lock"></i> <span data-i18n="loginModalTitle">用户登录</span>
         </div>
         <button class="modal-close" id="loginModalCloseBtn" onclick="closeModal('loginModal')" style="display:none;">&times;</button>
       </div>
       <div class="modal-body">
-        <div style="background-color: #fffde6; border: 2px solid var(--xianyu-black); padding: 12px; border-radius: 8px; font-size: 13px; line-height: 1.5; color: #1a1a1a;">
+        <div class="tip-box-warning">
           <i class="fa-solid fa-circle-info" style="color: #d97706;"></i>
-          请输入您的<strong>用户名</strong>（如 <code>admin</code> 或您的子账号）进行登录。
+          <span data-i18n="loginModalTip">请输入您的<strong>用户名</strong>（如 <code>admin</code> 或您的子账号）进行登录。</span>
         </div>
 
         <div class="form-group" style="margin-top: 10px;">
-          <label class="form-label">用户名:</label>
-          <input type="text" id="loginUsernameInput" class="form-input" placeholder="例如: admin 或 account_a" value="admin" onkeydown="if(event.key==='Enter') submitLogin()" />
+          <label class="form-label" data-i18n="loginUserPrefix">用户名:</label>
+          <input type="text" id="loginUsernameInput" class="form-input" placeholder="例如: admin 或 account_a" data-i18n-placeholder="loginUsernamePlaceholder" value="admin" onkeydown="if(event.key==='Enter') submitLogin()" />
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-xianyu" style="width: 100%; padding: 12px; font-size: 15px;" onclick="submitLogin()">
-          <i class="fa-solid fa-right-to-bracket"></i> 登 录 进入系统
+          <i class="fa-solid fa-right-to-bracket"></i> <span data-i18n="loginSubmitBtn">登 录 进入系统</span>
         </button>
       </div>
     </div>
@@ -1225,12 +1664,12 @@
     <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title">
-          <i class="fa-solid fa-file-pen"></i> 修改我的文案模板
+          <i class="fa-solid fa-file-pen"></i> <span data-i18n="editTemplateModalTitle">修改我的文案模板</span>
         </div>
         <button class="modal-close" onclick="closeModal('editTemplateModal')">&times;</button>
       </div>
       <div class="modal-body">
-        <div id="myTemplateTagsTip" style="background-color: #fff9db; border: 1px solid #ffe066; padding: 12px; border-radius: 8px; font-size: 13px; color: #856404;">
+        <div id="myTemplateTagsTip" class="tip-box-warning">
           <strong>统一变量标签：</strong><br>
           • <code>{{VAR_1}}</code>：自动替换为商品的<strong>主名称/中文名/品牌</strong>（如：黑神话：悟空）<br>
           • <code>{{VAR_2}}</code>：自动替换为商品的<strong>副名称/英文名/型号</strong>（如：Black Myth: Wukong）<br>
@@ -1238,16 +1677,16 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">当前模板内容：</label>
-          <textarea id="myTemplateTextarea" class="form-textarea" rows="8" placeholder="在此输入你的专属发布文案..."></textarea>
+          <label class="form-label" data-i18n="currentTemplateLabel">当前模板内容：</label>
+          <textarea id="myTemplateTextarea" class="form-textarea" rows="8" placeholder="在此输入你的专属发布文案..." data-i18n-placeholder="templateTextareaPlaceholder"></textarea>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" style="margin-right: auto; padding: 6px 12px; font-size: 12px;" onclick="restoreOriginalMyTemplateText()">
-          <i class="fa-solid fa-rotate-left"></i> 恢复修改前
+          <i class="fa-solid fa-rotate-left"></i> <span data-i18n="restoreOriginalBtn">恢复修改前</span>
         </button>
-        <button class="btn btn-secondary" onclick="closeModal('editTemplateModal')">取消</button>
-        <button class="btn btn-xianyu" onclick="saveMyTemplate()">保存并更新界面</button>
+        <button class="btn btn-secondary" onclick="closeModal('editTemplateModal')" data-i18n="cancelBtn">取消</button>
+        <button class="btn btn-xianyu" onclick="saveMyTemplate()" data-i18n="saveTemplateBtn">保存并更新界面</button>
       </div>
     </div>
   </div>
@@ -1259,45 +1698,45 @@
     <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title">
-          <i class="fa-solid fa-paper-plane"></i> 商品已复制并准备搜图发布
+          <i class="fa-solid fa-paper-plane"></i> <span data-i18n="publishModalTitle">商品已复制并准备搜图发布</span>
         </div>
         <button class="modal-close" onclick="closeModal('publishModal')">&times;</button>
       </div>
       <div class="modal-body">
-        <div style="background-color: #d1fae5; border: 2px solid var(--xianyu-black); padding: 12px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 10px; color: #065f46; font-weight: 800;">
+        <div class="tip-box-success" style="display: flex; align-items: center; gap: 10px;">
           <i class="fa-solid fa-circle-check" style="font-size: 20px;"></i>
-          <span>最终套用文案已自动复制到剪贴板！可直接粘贴到咸鱼宝贝描述中！</span>
+          <span data-i18n="publishModalSuccessTip">最终套用文案已自动复制到剪贴板！可直接粘贴到商品描述中！</span>
         </div>
 
         <div style="margin-top: 10px;">
-          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 6px;">生成的套用文案预览：</label>
+          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 6px;" data-i18n="generatedCopyPreviewLabel">生成的套用文案预览：</label>
           <div class="text-preview-box" id="modalTextPreview"></div>
         </div>
 
         <!-- 搜图引擎快捷入口 -->
         <div class="search-engines-box">
           <div class="search-engines-title" id="modalSearchTitle">
-            <i class="fa-solid fa-images"></i> 一键快捷搜游戏海报/封面图片:
+            <i class="fa-solid fa-images"></i> <span data-i18n="quickSearchImagesTitle">一键快捷搜海报/封面图片:</span>
           </div>
           <div class="engine-btn-group">
             <a href="#" target="_blank" id="bingSearchBtn" class="btn-engine">
               <i class="fa-solid fa-magnifying-glass"></i>
-              <span>微软 Bing 搜图</span>
+              <span data-i18n="bingSearch">Bing 搜图</span>
             </a>
             <a href="#" target="_blank" id="baiduSearchBtn" class="btn-engine">
               <i class="fa-solid fa-paw"></i>
-              <span>百度图片搜索</span>
+              <span data-i18n="baiduSearch">百度搜图</span>
             </a>
             <a href="#" target="_blank" id="googleSearchBtn" class="btn-engine">
               <i class="fa-brands fa-google"></i>
-              <span>谷歌图片搜索</span>
+              <span data-i18n="googleSearch">谷歌搜图</span>
             </a>
           </div>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-xianyu" onclick="confirmModalPublishAndHide()">
-          <i class="fa-solid fa-check"></i> 完成发布并隐藏此卡片
+          <i class="fa-solid fa-check"></i> <span data-i18n="finishAndHideBtn">完成发布并隐藏此卡片</span>
         </button>
       </div>
     </div>
@@ -1310,7 +1749,7 @@
     <div class="modal-card" style="max-width: 800px;">
       <div class="modal-header">
         <div class="modal-title">
-          <i class="fa-solid fa-gears"></i> 管理员数据中心与全功能控制台
+          <i class="fa-solid fa-gears"></i> <span data-i18n="adminModalTitle">管理员数据中心与全功能控制台</span>
         </div>
         <button class="modal-close" onclick="closeModal('adminModal')">&times;</button>
       </div>
@@ -1319,16 +1758,16 @@
         <!-- 选项卡按钮组 -->
         <div class="tab-header">
           <button class="tab-btn active" onclick="switchAdminTab(event, 'dashboard')">
-            <i class="fa-solid fa-chart-pie"></i> 运行仪表板
+            <i class="fa-solid fa-chart-pie"></i> <span data-i18n="tabDashboard">运行仪表板</span>
           </button>
           <button class="tab-btn" onclick="switchAdminTab(event, 'batchImport')">
-            <i class="fa-solid fa-file-import"></i> 批量导入商品
+            <i class="fa-solid fa-file-import"></i> <span data-i18n="tabBatchImport">批量导入商品</span>
           </button>
           <button class="tab-btn" onclick="switchAdminTab(event, 'accountsManage')">
-            <i class="fa-solid fa-users-gear"></i> 用户名与模板管理
+            <i class="fa-solid fa-users-gear"></i> <span data-i18n="tabAccountsManage">用户名与模板管理</span>
           </button>
           <button class="tab-btn" onclick="switchAdminTab(event, 'gamesManage')">
-            <i class="fa-solid fa-boxes-packing"></i> 单个商品管理
+            <i class="fa-solid fa-boxes-packing"></i> <span data-i18n="tabGamesManage">单个商品管理</span>
           </button>
         </div>
 
@@ -1336,20 +1775,20 @@
         <div class="tab-content active" id="adminTab-dashboard">
 
           <!-- 系统预设模式 / 行业场景套件切换 -->
-          <div style="background-color: #fffde6; border: 2px solid var(--xianyu-black); padding: 14px; border-radius: 10px; margin-bottom: 20px; box-shadow: var(--shadow-geo-sm);">
+          <div class="tip-box-warning" style="margin-bottom: 20px;">
             <div style="font-weight: 800; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-              <span><i class="fa-solid fa-sliders" style="color: var(--xianyu-black);"></i> 系统当前预设模式 / 行业场景套件:</span>
+              <span><i class="fa-solid fa-sliders"></i> <span data-i18n="sceneModeTitle">系统当前预设模式 / 行业场景套件:</span></span>
               <span class="logo-badge" id="currentSceneBadge">🎮 Steam游戏安装包模式</span>
             </div>
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-              <select id="sceneModeSelect" class="form-input" style="flex: 1; font-weight: 800; border: 2px solid var(--xianyu-black); background: #ffffff;" onchange="changeSceneMode(this.value)">
-                <option value="game_mode">🎮 咸鱼 Steam游戏安装包/虚拟商品模式 (系统默认预设)</option>
+              <select id="sceneModeSelect" class="form-input" style="flex: 1; font-weight: 800;" onchange="changeSceneMode(this.value)">
+                <option value="game_mode">🎮 Steam游戏安装包/虚拟商品模式 (系统默认预设)</option>
                 <option value="digital_mode">📱 数码二手/3C电子商品模式</option>
                 <option value="fashion_mode">👗 服饰潮牌/中古闲置模式</option>
                 <option value="custom_mode">⚙️ 通用电商/自由自定义模式</option>
               </select>
             </div>
-            <div style="font-size: 12px; color: #666; margin-top: 8px;">
+            <div style="font-size: 12px; margin-top: 8px; opacity: 0.85;" data-i18n="sceneModeTip">
               💡 <strong>开箱即用保障：</strong>系统默认启用“Steam游戏安装包模式”。切换场景后，表格列名、输入提示、文案变量及搜图建议词将实时联动适应。
             </div>
           </div>
@@ -1357,25 +1796,25 @@
           <div class="dashboard-cards">
             <div class="dash-card">
               <div class="num" id="dashTotalGames">0</div>
-              <div class="label">数据库商品总数</div>
+              <div class="label" data-i18n="dashDbTotal">数据库商品总数</div>
             </div>
             <div class="dash-card">
               <div class="num" id="dashTotalAccounts">0</div>
-              <div class="label">登记在册用户名</div>
+              <div class="label" data-i18n="dashUserKeys">登记在册用户名</div>
             </div>
             <div class="dash-card">
               <div class="num" id="dashTotalPublishes">0</div>
-              <div class="label">累计发布商品次数</div>
+              <div class="label" data-i18n="dashPublishCount">累计发布商品次数</div>
             </div>
           </div>
 
-          <label class="form-label" style="margin-top: 16px;">📊 各用户名已发布商品统计：</label>
+          <label class="form-label" style="margin-top: 16px;" data-i18n="dashUserStatsTitle">📊 各用户名已发布商品统计：</label>
           <table class="list-table">
             <thead>
               <tr>
-                <th>用户名</th>
-                <th>已发布归档数量</th>
-                <th>状态</th>
+                <th data-i18n="dashColUser">用户名</th>
+                <th data-i18n="dashColArchived">已发布归档数量</th>
+                <th data-i18n="dashColRole">状态</th>
               </tr>
             </thead>
             <tbody id="dashAccountTableBody">
@@ -1386,7 +1825,7 @@
 
         <!-- Tab 2: 一键批量导入商品 -->
         <div class="tab-content" id="adminTab-batchImport">
-          <div id="batchImportTip" style="background-color: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; border-left: 4px solid var(--xianyu-yellow);">
+          <div id="batchImportTip" class="tip-box-info" style="margin-bottom: 12px;">
             <strong>支持格式规范：</strong> 每行一款商品，使用 <code>[参数1]+[参数2]</code> 格式（例如 <code>[幻兽帕鲁]+[Palworld]</code>），支持 <code>\n</code> 换行符。<br>
             例如：<br>
             <code>[黑神话：悟空]+[Black Myth: Wukong]</code><br>
@@ -1395,32 +1834,36 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">粘贴批量商品清单：</label>
+            <label class="form-label" data-i18n="pasteBatchListLabel">粘贴批量商品清单：</label>
             <textarea id="batchImportTextarea" class="form-textarea" rows="8" placeholder="[黑神话：悟空]+[Black Myth: Wukong]&#10;[幻兽帕鲁]+[Palworld]&#10;[赛博朋克2077]+[Cyberpunk 2077]"></textarea>
           </div>
 
           <button class="btn btn-xianyu" onclick="submitBatchImportGames()">
-            <i class="fa-solid fa-upload"></i> 一键解析并批量写入库
+            <i class="fa-solid fa-upload"></i> <span data-i18n="batchImportSubmitBtn">一键解析并批量写入库</span>
           </button>
         </div>
 
         <!-- Tab 3: 用户名与模板管理 -->
         <div class="tab-content" id="adminTab-accountsManage">
-          <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border: 2px solid var(--xianyu-black); margin-bottom: 20px;">
-            <div style="font-weight: 800; font-size: 14px; margin-bottom: 10px;"><i class="fa-solid fa-user-plus"></i> 添加新账号：</div>
+          <div class="admin-card-box">
+            <div style="font-weight: 800; font-size: 14px; margin-bottom: 10px;"><i class="fa-solid fa-user-plus"></i> <span data-i18n="addNewUserTitle">添加新账号：</span></div>
             <div style="margin-bottom: 10px;">
-              <input type="text" id="newAccountKeyInput" class="form-input" placeholder="用户名 (如: account_c)">
+              <input type="text" id="newAccountKeyInput" class="form-input" placeholder="用户名 (如: account_c)" data-i18n-placeholder="newUsernamePlaceholder">
             </div>
-            <textarea id="newAccountTemplateInput" class="form-textarea" rows="3" placeholder="初始模板内容 (留空使用默认模板)"></textarea>
-            <button class="btn btn-xianyu" style="margin-top: 10px;" onclick="submitCreateAccount()">确认添加账号</button>
+            <textarea id="newAccountTemplateInput" class="form-textarea" rows="3" placeholder="初始模板内容 (留空使用默认模板)" data-i18n-placeholder="newTemplatePlaceholder"></textarea>
+            <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="newAccountIsAdminInput" style="width: 16px; height: 16px; cursor: pointer;">
+              <label for="newAccountIsAdminInput" style="font-size: 13px; font-weight: 800; cursor: pointer; user-select: none;" data-i18n="setAdminCheckbox">设为管理员账号 (ADMIN)</label>
+            </div>
+            <button class="btn btn-xianyu" style="margin-top: 12px;" onclick="submitCreateAccount()"><span data-i18n="addAccountBtn">确认添加账号</span></button>
           </div>
 
-          <label class="form-label">所有用户名列表：</label>
+          <label class="form-label" data-i18n="allUsersListTitle">所有用户名列表：</label>
           <table class="list-table">
             <thead>
               <tr>
-                <th>用户名</th>
-                <th>动作</th>
+                <th data-i18n="colUserKey">用户名</th>
+                <th data-i18n="colActions">动作</th>
               </tr>
             </thead>
             <tbody id="adminAccountsTableBody">
@@ -1429,12 +1872,12 @@
           </table>
         </div>
 
-        <!-- Tab 4: 单个游戏管理 -->
+        <!-- Tab 4: 单个商品管理 -->
         <div class="tab-content" id="adminTab-gamesManage">
-          <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
-            <input type="text" id="singleGameCnInput" class="form-input" style="flex: 1; min-width: 160px;" placeholder="中文游戏名称 (如: 幻兽帕鲁)">
-            <input type="text" id="singleGameEnInput" class="form-input" style="flex: 1; min-width: 160px;" placeholder="英文游戏名称 (如: Palworld)">
-            <button class="btn btn-xianyu" onclick="submitSingleGameAdd()"><i class="fa-solid fa-plus"></i> 添加游戏</button>
+          <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: flex-start;">
+            <textarea id="singleGameCnInput" class="form-textarea" rows="2" style="flex: 1; min-width: 160px; resize: vertical;" placeholder="商品主名称 (如: 黑神话：悟空，支持 \n 换行)"></textarea>
+            <textarea id="singleGameEnInput" class="form-textarea" rows="2" style="flex: 1; min-width: 160px; resize: vertical;" placeholder="商品副名称 (如: Black Myth: Wukong，支持 \n 换行)"></textarea>
+            <button class="btn btn-xianyu" style="height: 42px; margin-top: 2px;" onclick="submitSingleGameAdd()"><i class="fa-solid fa-plus"></i> <span data-i18n="addItemBtn">添加商品</span></button>
           </div>
 
           <div style="margin-bottom: 12px; position: relative;">
@@ -1445,10 +1888,10 @@
           <table class="list-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th data-i18n="colId">ID</th>
                 <th id="adminTableColCnHeader">中文名称</th>
                 <th id="adminTableColEnHeader">英文名称</th>
-                <th>操作</th>
+                <th data-i18n="colOps">操作</th>
               </tr>
             </thead>
             <tbody id="adminGamesTableBody">
@@ -1459,7 +1902,7 @@
 
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('adminModal')">关闭</button>
+        <button class="btn btn-secondary" onclick="closeModal('adminModal')" data-i18n="closeBtn">关闭</button>
       </div>
     </div>
   </div>
@@ -1469,22 +1912,22 @@
     <div class="modal-card" style="max-width: 440px;">
       <div class="modal-header">
         <div class="modal-title">
-          <i class="fa-solid fa-pen-to-square"></i> 修改用户名
+          <i class="fa-solid fa-pen-to-square"></i> <span data-i18n="editUsernameTitle">修改用户名</span>
         </div>
         <button class="modal-close" onclick="closeModal('editUsernameModal')">&times;</button>
       </div>
       <div class="modal-body">
         <div style="font-size: 13px; margin-bottom: 10px; color: var(--text-muted);">
-          原用户名: <strong id="editOldUsernameDisplay" style="color: var(--xianyu-black);"></strong>
+          <span data-i18n="oldUsernameLabel">原用户名:</span> <strong id="editOldUsernameDisplay" class="highlight-account-key"></strong>
         </div>
         <div class="form-group">
-          <label class="form-label">请输入新的用户名:</label>
-          <input type="text" id="editNewUsernameInput" class="form-input" placeholder="输入新的用户名..." onkeydown="if(event.key==='Enter') confirmEditUsername()" />
+          <label class="form-label" data-i18n="newUsernameLabel">请输入新的用户名:</label>
+          <input type="text" id="editNewUsernameInput" class="form-input" placeholder="输入新的用户名..." data-i18n-placeholder="newUsernameInputPlaceholder" onkeydown="if(event.key==='Enter') confirmEditUsername()" />
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('editUsernameModal')">取消</button>
-        <button class="btn btn-xianyu" onclick="confirmEditUsername()">确认修改</button>
+        <button class="btn btn-secondary" onclick="closeModal('editUsernameModal')" data-i18n="cancelBtn">取消</button>
+        <button class="btn btn-xianyu" onclick="confirmEditUsername()" data-i18n="confirmEditBtn">确认修改</button>
       </div>
     </div>
   </div>
@@ -1494,18 +1937,18 @@
     <div class="modal-card" style="max-width: 440px;">
       <div class="modal-header">
         <div class="modal-title" style="color: #ef4444;">
-          <i class="fa-solid fa-triangle-exclamation"></i> 确认删除账号
+          <i class="fa-solid fa-triangle-exclamation"></i> <span data-i18n="confirmDeleteAccountTitle">确认删除账号</span>
         </div>
         <button class="modal-close" onclick="closeModal('confirmDeleteAccountModal')">&times;</button>
       </div>
       <div class="modal-body">
         <div style="font-size: 14px; line-height: 1.6; color: var(--text-main);">
-          确定要彻底删除账号【<strong id="deleteAccountTargetName" style="color: #ef4444;"></strong>】吗？删除后不可撤销。
+          <span data-i18n="confirmDeleteAccountPrefix">确定要彻底删除账号【</span><strong id="deleteAccountTargetName" style="color: #ef4444;"></strong><span data-i18n="confirmDeleteAccountSuffix">】吗？删除后不可撤销。</span>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('confirmDeleteAccountModal')">取消</button>
-        <button class="btn btn-danger" onclick="confirmDeleteAccount()">确认删除</button>
+        <button class="btn btn-secondary" onclick="closeModal('confirmDeleteAccountModal')" data-i18n="cancelBtn">取消</button>
+        <button class="btn btn-danger" onclick="confirmDeleteAccount()" data-i18n="deleteAccount">确认删除</button>
       </div>
     </div>
   </div>
@@ -1515,18 +1958,18 @@
     <div class="modal-card" style="max-width: 440px;">
       <div class="modal-header">
         <div class="modal-title" style="color: #ef4444;">
-          <i class="fa-solid fa-triangle-exclamation"></i> 确认删除游戏
+          <i class="fa-solid fa-triangle-exclamation"></i> <span data-i18n="confirmDeleteItemTitle">确认删除商品</span>
         </div>
         <button class="modal-close" onclick="closeModal('confirmDeleteGameModal')">&times;</button>
       </div>
       <div class="modal-body">
         <div style="font-size: 14px; line-height: 1.6; color: var(--text-main);">
-          确定要从全局游戏库中彻底删除【<strong id="deleteGameTargetName" style="color: #ef4444;"></strong>】吗？
+          <span data-i18n="confirmDeleteItemPrefix">确定要从全局商品库中彻底删除【</span><strong id="deleteGameTargetName" style="color: #ef4444;"></strong><span data-i18n="confirmDeleteItemSuffix">】吗？</span>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('confirmDeleteGameModal')">取消</button>
-        <button class="btn btn-danger" onclick="confirmDeleteGame()">确认删除</button>
+        <button class="btn btn-secondary" onclick="closeModal('confirmDeleteGameModal')" data-i18n="cancelBtn">取消</button>
+        <button class="btn btn-danger" onclick="confirmDeleteGame()" data-i18n="deleteItemBtn">确认删除</button>
       </div>
     </div>
   </div>
@@ -1536,31 +1979,31 @@
     <div class="modal-card" style="max-width: 540px;">
       <div class="modal-header">
         <div class="modal-title">
-          <i class="fa-solid fa-file-pen"></i> 修改用户文案模板
+          <i class="fa-solid fa-file-pen"></i> <span data-i18n="adminEditTemplateTitle">修改用户文案模板</span>
         </div>
         <button class="modal-close" onclick="closeModal('adminEditTemplateModal')">&times;</button>
       </div>
       <div class="modal-body">
         <div style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">
-          正在查看并修改用户【<strong id="adminEditTemplateTargetUser" style="color: var(--xianyu-black);"></strong>】的专用文案模板：
+          <span data-i18n="editingUserTemplatePrefix">正在查看并修改用户【</span><strong id="adminEditTemplateTargetUser" class="highlight-account-key"></strong><span data-i18n="editingUserTemplateSuffix">】的专用文案模板：</span>
         </div>
         <div class="form-group">
-          <label class="form-label">文案模板内容：</label>
+          <label class="form-label" data-i18n="templateContentLabel">文案模板内容：</label>
           <textarea id="adminEditTemplateTextarea" class="form-textarea" rows="8" placeholder="在这里编辑该用户的文案模板..."></textarea>
         </div>
-        <div style="background-color: #f1f5f9; padding: 10px; border-radius: 6px; font-size: 12px; color: #475569; line-height: 1.5;">
+        <div class="tip-box-info" style="font-size: 12px; line-height: 1.5;">
           💡 <strong>占位符说明:</strong><br>
-          • <code>{{GAME_CN}}</code> - 替换为游戏中文名称<br>
-          • <code>{{GAME_EN}}</code> - 替换为游戏英文名称<br>
-          • <code>{{GAME}}</code> - 自动组合中文+英文名称
+          • <code>{{VAR_1}}</code> - 替换为商品主名称<br>
+          • <code>{{VAR_2}}</code> - 替换为商品副名称<br>
+          • <code>{{VAR}}</code> - 自动组合主副名称
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" style="margin-right: auto; padding: 6px 12px; font-size: 12px;" onclick="restoreOriginalAdminTemplateText()">
-          <i class="fa-solid fa-rotate-left"></i> 恢复修改前
+          <i class="fa-solid fa-rotate-left"></i> <span data-i18n="restoreOriginalBtn">恢复修改前</span>
         </button>
-        <button class="btn btn-secondary" onclick="closeModal('adminEditTemplateModal')">取消</button>
-        <button class="btn btn-xianyu" onclick="confirmAdminSaveTemplate()">保存修改</button>
+        <button class="btn btn-secondary" onclick="closeModal('adminEditTemplateModal')" data-i18n="cancelBtn">取消</button>
+        <button class="btn btn-xianyu" onclick="confirmAdminSaveTemplate()" data-i18n="saveChangesBtn">保存修改</button>
       </div>
     </div>
   </div>
@@ -1569,19 +2012,19 @@
   <div class="modal-overlay" id="confirmResetAccountGamesModal">
     <div class="modal-card" style="max-width: 440px;">
       <div class="modal-header">
-        <div class="modal-title" style="color: var(--xianyu-black);">
-          <i class="fa-solid fa-rotate-left"></i> 确认一键恢复商品
+        <div class="modal-title">
+          <i class="fa-solid fa-rotate-left"></i> <span data-i18n="confirmRestoreTitle">确认一键恢复商品</span>
         </div>
         <button class="modal-close" onclick="closeModal('confirmResetAccountGamesModal')">&times;</button>
       </div>
       <div class="modal-body">
         <div style="font-size: 14px; line-height: 1.6; color: var(--text-main);">
-          确定要将账号【<strong id="resetAccountGamesTargetName" style="color: var(--xianyu-black);"></strong>】所有已隐藏的商品全部重新恢复到待发布列表吗？
+          <span data-i18n="confirmRestorePrefix">确定要将账号【</span><strong id="resetAccountGamesTargetName" class="highlight-account-key"></strong><span data-i18n="confirmRestoreSuffix">】所有已隐藏的商品全部重新恢复到待发布列表吗？</span>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('confirmResetAccountGamesModal')">取消</button>
-        <button class="btn btn-xianyu" onclick="confirmResetCurrentAccountGames()">确认恢复</button>
+        <button class="btn btn-secondary" onclick="closeModal('confirmResetAccountGamesModal')" data-i18n="cancelBtn">取消</button>
+        <button class="btn btn-xianyu" onclick="confirmResetCurrentAccountGames()" data-i18n="confirmRestoreBtn">确认恢复</button>
       </div>
     </div>
   </div>
@@ -1589,88 +2032,473 @@
   <!-- JavaScript 核心逻辑 -->
   <script>
     // ========================================================
+    // 多语言 i18n & 灰暗/明亮模式核心逻辑
+    // ========================================================
+    const I18N = {
+      cn: {
+        appSubtitle: "Shop Copy Studio",
+        sponsorTag: "赞助推荐",
+        sponsorDesc: "🚀 NodeHK VPN - 专为跨境电商、外贸及节点加速打造的高速稳定 VPN 服务：",
+        themeDark: "暗黑模式",
+        themeLight: "明亮模式",
+        loginUserPrefix: "用户名:",
+        notLoggedIn: "未登录",
+        adminConsole: "管理员控制台",
+        logout: "退出登录",
+        loggedUserKey: "当前登录用户 Key:",
+        editMyTemplateBtn: "编辑我的文案模板",
+        tabUnpublished: "待发布商品",
+        tabPublished: "已隐藏商品",
+        searchPlaceholder: "输入商品名称/副名搜索...",
+        batchCopyBtn: "批量复制本页文案",
+        publishedHiddenLabel: "已隐藏发布的商品:",
+        unpublishedLabel: "待发布:",
+        hiddenProductsTitlePrefix: "当前账号【",
+        hiddenProductsTitleSuffix: "】已归档隐藏的商品",
+        restoreHiddenBtn: "一键恢复本账号所有隐藏商品",
+        perPageLabel: "每页:",
+        loginModalTitle: "用户登录",
+        loginModalTip: "请输入您的用户名（如 admin 或您的子账号）进行登录。",
+        loginSubmitBtn: "登 录 进入系统",
+        loginUsernamePlaceholder: "例如: admin 或 account_a",
+        editTemplateModalTitle: "修改我的文案模板",
+        currentTemplateLabel: "当前模板内容：",
+        templateTextareaPlaceholder: "在此输入你的专属发布文案...",
+        saveTemplateBtn: "保存并更新界面",
+        restoreOriginalBtn: "恢复修改前",
+        cancelBtn: "取消",
+        confirmBtn: "确认",
+        closeBtn: "关闭",
+        publishModalTitle: "商品已复制并准备搜图发布",
+        publishModalSuccessTip: "最终套用文案已自动复制到剪贴板！可直接粘贴到商品描述中！",
+        generatedCopyPreviewLabel: "生成的套用文案预览：",
+        quickSearchImagesTitle: "一键快捷搜海报/封面图片:",
+        finishAndHideBtn: "完成发布并隐藏此卡片",
+        adminModalTitle: "管理员数据中心与全功能控制台",
+        tabDashboard: "运行仪表板",
+        tabBatchImport: "批量导入商品",
+        tabAccountsManage: "用户名与模板管理",
+        tabGamesManage: "单个商品管理",
+        sceneModeTitle: "系统当前预设模式 / 行业场景套件:",
+        sceneModeTip: "💡 开箱即用保障：系统默认启用“Steam游戏安装包模式”。切换场景后，表格列名、输入提示、文案变量及搜图建议词将实时联动适应。",
+        dashDbTotal: "数据库商品总数",
+        dashUserKeys: "登记在册用户名",
+        dashPublishCount: "累计发布商品次数",
+        dashUserStatsTitle: "📊 各用户名已发布商品统计：",
+        dashColUser: "用户名",
+        dashColArchived: "已发布归档数量",
+        dashColRole: "状态",
+        pasteBatchListLabel: "粘贴批量商品清单：",
+        batchImportSubmitBtn: "一键解析并批量写入库",
+        addNewUserTitle: "添加新账号：",
+        newUsernamePlaceholder: "用户名 (如: account_c)",
+        newTemplatePlaceholder: "初始模板内容 (留空使用默认模板)",
+        setAdminCheckbox: "设为管理员账号 (ADMIN)",
+        addAccountBtn: "确认添加账号",
+        allUsersListTitle: "所有用户名列表：",
+        colUserKey: "用户名",
+        colActions: "动作",
+        addItemBtn: "添加商品",
+        colId: "ID",
+        colOps: "操作",
+        editUsernameTitle: "修改用户名",
+        oldUsernameLabel: "原用户名:",
+        newUsernameLabel: "请输入新的用户名:",
+        newUsernameInputPlaceholder: "输入新的用户名...",
+        confirmEditBtn: "确认修改",
+        confirmDeleteAccountTitle: "确认删除账号",
+        confirmDeleteAccountPrefix: "确定要彻底删除账号【",
+        confirmDeleteAccountSuffix: "】吗？删除后不可撤销。",
+        confirmDeleteItemTitle: "确认删除商品",
+        confirmDeleteItemPrefix: "确定要从全局商品库中彻底删除【",
+        confirmDeleteItemSuffix: "】吗？",
+        deleteItemBtn: "确认删除",
+        adminEditTemplateTitle: "修改用户文案模板",
+        editingUserTemplatePrefix: "正在查看并修改用户【",
+        editingUserTemplateSuffix: "】的专用文案模板：",
+        templateContentLabel: "文案模板内容：",
+        saveChangesBtn: "保存修改",
+        confirmRestoreTitle: "确认一键恢复商品",
+        confirmRestorePrefix: "确定要将账号【",
+        confirmRestoreSuffix: "】所有已隐藏的商品全部重新恢复到待发布列表吗？",
+        confirmRestoreBtn: "确认恢复",
+        copyAndSearchBtn: "一键复制文案并搜图",
+        copyTextOnly: "复制文案",
+        unhideBtn: "取消隐藏",
+        bingSearch: "Bing 搜图",
+        baiduSearch: "百度搜图",
+        googleSearch: "谷歌搜图",
+        prevPage: "上一页",
+        nextPage: "下一页",
+        noPendingTitle: "无待发布的商品文案",
+        noPendingMsg: "当前账号的所有商品均已复制发布并加入已隐藏文案库！",
+        noHiddenTitle: "尚无已隐藏/已发布的商品文案",
+        noHiddenMsg: "当您在待发布列表中点击“一键复制文案并搜图”后，商品将自动记录归档在此处。",
+        goHiddenView: "前往【已隐藏商品】查看",
+        userRole: "普通账号",
+        adminRole: "管理员",
+        viewEditTpl: "查看/修改模板",
+        changeUsername: "修改用户名",
+        setAdmin: "设为管理员",
+        revokeAdmin: "取消管理员",
+        deleteAccount: "删除账号",
+        archivedHiddenTag: "[已隐藏/已归档]"
+      },
+      en: {
+        appSubtitle: "Shop Copy Studio",
+        sponsorTag: "Sponsor",
+        sponsorDesc: "🚀 NodeHK VPN - Fast & Stable Network Acceleration Service for Cross-Border Sellers:",
+        themeDark: "Dark Mode",
+        themeLight: "Light Mode",
+        loginUserPrefix: "User:",
+        notLoggedIn: "Not Logged In",
+        adminConsole: "Admin Console",
+        logout: "Logout",
+        loggedUserKey: "Current User Key:",
+        editMyTemplateBtn: "Edit My Copy Template",
+        tabUnpublished: "Pending Items",
+        tabPublished: "Hidden Items",
+        searchPlaceholder: "Search product name, subtitle...",
+        batchCopyBtn: "Batch Copy Page Text",
+        publishedHiddenLabel: "Hidden / Archived:",
+        unpublishedLabel: "Pending:",
+        hiddenProductsTitlePrefix: "Account [",
+        hiddenProductsTitleSuffix: "] Hidden Products Archive",
+        restoreHiddenBtn: "Restore All Hidden Items for Account",
+        perPageLabel: "Per Page:",
+        loginModalTitle: "User Login",
+        loginModalTip: "Enter your username (e.g. admin or sub-account) to log in.",
+        loginSubmitBtn: "Log In to System",
+        loginUsernamePlaceholder: "e.g. admin or account_a",
+        editTemplateModalTitle: "Edit My Copy Template",
+        currentTemplateLabel: "Current Template Content:",
+        templateTextareaPlaceholder: "Enter your custom template text here...",
+        saveTemplateBtn: "Save & Update UI",
+        restoreOriginalBtn: "Reset Unsaved",
+        cancelBtn: "Cancel",
+        confirmBtn: "Confirm",
+        closeBtn: "Close",
+        publishModalTitle: "Copy Generated & Ready for Image Search",
+        publishModalSuccessTip: "Copy generated and copied to clipboard! Ready to paste into product description.",
+        generatedCopyPreviewLabel: "Generated Copy Preview:",
+        quickSearchImagesTitle: "Instant Image Search Shortcuts:",
+        finishAndHideBtn: "Finish & Archive Item",
+        adminModalTitle: "Admin Dashboard & Control Center",
+        tabDashboard: "Dashboard",
+        tabBatchImport: "Batch Import",
+        tabAccountsManage: "User & Template Manager",
+        tabGamesManage: "Product List Manager",
+        sceneModeTitle: "Current Scene Preset / Industry Profile:",
+        sceneModeTip: "💡 Preset System: Switching scene profiles instantly updates column headers, variable tags, and search keywords.",
+        dashDbTotal: "Total Database Products",
+        dashUserKeys: "Registered User Accounts",
+        dashPublishCount: "Total Published Items",
+        dashUserStatsTitle: "📊 User Account Publishing Statistics:",
+        dashColUser: "Username Key",
+        dashColArchived: "Archived Items Count",
+        dashColRole: "Status",
+        pasteBatchListLabel: "Paste Batch Product List:",
+        batchImportSubmitBtn: "Parse & Batch Import All",
+        addNewUserTitle: "Add New Account:",
+        newUsernamePlaceholder: "Username (e.g. account_c)",
+        newTemplatePlaceholder: "Initial template content (leave empty for default)",
+        setAdminCheckbox: "Grant Administrator Rights (ADMIN)",
+        addAccountBtn: "Add Account",
+        allUsersListTitle: "All Registered Users:",
+        colUserKey: "Username Key",
+        colActions: "Actions",
+        addItemBtn: "Add Product",
+        colId: "ID",
+        colOps: "Operations",
+        editUsernameTitle: "Rename User",
+        oldUsernameLabel: "Current Username:",
+        newUsernameLabel: "Enter New Username:",
+        newUsernameInputPlaceholder: "Enter new username...",
+        confirmEditBtn: "Save Changes",
+        confirmDeleteAccountTitle: "Confirm Delete Account",
+        confirmDeleteAccountPrefix: "Are you sure you want to delete account [",
+        confirmDeleteAccountSuffix: "]? This action cannot be undone.",
+        confirmDeleteItemTitle: "Confirm Delete Product",
+        confirmDeleteItemPrefix: "Are you sure you want to delete [",
+        confirmDeleteItemSuffix: "] from global products?",
+        deleteItemBtn: "Delete Product",
+        adminEditTemplateTitle: "Edit User Copy Template",
+        editingUserTemplatePrefix: "Viewing & editing template for user [",
+        editingUserTemplateSuffix: "]:",
+        templateContentLabel: "Copy Template Content:",
+        saveChangesBtn: "Save Changes",
+        confirmRestoreTitle: "Confirm Restore All Items",
+        confirmRestorePrefix: "Are you sure you want to restore all hidden items for account [",
+        confirmRestoreSuffix: "] back to pending list?",
+        confirmRestoreBtn: "Confirm Restore",
+        copyAndSearchBtn: "Copy Text & Search Image",
+        copyTextOnly: "Copy Text",
+        unhideBtn: "Unhide Item",
+        bingSearch: "Bing Search",
+        baiduSearch: "Baidu Search",
+        googleSearch: "Google Search",
+        prevPage: "Prev Page",
+        nextPage: "Next Page",
+        noPendingTitle: "No Pending Copy Items",
+        noPendingMsg: "All products for this account have been copied and archived!",
+        noHiddenTitle: "No Hidden / Archived Items",
+        noHiddenMsg: "Items will appear here after clicking 'Copy Text & Search Image' in the pending list.",
+        goHiddenView: "Go to Hidden Items",
+        userRole: "Standard User",
+        adminRole: "Administrator",
+        viewEditTpl: "View / Edit Template",
+        changeUsername: "Rename User",
+        setAdmin: "Set as Admin",
+        revokeAdmin: "Revoke Admin",
+        deleteAccount: "Delete Account",
+        archivedHiddenTag: "[Hidden / Archived]"
+      }
+    };
+
+    let currentLang = localStorage.getItem('shoptext_lang') || 'cn';
+    let currentTheme = localStorage.getItem('shoptext_theme') || 'light';
+
+    function initThemeAndLang() {
+      if (currentTheme === 'dark') {
+        document.documentElement.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+      }
+      updateThemeUI();
+      applyLanguage(currentLang);
+    }
+
+    function toggleTheme() {
+      currentTheme = (currentTheme === 'dark') ? 'light' : 'dark';
+      localStorage.setItem('shoptext_theme', currentTheme);
+      if (currentTheme === 'dark') {
+        document.documentElement.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+      }
+      updateThemeUI();
+    }
+
+    function updateThemeUI() {
+      const themeIcon = document.getElementById('themeIcon');
+      const themeText = document.getElementById('themeText');
+      if (!themeIcon || !themeText) return;
+      if (currentTheme === 'dark') {
+        themeIcon.className = 'fa-solid fa-sun';
+        themeText.innerText = currentLang === 'cn' ? '明亮模式' : 'Light Mode';
+      } else {
+        themeIcon.className = 'fa-solid fa-moon';
+        themeText.innerText = currentLang === 'cn' ? '暗黑模式' : 'Dark Mode';
+      }
+    }
+
+    function toggleLanguage() {
+      currentLang = (currentLang === 'cn') ? 'en' : 'cn';
+      localStorage.setItem('shoptext_lang', currentLang);
+      applyLanguage(currentLang);
+      updateThemeUI();
+    }
+
+    function t(key) {
+      if (I18N[currentLang] && I18N[currentLang][key] !== undefined) {
+        return I18N[currentLang][key];
+      }
+      if (I18N.cn && I18N.cn[key] !== undefined) {
+        return I18N.cn[key];
+      }
+      return key;
+    }
+
+    function applyLanguage(lang) {
+      currentLang = lang;
+      document.documentElement.lang = (lang === 'cn') ? 'zh-CN' : 'en';
+
+      const langTextBtn = document.getElementById('langText');
+      if (langTextBtn) {
+        langTextBtn.innerText = lang === 'cn' ? 'English' : '中文';
+      }
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (I18N[lang] && I18N[lang][key] !== undefined) {
+          el.innerText = I18N[lang][key];
+        }
+      });
+
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (I18N[lang] && I18N[lang][key] !== undefined) {
+          el.placeholder = I18N[lang][key];
+        }
+      });
+
+      if (typeof applySceneModeUI === 'function') applySceneModeUI();
+      if (typeof renderMainView === 'function') renderMainView();
+      if (typeof refreshAdminDashboard === 'function') refreshAdminDashboard();
+      if (typeof renderAdminAccountsTable === 'function') renderAdminAccountsTable();
+      if (typeof renderAdminGamesTable === 'function') renderAdminGamesTable();
+      if (typeof updateUserUI === 'function') updateUserUI();
+    }
+
+    // ========================================================
     // 全局状态数据管理 & 预设场景套件 (Preset-First Architecture)
     // ========================================================
     const SCENE_PROFILES = {
       game_mode: {
         key: 'game_mode',
-        name: '🎮 咸鱼 Steam游戏安装包/虚拟商品模式 (系统默认预设)',
-        badge: '🎮 Steam游戏安装包模式',
-        mainTitleLabel: '游戏中文名',
-        subTitleLabel: '游戏英文名',
-        mainInputPlaceholder: '例如: 黑神话：悟空',
-        subInputPlaceholder: '例如: Black Myth: Wukong',
-        searchPlaceholder: '输入游戏中文/英文名称搜索...',
-        tags: [
-          { tag: '{{VAR_1}}', desc: '商品主名称/中文名（如：黑神话：悟空）' },
-          { tag: '{{VAR_2}}', desc: '商品副名称/英文名（如：Black Myth: Wukong）' },
-          { tag: '{{VAR}}', desc: '完整组合名称（如：黑神话：悟空 (Black Myth: Wukong)）' }
-        ],
-        defaultTemplate: "【{{VAR_1}} ({{VAR_2}}) Steam正品游戏安装包 离线版/中文版】\n⚡ 自动发货 | 包含全套完整安装包+DLC扩展+终身更新\n✅ 送详细视频教程+远程协助安装 简体中文 免Steam繁琐步骤\n✅ 拍下即发 极速下载 随时随地畅玩！",
         searchSuffix: '海报 封面',
-        searchTitle: '一键快捷搜游戏海报/封面图片',
-        batchImportPlaceholder: "[黑神话：悟空]+[Black Myth: Wukong]\n[幻兽帕鲁]+[Palworld]\n[艾尔登法环]+[Elden Ring]\n[赛博朋克2077]+[Cyberpunk 2077]",
-        batchImportTip: "<strong>支持格式规范：</strong> 每行一款 Steam 游戏，格式为：<code>[中文名]+[英文名]</code>（例如 <code>[幻兽帕鲁]+[Palworld]</code>），支持 <code>\\n</code> 换行。"
+        defaultTemplate: "【{{VAR_1}} ({{VAR_2}}) Steam正品游戏安装包 离线版/中文版】\n⚡ 自动发货 | 包含全套完整安装包+DLC扩展+终身更新\n✅ 送详细视频教程+远程协助安装 简体中文 免Steam繁琐步骤\n✅ 拍下即发 极速下载 随时随地畅玩！",
+        cn: {
+          name: '🎮 Steam游戏安装包/虚拟商品模式 (系统默认预设)',
+          badge: '🎮 Steam游戏安装包模式',
+          mainTitleLabel: '游戏中文名',
+          subTitleLabel: '游戏英文名',
+          mainInputPlaceholder: '例如: 黑神话：悟空',
+          subInputPlaceholder: '例如: Black Myth: Wukong',
+          searchPlaceholder: '输入游戏中文/英文名称搜索...',
+          searchTitle: '一键快捷搜游戏海报/封面图片',
+          batchImportPlaceholder: "[黑神话：悟空]+[Black Myth: Wukong]\n[幻兽帕鲁]+[Palworld]\n[艾尔登法环]+[Elden Ring]\n[赛博朋克2077]+[Cyberpunk 2077]",
+          batchImportTip: "<strong>支持格式规范：</strong> 每行一款 Steam 游戏，格式为：<code>[中文名]+[英文名]</code>（例如 <code>[幻兽帕鲁]+[Palworld]</code>），支持 <code>\\n</code> 换行。",
+          tags: [
+            { tag: '{{VAR_1}}', desc: '商品主名称/中文名（如：黑神话：悟空）' },
+            { tag: '{{VAR_2}}', desc: '商品副名称/英文名（如：Black Myth: Wukong）' },
+            { tag: '{{VAR}}', desc: '完整组合名称（如：黑神话：悟空 (Black Myth: Wukong)）' }
+          ]
+        },
+        en: {
+          name: '🎮 Steam Game Package / Digital Goods Mode (Default)',
+          badge: '🎮 Steam Game Mode',
+          mainTitleLabel: 'Product Main Title',
+          subTitleLabel: 'Product Sub Title',
+          mainInputPlaceholder: 'e.g. Black Myth: Wukong',
+          subInputPlaceholder: 'e.g. Black Myth: Wukong',
+          searchPlaceholder: 'Search product main or sub title...',
+          searchTitle: 'Quick Search Game Cover / Poster Images',
+          batchImportPlaceholder: "[Black Myth: Wukong]+[Black Myth: Wukong]\n[Palworld]+[Palworld]\n[Elden Ring]+[Elden Ring]\n[Cyberpunk 2077]+[Cyberpunk 2077]",
+          batchImportTip: "<strong>Format Rule:</strong> One item per line: <code>[Main Title]+[Sub Title]</code> (e.g. <code>[Palworld]+[Palworld]</code>), supports <code>\\n</code> for line breaks.",
+          tags: [
+            { tag: '{{VAR_1}}', desc: 'Main title / Chinese name (e.g. Black Myth: Wukong)' },
+            { tag: '{{VAR_2}}', desc: 'Sub title / English name (e.g. Black Myth: Wukong)' },
+            { tag: '{{VAR}}', desc: 'Combined full title (e.g. Black Myth: Wukong (English))' }
+          ]
+        }
       },
       digital_mode: {
         key: 'digital_mode',
-        name: '📱 数码二手/3C电子商品模式',
-        badge: '📱 数码/二手模式',
-        mainTitleLabel: '品牌/设备名称',
-        subTitleLabel: '型号/成色规格',
-        mainInputPlaceholder: '例如: 苹果 iPhone 15 Pro',
-        subInputPlaceholder: '例如: 256G 深空黑 99新',
-        searchPlaceholder: '输入品牌名称 / 型号规格搜索...',
-        tags: [
-          { tag: '{{VAR_1}}', desc: '品牌或设备主名称（如：苹果 iPhone 15 Pro）' },
-          { tag: '{{VAR_2}}', desc: '型号或成色规格（如：256G 深空黑 99新）' },
-          { tag: '{{VAR}}', desc: '设备组合全名（如：苹果 iPhone 15 Pro (256G 99新)）' }
-        ],
-        defaultTemplate: "【{{VAR_1}} {{VAR_2}} 99新/二手急售】\n⚡ 原装正品 | 现货秒发 | 支持验货\n✅ 成色状态：{{VAR}}，无拆无修，功能完好\n✅ 配件齐全，包邮顺丰，先到先得！",
         searchSuffix: '外观 实拍图',
-        searchTitle: '一键快捷搜设备实拍图/官方渲染图',
-        batchImportPlaceholder: "[苹果 iPhone 15 Pro]+[256G 深空黑 99新]\n[联想 拯救者Y9000P]+[i9/32G/1T/RTX4060]\n[索尼 WH-1000XM5]+[黑色 95新]",
-        batchImportTip: "<strong>支持格式规范：</strong> 每行一款商品，格式为：<code>[品牌/设备名]+[规格型号]</code>（例如 <code>[苹果 iPhone 15 Pro]+[256G 99新]</code>），支持 <code>\\n</code> 换行。"
+        defaultTemplate: "【{{VAR_1}} {{VAR_2}} 99新/二手急售】\n⚡ 原装正品 | 现货秒发 | 支持验货\n✅ 成色状态：{{VAR}}，无拆无修，功能完好\n✅ 配件齐全，包邮顺丰，先到先得！",
+        cn: {
+          name: '📱 数码二手/3C电子商品模式',
+          badge: '📱 数码/二手模式',
+          mainTitleLabel: '品牌/设备名称',
+          subTitleLabel: '型号/成色规格',
+          mainInputPlaceholder: '例如: 苹果 iPhone 15 Pro',
+          subInputPlaceholder: '例如: 256G 深空黑 99新',
+          searchPlaceholder: '输入品牌名称 / 型号规格搜索...',
+          searchTitle: '一键快捷搜设备实拍图/官方渲染图',
+          batchImportPlaceholder: "[苹果 iPhone 15 Pro]+[256G 深空黑 99新]\n[联想 拯救者Y9000P]+[i9/32G/1T/RTX4060]\n[索尼 WH-1000XM5]+[黑色 95新]",
+          batchImportTip: "<strong>支持格式规范：</strong> 每行一款商品，格式为：<code>[品牌/设备名]+[规格型号]</code>（例如 <code>[苹果 iPhone 15 Pro]+[256G 99新]</code>），支持 <code>\\n</code> 换行。",
+          tags: [
+            { tag: '{{VAR_1}}', desc: '品牌或设备主名称（如：苹果 iPhone 15 Pro）' },
+            { tag: '{{VAR_2}}', desc: '型号或成色规格（如：256G 深空黑 99新）' },
+            { tag: '{{VAR}}', desc: '设备组合全名（如：苹果 iPhone 15 Pro (256G 99新)）' }
+          ]
+        },
+        en: {
+          name: '📱 Used Electronics & 3C Digital Goods Mode',
+          badge: '📱 Digital / Electronics Mode',
+          mainTitleLabel: 'Brand / Device Name',
+          subTitleLabel: 'Model / Condition Specs',
+          mainInputPlaceholder: 'e.g. Apple iPhone 15 Pro',
+          subInputPlaceholder: 'e.g. 256GB Space Black Mint 99%',
+          searchPlaceholder: 'Search brand name or model specs...',
+          searchTitle: 'Quick Search Device Photos / Renderings',
+          batchImportPlaceholder: "[Apple iPhone 15 Pro]+[256GB Space Black Mint]\n[Lenovo Legion Y9000P]+[i9/32G/1T/RTX4060]\n[Sony WH-1000XM5]+[Black 95% New]",
+          batchImportTip: "<strong>Format Rule:</strong> One item per line: <code>[Brand/Device]+[Model/Specs]</code>, supports <code>\\n</code> for line breaks.",
+          tags: [
+            { tag: '{{VAR_1}}', desc: 'Brand or device main name (e.g. Apple iPhone 15 Pro)' },
+            { tag: '{{VAR_2}}', desc: 'Model or condition specs (e.g. 256GB Space Black)' },
+            { tag: '{{VAR}}', desc: 'Combined device name (e.g. Apple iPhone 15 Pro (256GB))' }
+          ]
+        }
       },
       fashion_mode: {
         key: 'fashion_mode',
-        name: '👗 服饰潮牌/中古闲置模式',
-        badge: '👗 服饰/潮牌模式',
-        mainTitleLabel: '商品/品牌名称',
-        subTitleLabel: '颜色/尺码材质',
-        mainInputPlaceholder: '例如: Essentials 连帽卫衣',
-        subInputPlaceholder: '例如: 燕麦灰 L码 纯棉',
-        searchPlaceholder: '输入品牌 / 颜色尺码搜索...',
-        tags: [
-          { tag: '{{VAR_1}}', desc: '服装品牌或主品名（如：Essentials 连帽卫衣）' },
-          { tag: '{{VAR_2}}', desc: '颜色/尺码/细节（如：燕麦灰 L码）' },
-          { tag: '{{VAR}}', desc: '组合全名（如：Essentials 连帽卫衣 (燕麦灰 L码)）' }
-        ],
-        defaultTemplate: "【正品现货 {{VAR_1}} / {{VAR_2}} 】\n✨ 潮流精选 | 质感十足 | 现货专拍\n✅ 细节材质：{{VAR}}\n✅ 保真支持鉴定，包邮顺丰，私信看细节图",
         searchSuffix: '上身图 细节',
-        searchTitle: '一键快捷搜服饰上身图/细节图',
-        batchImportPlaceholder: "[Essentials 连帽卫衣]+[燕麦灰 L码]\n[始祖鸟 Arc'teryx 冲锋衣]+[黑色 M码]\n[Nike Dunk Low]+[熊猫配色 42码 99新]",
-        batchImportTip: "<strong>支持格式规范：</strong> 每行一款服饰，格式为：<code>[品牌/商品名]+[颜色/尺码/细节]</code>（例如 <code>[Essentials 连帽卫衣]+[燕麦灰 L码]</code>），支持 <code>\\n</code> 换行。"
+        defaultTemplate: "【正品现货 {{VAR_1}} / {{VAR_2}} 】\n✨ 潮流精选 | 质感十足 | 现货专拍\n✅ 细节材质：{{VAR}}\n✅ 保真支持鉴定，包邮顺丰，私信看细节图",
+        cn: {
+          name: '👗 服饰潮牌/中古闲置模式',
+          badge: '👗 服饰/潮牌模式',
+          mainTitleLabel: '商品/品牌名称',
+          subTitleLabel: '颜色/尺码材质',
+          mainInputPlaceholder: '例如: Essentials 连帽卫衣',
+          subInputPlaceholder: '例如: 燕麦灰 L码 纯棉',
+          searchPlaceholder: '输入品牌 / 颜色尺码搜索...',
+          searchTitle: '一键快捷搜服饰上身图/细节图',
+          batchImportPlaceholder: "[Essentials 连帽卫衣]+[燕麦灰 L码]\n[始祖鸟 Arc'teryx 冲锋衣]+[黑色 M码]\n[Nike Dunk Low]+[熊猫配色 42码 99新]",
+          batchImportTip: "<strong>支持格式规范：</strong> 每行一款服饰，格式为：<code>[品牌/商品名]+[颜色/尺码/细节]</code>（例如 <code>[Essentials 连帽卫衣]+[燕麦灰 L码]</code>），支持 <code>\\n</code> 换行。",
+          tags: [
+            { tag: '{{VAR_1}}', desc: '服装品牌或主品名（如：Essentials 连帽卫衣）' },
+            { tag: '{{VAR_2}}', desc: '颜色/尺码/细节（如：燕麦灰 L码）' },
+            { tag: '{{VAR}}', desc: '组合全名（如：Essentials 连帽卫衣 (燕麦灰 L码)）' }
+          ]
+        },
+        en: {
+          name: '👗 Apparel, Fashion & Vintage Mode',
+          badge: '👗 Fashion / Apparel Mode',
+          mainTitleLabel: 'Product / Brand Name',
+          subTitleLabel: 'Color / Size & Material',
+          mainInputPlaceholder: 'e.g. Essentials Hoodie',
+          subInputPlaceholder: 'e.g. Oatmeal Grey Size L Cotton',
+          searchPlaceholder: 'Search brand or color/size...',
+          searchTitle: 'Quick Search Clothing Fit & Detail Photos',
+          batchImportPlaceholder: "[Essentials Hoodie]+[Oatmeal Grey Size L]\n[Arc'teryx Jacket]+[Black Size M]\n[Nike Dunk Low]+[Panda Size 42 Mint]",
+          batchImportTip: "<strong>Format Rule:</strong> One item per line: <code>[Brand/Item]+[Color/Size/Details]</code>, supports <code>\\n</code> for line breaks.",
+          tags: [
+            { tag: '{{VAR_1}}', desc: 'Apparel brand or main item (e.g. Essentials Hoodie)' },
+            { tag: '{{VAR_2}}', desc: 'Color / size / details (e.g. Oatmeal Grey Size L)' },
+            { tag: '{{VAR}}', desc: 'Combined apparel title' }
+          ]
+        }
       },
       custom_mode: {
         key: 'custom_mode',
-        name: '⚙️ 通用电商/自由自定义模式',
-        badge: '⚙️ 通用自定义模式',
-        mainTitleLabel: '商品主标题',
-        subTitleLabel: '副标题/规格参数',
-        mainInputPlaceholder: '例如: 高品质人体工学椅',
-        subInputPlaceholder: '例如: 网布可躺 带脚踏',
-        searchPlaceholder: '输入商品主标题 / 副标题搜索...',
-        tags: [
-          { tag: '{{VAR_1}}', desc: '商品主标题/核心名称' },
-          { tag: '{{VAR_2}}', desc: '副标题/附加规格参数' },
-          { tag: '{{VAR}}', desc: '主副标题组合名称' }
-        ],
-        defaultTemplate: "【{{VAR_1}} {{VAR_2}}】\n⚡ 现货特惠 | 品质保障 | 快速发货\n✅ 规格说明：{{VAR}}\n✅ 欢迎沟通询问，下单即发！",
         searchSuffix: '产品图',
-        searchTitle: '一键快捷搜商品主图/渲染图',
-        batchImportPlaceholder: "[高品质人体工学椅]+[网布可躺带脚踏]\n[智能保温杯]+[500ml 316不锈钢]\n[便携式户外蓝牙音箱]+[防水续航12小时]",
-        batchImportTip: "<strong>支持格式规范：</strong> 每行一件商品，格式为：<code>[主标题]+[副标题/参数]</code>（例如 <code>[高品质人体工学椅]+[网布可躺带脚踏]</code>），支持 <code>\\n</code> 换行。"
+        defaultTemplate: "【{{VAR_1}} {{VAR_2}}】\n⚡ 现货特惠 | 品质保障 | 快速发货\n✅ 规格说明：{{VAR}}\n✅ 欢迎沟通询问，下单即发！",
+        cn: {
+          name: '⚙️ 通用电商/自由自定义模式',
+          badge: '⚙️ 通用自定义模式',
+          mainTitleLabel: '商品主标题',
+          subTitleLabel: '副标题/规格参数',
+          mainInputPlaceholder: '例如: 高品质人体工学椅',
+          subInputPlaceholder: '例如: 网布可躺 带脚踏',
+          searchPlaceholder: '输入商品主标题 / 副标题搜索...',
+          searchTitle: '一键快捷搜商品主图/渲染图',
+          batchImportPlaceholder: "[高品质人体工学椅]+[网布可躺带脚踏]\n[智能保温杯]+[500ml 316不锈钢]\n[便携式户外蓝牙音箱]+[防水续航12小时]",
+          batchImportTip: "<strong>支持格式规范：</strong> 每行一件商品，格式为：<code>[主标题]+[副标题/参数]</code>（例如 <code>[高品质人体工学椅]+[网布可躺带脚踏]</code>），支持 <code>\\n</code> 换行。",
+          tags: [
+            { tag: '{{VAR_1}}', desc: '商品主标题/核心名称' },
+            { tag: '{{VAR_2}}', desc: '副标题/附加规格参数' },
+            { tag: '{{VAR}}', desc: '主副标题组合名称' }
+          ]
+        },
+        en: {
+          name: '⚙️ General E-Commerce / Custom Mode',
+          badge: '⚙️ Custom Profile Mode',
+          mainTitleLabel: 'Main Product Title',
+          subTitleLabel: 'Subtitle / Specs',
+          mainInputPlaceholder: 'e.g. Ergonomic Office Chair',
+          subInputPlaceholder: 'e.g. Mesh Reclining with Footrest',
+          searchPlaceholder: 'Search main title or subtitle...',
+          searchTitle: 'Quick Search Product Rendering / Main Image',
+          batchImportPlaceholder: "[Ergonomic Office Chair]+[Mesh Reclining with Footrest]\n[Smart Thermos Bottle]+[500ml Stainless Steel]\n[Portable Outdoor Speaker]+[Waterproof 12h]",
+          batchImportTip: "<strong>Format Rule:</strong> One item per line: <code>[Main Title]+[Subtitle/Specs]</code>, supports <code>\\n</code> for line breaks.",
+          tags: [
+            { tag: '{{VAR_1}}', desc: 'Main product title / core name' },
+            { tag: '{{VAR_2}}', desc: 'Subtitle / specification parameters' },
+            { tag: '{{VAR}}', desc: 'Combined main & subtitle' }
+          ]
+        }
       }
     };
 
@@ -1694,20 +2522,31 @@
       renderTemplatePreview();
       renderMainView();
       if (typeof showToast === 'function') {
-        showToast(`已切换为【${SCENE_PROFILES[newMode].badge}】！UI及变量已实时重载`);
+        const isEn = currentLang === 'en';
+        const profileObj = SCENE_PROFILES[newMode];
+        const profile = profileObj[isEn ? 'en' : 'cn'] || profileObj.cn;
+        showToast(isEn ? `Switched to [${profile.badge}]!` : `已切换为【${profile.badge}】！UI及变量已实时重载`);
       }
     }
 
     // 应用场景 UI 标签与提示语
     function applySceneModeUI() {
-      const profile = SCENE_PROFILES[currentSceneMode] || SCENE_PROFILES.game_mode;
+      const profileObj = SCENE_PROFILES[currentSceneMode] || SCENE_PROFILES.game_mode;
+      const isEn = currentLang === 'en';
+      const profile = profileObj[isEn ? 'en' : 'cn'] || profileObj.cn;
 
       // 1. Badge & Select
       const badgeEl = document.getElementById('currentSceneBadge');
       if (badgeEl) badgeEl.innerText = profile.badge;
 
       const selectEl = document.getElementById('sceneModeSelect');
-      if (selectEl) selectEl.value = currentSceneMode;
+      if (selectEl) {
+        selectEl.options[0].text = SCENE_PROFILES.game_mode[isEn ? 'en' : 'cn'].name;
+        selectEl.options[1].text = SCENE_PROFILES.digital_mode[isEn ? 'en' : 'cn'].name;
+        selectEl.options[2].text = SCENE_PROFILES.fashion_mode[isEn ? 'en' : 'cn'].name;
+        selectEl.options[3].text = SCENE_PROFILES.custom_mode[isEn ? 'en' : 'cn'].name;
+        selectEl.value = currentSceneMode;
+      }
 
       // 2. Search input
       const searchInput = document.getElementById('gameSearchInput');
@@ -1716,7 +2555,7 @@
       // 3. User Template Modal Tags Tip
       const myTagsTip = document.getElementById('myTemplateTagsTip');
       if (myTagsTip) {
-        let tagsHtml = `<strong>支持变量标签（对应【${profile.badge}】）：</strong><br>`;
+        let tagsHtml = `<strong>${isEn ? 'Supported Variable Tags (' + profile.badge + '):' : '支持变量标签（对应【' + profile.badge + '】）：'}</strong><br>`;
         profile.tags.forEach(t => {
           tagsHtml += `• <code>${t.tag}</code>：${t.desc}<br>`;
         });
@@ -1726,7 +2565,7 @@
       // 4. Admin Template Modal Tags Tip
       const adminTagsTip = document.getElementById('adminTemplateTagsTip');
       if (adminTagsTip) {
-        let tagsHtml = `💡 <strong>【${profile.badge}】占位符说明:</strong><br>`;
+        let tagsHtml = `💡 <strong>${isEn ? 'Placeholder Guide (' + profile.badge + '):' : '【' + profile.badge + '】占位符说明:'}</strong><br>`;
         profile.tags.forEach(t => {
           tagsHtml += `• <code>${t.tag}</code> - ${t.desc}<br>`;
         });
@@ -1748,7 +2587,9 @@
       if (singleEn) singleEn.placeholder = `${profile.subTitleLabel} (${profile.subInputPlaceholder})`;
 
       const adminSearch = document.getElementById('adminGameSearchInput');
-      if (adminSearch) adminSearch.placeholder = `🔍 快速搜索商品列表 (${profile.mainTitleLabel}/${profile.subTitleLabel})...`;
+      if (adminSearch) adminSearch.placeholder = isEn 
+        ? `🔍 Quick search product list (${profile.mainTitleLabel}/${profile.subTitleLabel})...`
+        : `🔍 快速搜索商品列表 (${profile.mainTitleLabel}/${profile.subTitleLabel})...`;
 
       const singleCnHeader = document.getElementById('adminTableColCnHeader');
       if (singleCnHeader) singleCnHeader.innerText = profile.mainTitleLabel;
@@ -1765,6 +2606,7 @@
 
     // 页面初始化加载
     document.addEventListener('DOMContentLoaded', async () => {
+      initThemeAndLang();
       applySceneModeUI();
       await loadAccounts();
 
@@ -1921,17 +2763,24 @@
     // 渲染模板显示框 (带变量高亮与场景 Badge)
     function renderTemplatePreview() {
       const box = document.getElementById('templatePreviewBox');
+      if (!box) return;
+      const isEn = currentLang === 'en';
       if (!currentUser || !currentUser.template_text) {
-        box.innerHTML = '<em>未设置模板</em>';
+        box.innerHTML = `<em>${isEn ? 'No template configured' : '未设置模板'}</em>`;
         return;
       }
 
       let textHtml = escapeHtml(currentUser.template_text)
         .replace(/(\{\{[A-Z0-9_]+\}\})/g, '<span class="placeholder-tag">$1</span>');
 
-      const profile = SCENE_PROFILES[currentSceneMode] || SCENE_PROFILES.game_mode;
+      const profileObj = SCENE_PROFILES[currentSceneMode] || SCENE_PROFILES.game_mode;
+      const profile = profileObj[isEn ? 'en' : 'cn'] || profileObj.cn;
 
-      box.innerHTML = `<div><strong>当前账号【${currentUser.account_key}】应用中的文案模版 <span style="font-size: 11px; background: var(--xianyu-black); color: var(--xianyu-yellow); padding: 2px 6px; border-radius: 4px; margin-left: 6px;">${profile.badge}</span>:</strong></div>\n${textHtml}`;
+      const labelText = isEn 
+        ? `Active Copy Template for Account [${currentUser.account_key}]` 
+        : `当前账号【${currentUser.account_key}】应用中的文案模版`;
+
+      box.innerHTML = `<div><strong>${labelText} <span style="font-size: 11px; background: var(--xianyu-black); color: var(--xianyu-yellow); padding: 2px 6px; border-radius: 4px; margin-left: 6px;">${profile.badge}</span>:</strong></div>\n${textHtml}`;
     }
 
     // 加载游戏数据
@@ -2069,9 +2918,12 @@
       const pageItems = filtered.slice(startIndex, endIndex);
 
       // 更新通用分页指示文案
+      const isEn = currentLang === 'en';
       const statsText = totalItems > 0 
-        ? `共 ${totalItems} 条待发布文案，正在显示第 ${startIndex + 1} - ${endIndex} 条 (第 ${currentPage}/${totalPages} 页)`
-        : `无匹配的待发布文案`;
+        ? (isEn 
+            ? `Total ${totalItems} items, showing ${startIndex + 1} - ${endIndex} (Page ${currentPage}/${totalPages})`
+            : `共 ${totalItems} 条待发布文案，正在显示第 ${startIndex + 1} - ${endIndex} 条 (第 ${currentPage}/${totalPages} 页)`)
+        : (isEn ? `No matching pending items` : `无匹配的待发布文案`);
       document.getElementById('pageStatsText').innerText = statsText;
 
       // 渲染数字页码按钮
@@ -2082,17 +2934,17 @@
         grid.innerHTML = `
           <div class="empty-state" style="grid-column: 1 / -1;">
             <i class="fa-solid fa-square-check" style="color: var(--xianyu-yellow-dark); font-size: 40px; margin-bottom: 12px;"></i>
-            <h3 style="font-size: 16px; margin-bottom: 6px;">无待发布的商品文案</h3>
+            <h3 style="font-size: 16px; margin-bottom: 6px;">${t('noPendingTitle')}</h3>
             <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
-              ${searchKeyword ? '未在待发布列表中搜索到匹配的游戏名称。' : '当前账号的所有游戏均已复制发布并加入已隐藏文案库！'}
+              ${searchKeyword ? (isEn ? 'No matching products found.' : '未在待发布列表中搜索到匹配的商品名称。') : t('noPendingMsg')}
             </p>
             <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
               <button class="btn btn-xianyu" onclick="switchMainTab('published')">
-                <i class="fa-solid fa-eye-slash"></i> 前往【已隐藏商品】查看
+                <i class="fa-solid fa-eye-slash"></i> ${t('goHiddenView')}
               </button>
               ${hasHiddenGames ? `
                 <button class="btn btn-outline" onclick="resetCurrentAccountGames()">
-                  <i class="fa-solid fa-rotate-left"></i> 一键恢复本账号所有隐藏商品
+                  <i class="fa-solid fa-rotate-left"></i> ${t('restoreHiddenBtn')}
                 </button>
               ` : ''}
             </div>
@@ -2116,7 +2968,7 @@
               <div class="text-preview-box">${escapeHtml(finalText)}</div>
               <div class="card-actions">
                 <button class="btn btn-publish" onclick="openPublishModal(${g.id})">
-                  <i class="fa-solid fa-copy"></i> 一键复制文案并搜图
+                  <i class="fa-solid fa-copy"></i> ${t('copyAndSearchBtn')}
                 </button>
               </div>
             </div>
@@ -2147,9 +2999,12 @@
       const pageItems = filtered.slice(startIndex, endIndex);
 
       // 更新分页指示文案
+      const isEn = currentLang === 'en';
       const statsText = totalItems > 0 
-        ? `共 ${totalItems} 条已隐藏文案，正在显示第 ${startIndex + 1} - ${endIndex} 条 (第 ${currentPage}/${totalPages} 页)`
-        : `无匹配的已隐藏文案`;
+        ? (isEn 
+            ? `Total ${totalItems} hidden items, showing ${startIndex + 1} - ${endIndex} (Page ${currentPage}/${totalPages})`
+            : `共 ${totalItems} 条已隐藏文案，正在显示第 ${startIndex + 1} - ${endIndex} 条 (第 ${currentPage}/${totalPages} 页)`)
+        : (isEn ? `No matching hidden items` : `无匹配的已隐藏文案`);
       document.getElementById('pageStatsText').innerText = statsText;
 
       // 渲染数字页码按钮
@@ -2159,8 +3014,8 @@
         grid.innerHTML = `
           <div class="empty-state" style="grid-column: 1 / -1;">
             <i class="fa-solid fa-box-open"></i>
-            <h3>尚无已隐藏/已发布的商品文案</h3>
-            <p>当您在待发布列表中点击“一键复制文案并搜图”后，商品将自动记录归档在此处。</p>
+            <h3>${t('noHiddenTitle')}</h3>
+            <p>${t('noHiddenMsg')}</p>
           </div>
         `;
         return;
@@ -2180,23 +3035,23 @@
                 <i class="fa-solid fa-eye-slash"></i>
                 <span>${escapeHtml(g.game_name_cn)}</span>
               </div>
-              <span style="font-size: 11px; opacity: 0.8; font-family: monospace;">[已隐藏/已归档]</span>
+              <span style="font-size: 11px; opacity: 0.8; font-family: monospace;">${t('archivedHiddenTag')}</span>
             </div>
             <div class="card-body">
               <div class="text-preview-box">${escapeHtml(finalText)}</div>
               
               <div class="search-engines-row">
-                <a href="${bingUrl}" target="_blank" class="btn-engine-sm" title="Bing 搜图"><i class="fa-solid fa-magnifying-glass"></i> Bing</a>
-                <a href="${baiduUrl}" target="_blank" class="btn-engine-sm" title="百度搜图"><i class="fa-solid fa-paw"></i> 百度</a>
-                <a href="${googleUrl}" target="_blank" class="btn-engine-sm" title="谷歌搜图"><i class="fa-brands fa-google"></i> 谷歌</a>
+                <a href="${bingUrl}" target="_blank" class="btn-engine-sm" title="${t('bingSearch')}"><i class="fa-solid fa-magnifying-glass"></i> Bing</a>
+                <a href="${baiduUrl}" target="_blank" class="btn-engine-sm" title="${t('baiduSearch')}"><i class="fa-solid fa-paw"></i> ${isEn ? 'Baidu' : '百度'}</a>
+                <a href="${googleUrl}" target="_blank" class="btn-engine-sm" title="${t('googleSearch')}"><i class="fa-brands fa-google"></i> ${isEn ? 'Google' : '谷歌'}</a>
               </div>
 
               <div class="card-actions">
                 <button class="btn btn-outline" style="flex: 1; padding: 8px; font-size: 13px;" onclick="copyToClipboardText('${escapeJsString(finalText)}', this)">
-                  <i class="fa-solid fa-copy"></i> 复制文案
+                  <i class="fa-solid fa-copy"></i> ${t('copyTextOnly')}
                 </button>
                 <button class="btn btn-danger" style="flex: 1; padding: 8px; font-size: 13px;" onclick="unpublishSingleGame(${g.id})">
-                  <i class="fa-solid fa-arrow-rotate-left"></i> 取消隐藏
+                  <i class="fa-solid fa-arrow-rotate-left"></i> ${t('unhideBtn')}
                 </button>
               </div>
             </div>
@@ -2209,26 +3064,30 @@
       const container = document.getElementById('pageButtonsContainer');
       if (!container) return;
 
+      const isEn = currentLang === 'en';
+      const prevStr = t('prevPage');
+      const nextStr = t('nextPage');
+
       if (totalPages <= 1) {
         container.innerHTML = `
-          <button class="page-btn" disabled><i class="fa-solid fa-chevron-left"></i> 上一页</button>
+          <button class="page-btn" disabled><i class="fa-solid fa-chevron-left"></i> ${prevStr}</button>
           <select class="page-select" disabled>
-            <option value="1">第 1 / 1 页</option>
+            <option value="1">${isEn ? 'Page 1 / 1' : '第 1 / 1 页'}</option>
           </select>
-          <button class="page-btn" disabled>下一页 <i class="fa-solid fa-chevron-right"></i></button>
+          <button class="page-btn" disabled>${nextStr} <i class="fa-solid fa-chevron-right"></i></button>
         `;
         return;
       }
 
       let optionsHtml = '';
       for (let p = 1; p <= totalPages; p++) {
-        optionsHtml += `<option value="${p}" ${p === currentPage ? 'selected' : ''}>第 ${p} / ${totalPages} 页</option>`;
+        optionsHtml += `<option value="${p}" ${p === currentPage ? 'selected' : ''}>${isEn ? `Page ${p} / ${totalPages}` : `第 ${p} / ${totalPages} 页`}</option>`;
       }
 
       let html = '';
-      html += `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})"><i class="fa-solid fa-chevron-left"></i> 上一页</button>`;
+      html += `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})"><i class="fa-solid fa-chevron-left"></i> ${prevStr}</button>`;
       html += `<select class="page-select" onchange="goToPage(Number(this.value))">${optionsHtml}</select>`;
-      html += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">下一页 <i class="fa-solid fa-chevron-right"></i></button>`;
+      html += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">${nextStr} <i class="fa-solid fa-chevron-right"></i></button>`;
 
       container.innerHTML = html;
     }
@@ -2438,6 +3297,7 @@
 
         if (data.status === 'success') {
           const stats = data.stats;
+          const isEn = currentLang === 'en';
           document.getElementById('dashTotalGames').innerText = stats.total_games;
           document.getElementById('dashTotalAccounts').innerText = stats.total_accounts;
           document.getElementById('dashTotalPublishes').innerText = stats.total_publishes;
@@ -2446,8 +3306,8 @@
           tbody.innerHTML = stats.account_details.map(a => `
             <tr>
               <td><code>${escapeHtml(a.account_key)}</code></td>
-              <td><span style="color: var(--success-color); font-weight: 800;">${a.published_count}</span> 款已发布归档</td>
-              <td><span style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-size: 11px;">正常运行</span></td>
+              <td><span style="color: var(--success-color); font-weight: 800;">${a.published_count}</span> ${isEn ? 'items archived' : '款已发布归档'}</td>
+              <td><span class="status-badge-active">${isEn ? 'Active' : '正常运行'}</span></td>
             </tr>
           `).join('');
         }
@@ -2488,29 +3348,71 @@
     // 管理员：渲染账号列表
     function renderAdminAccountsTable() {
       const tbody = document.getElementById('adminAccountsTableBody');
-      tbody.innerHTML = accountsList.map(a => `
-        <tr>
-          <td>
-            <code>${escapeHtml(a.account_key)}</code>
-            ${a.is_admin || a.account_key === 'admin' ? '<span class="badge-admin" style="margin-left: 6px; font-size: 10px; padding: 2px 5px; background-color: var(--xianyu-yellow); color: #000; border-radius: 4px; font-weight: 800;">ADMIN</span>' : ''}
-          </td>
-          <td>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-              <button class="btn btn-xianyu" style="padding: 4px 10px; font-size: 12px;" onclick="openAdminEditTemplateModal('${escapeJsString(a.account_key)}')">
-                <i class="fa-solid fa-file-pen"></i> 查看/修改模板
-              </button>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="editAccountKey('${escapeJsString(a.account_key)}')">
-                <i class="fa-solid fa-pen-to-square"></i> 修改用户名
-              </button>
-              ${(!a.is_admin && a.account_key !== 'admin') ? `
-                <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="deleteSubAccount('${escapeJsString(a.account_key)}')">
-                  <i class="fa-solid fa-trash"></i> 删除账号
+      tbody.innerHTML = accountsList.map(a => {
+        const isAdmin = !!(a.is_admin || a.account_key === 'admin');
+        return `
+          <tr>
+            <td>
+              <code>${escapeHtml(a.account_key)}</code>
+              ${isAdmin ? '<span class="badge-admin" style="margin-left: 6px; font-size: 10px; padding: 2px 6px; background-color: var(--xianyu-yellow); color: #000; border-radius: 4px; font-weight: 800; border: 1px solid var(--xianyu-black);">ADMIN</span>' : `<span style="margin-left: 6px; font-size: 10px; padding: 2px 6px; background-color: #f1f5f9; color: #64748b; border-radius: 4px; font-weight: 700; border: 1px solid #cbd5e1;">${t('userRole')}</span>`}
+            </td>
+            <td>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <button class="btn btn-xianyu" style="padding: 4px 10px; font-size: 12px;" onclick="openAdminEditTemplateModal('${escapeJsString(a.account_key)}')">
+                  <i class="fa-solid fa-file-pen"></i> ${t('viewEditTpl')}
                 </button>
-              ` : '<span style="color: #94a3b8; font-size: 12px; align-self: center;">[管理账号]</span>'}
-            </div>
-          </td>
-        </tr>
-      `).join('');
+                <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="editAccountKey('${escapeJsString(a.account_key)}')">
+                  <i class="fa-solid fa-pen-to-square"></i> ${t('changeUsername')}
+                </button>
+                ${isAdmin ? `
+                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; color: #dc2626; border-color: #fca5a5;" onclick="toggleAdminStatus('${escapeJsString(a.account_key)}', false)">
+                    <i class="fa-solid fa-user-minus"></i> ${t('revokeAdmin')}
+                  </button>
+                ` : `
+                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; color: #0284c7; border-color: #7dd3fc;" onclick="toggleAdminStatus('${escapeJsString(a.account_key)}', true)">
+                    <i class="fa-solid fa-user-shield"></i> ${t('setAdmin')}
+                  </button>
+                `}
+                <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="deleteSubAccount('${escapeJsString(a.account_key)}')">
+                  <i class="fa-solid fa-trash"></i> ${t('deleteAccount')}
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 设置或取消管理员权限
+    async function toggleAdminStatus(accountKey, setAdmin) {
+      try {
+        const res = await fetch(`${API_BASE}?action=toggle_admin`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account_key: accountKey,
+            is_admin: setAdmin
+          })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          showToast(data.message || '操作成功');
+          await loadAccounts();
+          renderAdminAccountsTable();
+
+          if (currentUser && currentUser.account_key === accountKey) {
+            currentUser.is_admin = !!setAdmin;
+            currentUser.role = setAdmin ? 'admin' : 'sub_account';
+            updateUserUI();
+          }
+        } else {
+          showToast(data.message || '操作失败', true);
+        }
+      } catch (e) {
+        console.error(e);
+        showToast('请求失败，请检查网络', true);
+      }
     }
 
     // 管理员：查看/修改指定用户的模板 Modal
@@ -2622,6 +3524,7 @@
     async function submitCreateAccount() {
       const key = document.getElementById('newAccountKeyInput').value.trim();
       const template = document.getElementById('newAccountTemplateInput').value.trim();
+      const isAdmin = document.getElementById('newAccountIsAdminInput').checked;
 
       if (!key) {
         showToast('请填写用户名', true);
@@ -2634,7 +3537,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             account_key: key,
-            template_text: template
+            template_text: template,
+            is_admin: isAdmin
           })
         });
 
@@ -2643,6 +3547,7 @@
           showToast('新账号创建成功！');
           document.getElementById('newAccountKeyInput').value = '';
           document.getElementById('newAccountTemplateInput').value = '';
+          document.getElementById('newAccountIsAdminInput').checked = false;
 
           await loadAccounts();
           renderAdminAccountsTable();
@@ -2692,7 +3597,9 @@
     // 单个游戏管理
     function renderAdminGamesTable() {
       const tbody = document.getElementById('adminGamesTableBody');
+      if (!tbody) return;
       const search = (document.getElementById('adminGameSearchInput')?.value || '').trim().toLowerCase();
+      const isEn = currentLang === 'en';
 
       const filtered = gamesList.filter(g => {
         if (!search) return true;
@@ -2702,18 +3609,18 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">未找到匹配的游戏数据</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">${isEn ? 'No matching product data found' : '未找到匹配的游戏数据'}</td></tr>`;
         return;
       }
 
       tbody.innerHTML = filtered.map(g => `
         <tr>
           <td>${g.id}</td>
-          <td><strong>${escapeHtml(g.game_name_cn)}</strong></td>
-          <td><code>${escapeHtml(g.game_name_en || '-')}</code></td>
+          <td><strong style="white-space: pre-line;">${escapeHtml(g.game_name_cn)}</strong></td>
+          <td><code style="white-space: pre-line;">${escapeHtml(g.game_name_en || '-')}</code></td>
           <td>
             <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="deleteSingleGame(${g.id}, '${escapeJsString(g.game_name_cn)}')">
-              <i class="fa-solid fa-trash"></i> 删除
+              <i class="fa-solid fa-trash"></i> ${t('deleteItemBtn') || (isEn ? 'Delete' : '删除')}
             </button>
           </td>
         </tr>
@@ -2721,13 +3628,17 @@
     }
 
     async function submitSingleGameAdd() {
-      const cn = document.getElementById('singleGameCnInput').value.trim();
-      const en = document.getElementById('singleGameEnInput').value.trim();
+      let cn = document.getElementById('singleGameCnInput').value.trim();
+      let en = document.getElementById('singleGameEnInput').value.trim();
 
       if (!cn) {
-        showToast('游戏中文名不能为空', true);
+        showToast('商品主名称不能为空', true);
         return;
       }
+
+      // 支持字面量 \n 与真实换行符
+      cn = cn.replace(/\\n/g, '\n');
+      en = en.replace(/\\n/g, '\n');
 
       try {
         const res = await fetch(`${API_BASE}?action=add_game`, {
@@ -2738,14 +3649,14 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-          showToast('游戏添加成功');
+          showToast('商品添加成功');
           document.getElementById('singleGameCnInput').value = '';
           document.getElementById('singleGameEnInput').value = '';
           await loadGames();
           renderAdminGamesTable();
           refreshAdminDashboard();
         } else {
-          showToast(data.message || '添加游戏失败', true);
+          showToast(data.message || '添加商品失败', true);
         }
       } catch (e) {
         console.error(e);
@@ -2886,11 +3797,12 @@
 
     function copyToClipboardText(text, btnElement = null) {
       copyToClipboard(text);
-      showToast('文案已成功复制到剪贴板！');
+      const isEn = currentLang === 'en';
+      showToast(isEn ? 'Copy text copied to clipboard!' : '文案已成功复制到剪贴板！');
 
       if (btnElement && btnElement instanceof HTMLElement) {
         const originalHtml = btnElement.innerHTML;
-        btnElement.innerHTML = '<i class="fa-solid fa-check" style="color: #10b981;"></i> 已复制!';
+        btnElement.innerHTML = `<i class="fa-solid fa-check" style="color: #10b981;"></i> ${isEn ? 'Copied!' : '已复制!'}`;
         btnElement.style.borderColor = '#10b981';
         setTimeout(() => {
           btnElement.innerHTML = originalHtml;
