@@ -97,12 +97,13 @@ $db_pass = '你的数据库密码'; // 宝塔创建的数据库密码
    cd /www/wwwroot/你的站点目录
    npm install
    ```
-4. 编译并启动服务：
+4. 编译前端与后端服务并启动：
    ```bash
-   # 打包服务端
+   # 打包前端与服务端 (构建生成 dist/ 静态页面和 dist/server.cjs)
    npm run build
-   # 使用 PM2 挂载后台运行
-   pm2 start dist/server.cjs --name "shop-text-manager"
+
+   # 使用 PM2 挂载后台运行 (生产环境配置 NODE_ENV=production)
+   NODE_ENV=production pm2 start dist/server.cjs --name "shop-text-manager"
    ```
 5. 在宝塔 **【网站】** 设置中，找到 **【反向代理】** -> **【添加反向代理】**：
    - **代理名称**：`shoptext-proxy`
@@ -220,10 +221,13 @@ If you prefer running the backend via Node.js (`server.ts` / `server.cjs`):
    cd /www/wwwroot/your_site_directory
    npm install
    ```
-4. Build and launch with PM2:
+4. Build frontend and backend server, then launch with PM2:
    ```bash
+   # Build frontend static files & backend bundle (generates dist/ and dist/server.cjs)
    npm run build
-   pm2 start dist/server.cjs --name "shop-text-manager"
+
+   # Launch with PM2 in production mode
+   NODE_ENV=production pm2 start dist/server.cjs --name "shop-text-manager"
    ```
 5. Go to aaPanel **Website** -> Site Settings -> **Reverse Proxy** -> **Add Reverse Proxy**:
    - **Proxy Name**: `shoptext-proxy`

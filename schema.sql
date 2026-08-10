@@ -56,3 +56,9 @@ INSERT INTO `templates` (`id`, `account_key`, `template_text`, `is_admin`) VALUE
 (2, 'account_a', '【{{VAR_1}} ({{VAR_2}}) 纯净单机中文安装包】\n⚡ 官方正品Steam分流下载 | 解压即玩 | 无毒无捆绑\n✅ 包含最新版本全套DLC + 汉化补丁 + 详细图文教程\n💬 售后客服一对一指导，包教包会！', 0),
 (3, 'account_b', '🔥【{{VAR_1}} ({{VAR_2}}) Steam离线极速安装包】🔥\n✨ 告别下载慢！百度网盘/迅雷/直连高速分流！\n🛠️ 自带一键启动器与全成就解锁，随时畅玩！\n需要的直接联系，拍下秒发！', 0)
 ON DUPLICATE KEY UPDATE `template_text` = VALUES(`template_text`), `is_admin` = VALUES(`is_admin`);
+
+-- 插入默认已发布归档记录 (示例：account_a 已归档发布的商品)
+INSERT INTO `published_logs` (`account_key`, `game_id`) VALUES
+('account_a', 1),
+('account_a', 2)
+ON DUPLICATE KEY UPDATE `account_key` = VALUES(`account_key`);

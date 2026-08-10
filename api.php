@@ -4,10 +4,11 @@
  * 数据库连接配置与 RESTful 响应处理
  */
 
-header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
+$cors_origin = getenv('CORS_ALLOW_ORIGIN') ?: '*';
+header("Access-Control-Allow-Origin: {$cors_origin}");
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -296,10 +297,23 @@ switch ($action) {
             jsonResponse(['status' => 'error', 'message' => '参数错误'], 400);
         }
 
-        $stmt = $pdo->prepare("DELETE FROM games WHERE id = ?");
-        $stmt->execute([$game_id]);
+        try {
+            $pdo->beginTransaction();
 
-        jsonResponse(['status' => 'success', 'message' => '游戏删除成功']);
+            $stmtLogs = $pdo->prepare("DELETE FROM published_logs WHERE game_id = ?");
+            $stmtLogs->execute([$game_id]);
+
+            $stmtGame = $pdo->prepare("DELETE FROM games WHERE id = ?");
+            $stmtGame->execute([$game_id]);
+
+            $pdo->commit();
+            jsonResponse(['status' => 'success', 'message' => '游戏及其发布隐藏日志已关联删除']);
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            jsonResponse(['status' => 'error', 'message' => '删除失败: ' . $e->getMessage()], 500);
+        }
         break;
 
     // ----------------------------------------------------
@@ -391,17 +405,27 @@ switch ($action) {
             jsonResponse(['status' => 'error', 'message' => '无法删除：系统中至少需要保留一个管理员账号！'], 400);
         }
 
-        $stmt = $pdo->prepare("DELETE FROM templates WHERE account_key = ?");
-        $stmt->execute([$account_key]);
+        try {
+            $pdo->beginTransaction();
 
-        $stmtLogs = $pdo->prepare("DELETE FROM published_logs WHERE account_key = ?");
-        $stmtLogs->execute([$account_key]);
+            $stmt = $pdo->prepare("DELETE FROM templates WHERE account_key = ?");
+            $stmt->execute([$account_key]);
 
-        jsonResponse(['status' => 'success', 'message' => '账号已成功删除']);
+            $stmtLogs = $pdo->prepare("DELETE FROM published_logs WHERE account_key = ?");
+            $stmtLogs->execute([$account_key]);
+
+            $pdo->commit();
+            jsonResponse(['status' => 'success', 'message' => '账号已成功删除']);
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            jsonResponse(['status' => 'error', 'message' => '删除失败: ' . $e->getMessage()], 500);
+        }
         break;
 
     // ----------------------------------------------------
-    // 13. 管理员修改账号 Key (用户名)
+    // 14. 管理员修改账号 Key (用户名)
     // ----------------------------------------------------
     case 'update_account_key':
         $old_key = trim($input['old_account_key'] ?? '');
@@ -419,13 +443,24 @@ switch ($action) {
                 jsonResponse(['status' => 'error', 'message' => '该账号 Key 已存在，请使用其他名称'], 400);
             }
 
-            // 更新 templates 表
-            $stmtUpdate = $pdo->prepare("UPDATE templates SET account_key = ? WHERE account_key = ?");
-            $stmtUpdate->execute([$new_key, $old_key]);
+            try {
+                $pdo->beginTransaction();
 
-            // 同步更新 published_logs 表关联
-            $stmtLogs = $pdo->prepare("UPDATE published_logs SET account_key = ? WHERE account_key = ?");
-            $stmtLogs->execute([$new_key, $old_key]);
+                // 更新 templates 表
+                $stmtUpdate = $pdo->prepare("UPDATE templates SET account_key = ? WHERE account_key = ?");
+                $stmtUpdate->execute([$new_key, $old_key]);
+
+                // 同步更新 published_logs 表关联
+                $stmtLogs = $pdo->prepare("UPDATE published_logs SET account_key = ? WHERE account_key = ?");
+                $stmtLogs->execute([$new_key, $old_key]);
+
+                $pdo->commit();
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                jsonResponse(['status' => 'error', 'message' => '修改失败: ' . $e->getMessage()], 500);
+            }
         }
 
         jsonResponse(['status' => 'success', 'message' => '账号名称修改成功！', 'new_account_key' => $new_key]);
