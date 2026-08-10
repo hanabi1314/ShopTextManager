@@ -16,6 +16,7 @@ interface TemplateAccount {
   account_key: string;
   template_text: string;
   is_admin?: boolean;
+  created_at?: string;
 }
 
 interface PublishedLog {
@@ -26,6 +27,18 @@ interface PublishedLog {
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // CORS 及 OPTIONS 预检处理
+  app.use((req, res, next) => {
+    const origin = process.env.CORS_ALLOW_ORIGIN || "*";
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -353,7 +366,7 @@ async function startServer() {
         return res.json({ status: "success", message: "账号及相关记录已成功删除" });
       }
 
-      // 13. 修改账号 Key (用户名)
+      // 14. 修改账号 Key (用户名)
       if (action === "update_account_key") {
         const { old_account_key, new_account_key } = body;
         const oldKey = (old_account_key || "").trim();

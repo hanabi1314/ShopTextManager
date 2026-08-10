@@ -58,7 +58,6 @@ INSERT INTO `templates` (`id`, `account_key`, `template_text`, `is_admin`) VALUE
 ON DUPLICATE KEY UPDATE `template_text` = VALUES(`template_text`), `is_admin` = VALUES(`is_admin`);
 
 -- 插入默认已发布归档记录 (示例：account_a 已归档发布的商品)
-INSERT INTO `published_logs` (`account_key`, `game_id`) VALUES
+INSERT IGNORE INTO `published_logs` (`account_key`, `game_id`) VALUES
 ('account_a', 1),
-('account_a', 2)
-ON DUPLICATE KEY UPDATE `account_key` = VALUES(`account_key`);
+('account_a', 2);

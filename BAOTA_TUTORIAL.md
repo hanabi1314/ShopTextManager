@@ -90,6 +90,8 @@ $db_pass = '你的数据库密码'; // 宝塔创建的数据库密码
 
 如果你希望使用 Node.js (`server.ts` / `server.cjs`) 运行服务端：
 
+> 💡 **Node.js 静态资源托管原理**：`npm run build` 会将前端网页打包到 `dist/index.html` 并将服务端打包为 `dist/server.cjs`。在 `NODE_ENV=production` 模式下，Node 服务会自动开启静态资源托管，将前端与 API 服务统一挂载在 `3000` 端口上，再通过 Nginx 反向代理提供标准 80/443 端口访问。
+
 1. 打开宝塔面板 **【软件商店】** -> 安装 **【Node.js版本管理器】**。
 2. 在 Node.js 管理器中安装 Node.js LTS 版本（如 `v18.x` 或 `v20.x`）。
 3. 使用宝塔终端（SSH）进入网站根目录，安装依赖：
@@ -213,6 +215,8 @@ Open your domain or IP in the browser:
 ### 5. Option 2: Node.js Deployment Mode (Alternative)
 
 If you prefer running the backend via Node.js (`server.ts` / `server.cjs`):
+
+> 💡 **Node.js Static Asset Hosting**: `npm run build` compiles the SPA frontend into `dist/index.html` and the server into `dist/server.cjs`. In `NODE_ENV=production` mode, Express automatically serves static assets from `dist/` on port `3000`, which aaPanel's Nginx reverse proxy routes to standard ports 80/443.
 
 1. Install **Node.js Version Manager** from aaPanel App Store.
 2. Install Node.js LTS (v18.x or v20.x).
