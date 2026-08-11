@@ -4,6 +4,42 @@
  * 数据库连接配置与 RESTful 响应处理
  */
 
+// 禁用 HTML 错误信息直接输出（防止输出 <br /><b> 格式破坏前端 JSON 解析）
+ini_set('display_errors', '0');
+error_reporting(E_ALL);
+
+// 全局异常捕捉：确保所有未捕获异常（如数据库 SQL 错误）均输出规范 JSON
+set_exception_handler(function ($e) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    
+    $msg = $e->getMessage();
+    // 识别最常见的“数据表不存在”错误
+    if (strpos($msg, '1146 Table') !== false || strpos($msg, '42S02') !== false) {
+        $msg = '数据库表不存在！请在宝塔面板的 MySQL 管理中导入项目的 schema.sql 脚本文件。(' . $msg . ')';
+    }
+    
+    echo json_encode([
+        'status' => 'error',
+        'message' => '服务器接口错误: ' . $msg
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+});
+
+// 全局 Error 捕捉
+set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+    if (!(error_reporting() & $errno)) {
+        return false;
+    }
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'status' => 'error',
+        'message' => "PHP 系统错误: {$errstr} (位于 {$errfile} 第 {$errline} 行)"
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+});
+
 $cors_origin = getenv('CORS_ALLOW_ORIGIN') ?: '*';
 header("Access-Control-Allow-Origin: {$cors_origin}");
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
@@ -49,8 +85,28 @@ try {
     ]);
 } catch (PDOException $e) {
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => '数据库连接失败: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    echo json_encode([
+        'status' => 'error',
+        'message' => '数据库连接失败: ' . $e->getMessage() . '。请检查宝塔中 .env 文件或 api.php 的数据库连接配置（主机、用户名、密码、数据库名）。'
+    ], JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+// 自动建表与初始数据检测（避免未导入 schema.sql 导致 1146 错误）
+try {
+    $checkTable = $pdo->query("SHOW TABLES LIKE 'templates'")->fetch();
+    if (!$checkTable) {
+        $sqlFile = __DIR__ . '/schema.sql';
+        if (file_exists($sqlFile)) {
+            $sqlContent = file_get_contents($sqlFile);
+            // 移除 CREATE DATABASE 和 USE 指令以直接导入当前 DB
+            $sqlContent = preg_replace('/CREATE DATABASE.*?;/is', '', $sqlContent);
+            $sqlContent = preg_replace('/USE `.*?`;/is', '', $sqlContent);
+            $pdo->exec($sqlContent);
+        }
+    }
+} catch (Exception $e) {
+    // 静默处理建表检测过程中的异常
 }
 
 $action = $_GET['action'] ?? '';
