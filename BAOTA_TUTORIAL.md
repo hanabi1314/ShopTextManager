@@ -65,18 +65,32 @@
 
 PHP 模式非常省资源，适合大多数宝塔服务器环境。
 
-### 第一步：修改 `api.php` 数据库配置
-在宝塔面板的文件管理器中打开 `api.php`，找到顶部的数据库连接参数进行修改：
+### 第一步：配置数据库信息 (支持两种方式)
 
-```php
-// 修改为你的宝塔数据库信息
-$db_host = '127.0.0.1';
-$db_port = '3306';
-$db_name = 'xianyu_db';     // 宝塔创建的数据库名
-$db_user = 'xianyu_user';   // 宝塔创建的数据库用户名
-$db_pass = '你的数据库密码'; // 宝塔创建的数据库密码
-```
-保存文件即可。
+系统支持 **环境变量配置文件 (`.env`)** 或 **直接编辑 `api.php`**，你可以选择任意一种方式：
+
+- **方式 A：使用 `.env` 配置文件（推荐）**
+  1. 在根目录下复制 `.env.example` 并重命名为 `.env`。
+  2. 打开 `.env` 文件，填写你的数据库连接参数：
+     ```env
+     DB_HOST=127.0.0.1
+     DB_PORT=3306
+     DB_NAME=xianyu_db
+     DB_USER=xianyu_user
+     DB_PASS=你的数据库密码
+     ```
+  `api.php` 已内置轻量级 `.env` 解析模块，会自动优先读取 `.env` 中的配置。
+
+- **方式 B：直接编辑 `api.php` 默认值**
+  如果在宝塔面板中习惯直接双击修改代码，可在面板文件管理器中打开 `api.php`，修改第 25~30 行的默认变量值：
+  ```php
+  $db_host = getenv('DB_HOST') ?: '127.0.0.1';
+  $db_port = getenv('DB_PORT') ?: '3306';
+  $db_name = getenv('DB_NAME') ?: 'xianyu_db';     // 宝塔创建的数据库名
+  $db_user = getenv('DB_USER') ?: 'xianyu_user';   // 宝塔创建的数据库用户名
+  $db_pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : '你的数据库密码';
+  ```
+保存配置后即可生效。
 
 ### 第二步：测试与访问
 直接在浏览器打开你的域名或 IP：
@@ -192,16 +206,31 @@ Log into aaPanel -> **App Store** and install:
 
 ### 4. Option 1: PHP + MySQL Deployment Mode (Recommended)
 
-#### Step 1: Configure `api.php` Database Settings
-Open `api.php` in aaPanel File Manager and edit the connection parameters at the top:
+#### Step 1: Configure Database Connection (Two Flexible Options)
 
-```php
-$db_host = '127.0.0.1';
-$db_port = '3306';
-$db_name = 'xianyu_db';     // Your database name
-$db_user = 'xianyu_user';   // Your database username
-$db_pass = 'YOUR_DB_PASSWORD'; // Your database password
-```
+The system supports both **`.env` Environment File** and **Direct `api.php` Editing**:
+
+- **Option A: Use `.env` Configuration File (Recommended)**
+  1. Copy `.env.example` to `.env` in the root directory.
+  2. Open `.env` and set your database credentials:
+     ```env
+     DB_HOST=127.0.0.1
+     DB_PORT=3306
+     DB_NAME=xianyu_db
+     DB_USER=xianyu_user
+     DB_PASS=YOUR_DB_PASSWORD
+     ```
+  `api.php` includes a zero-dependency `.env` parser that automatically loads these settings.
+
+- **Option B: Direct Editing in `api.php`**
+  If you prefer double-clicking files directly in aaPanel File Manager, open `api.php` and modify the default fallback values around lines 25–30:
+  ```php
+  $db_host = getenv('DB_HOST') ?: '127.0.0.1';
+  $db_port = getenv('DB_PORT') ?: '3306';
+  $db_name = getenv('DB_NAME') ?: 'xianyu_db';     // Your database name
+  $db_user = getenv('DB_USER') ?: 'xianyu_user';   // Your database username
+  $db_pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : 'YOUR_DB_PASSWORD';
+  ```
 Save the file.
 
 #### Step 2: Test & Access

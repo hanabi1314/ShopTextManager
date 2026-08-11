@@ -15,7 +15,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// 数据库连接配置 (可直接修改以下默认值，或通过环境变量 DB_HOST / DB_USER / DB_PASS / DB_NAME 配置)
+// 零依赖自动加载同目录下的 .env 文件 (若存在)
+$envFile = __DIR__ . '/.env';
+if (file_exists($envFile)) {
+    $envLines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($envLines as $line) {
+        $line = trim($line);
+        if ($line === '' || strpos($line, '#') === 0) continue;
+        if (strpos($line, '=') !== false) {
+            list($key, $val) = explode('=', $line, 2);
+            $key = trim($key);
+            $val = trim(trim($val), "\"'");
+            if ($key !== '' && getenv($key) === false) {
+                putenv("{$key}={$val}");
+                $_ENV[$key] = $val;
+                $_SERVER[$key] = $val;
+            }
+        }
+    }
+}
+
+// 数据库连接配置 (可直接修改以下默认值，或通过 .env / 系统环境变量 DB_HOST / DB_USER / DB_PASS / DB_NAME 配置)
 $db_host = getenv('DB_HOST') ?: '127.0.0.1';
 $db_port = getenv('DB_PORT') ?: '3306';
 $db_name = getenv('DB_NAME') ?: 'xianyu_db';
