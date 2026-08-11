@@ -29,6 +29,7 @@
 #### 2. 🛡️ 完善的管理员权限管理与安全防封禁
 - **设置/取消管理员 (Admin Management)**：超级管理员可在后台直接设定或取消任意子账号的管理员权限，且系统具备**最少保留一个管理员 (Safety Guard)** 逻辑，防止因误操作导致全站失控。
 - **重名防护与账号清理**：后台支持创建新账号（可选是否设为管理员）、重命名账号或彻底删除离职账号。
+- **🔐 修改默认管理员 Username 提醒（重要）**：系统初始管理员账号为 `admin`。系统部署成功后，请务必立即在 **【管理员控制台】 -> 【用户名与模板管理】** 中修改 `admin` 账号 Key（用户名），或重新添加您的专属管理员账号。更名后，系统将拒绝使用原 `admin` 登录，保障系统权限安全。
 
 #### 3. 🎯 默认开箱即用 (Preset-First 架构)
 - 系统默认开启 **“🎮 Steam游戏安装包/虚拟商品模式”**。
@@ -120,6 +121,7 @@ It is powered by a **Preset-First Architecture**: enabled by default with the **
 - **Grant / Revoke Admin**: Super admins can directly promote or demote any account in the full-featured Admin Console.
 - **Safety Guard**: Built-in protection logic ensures that at least one admin account must remain active at all times, preventing accidental lockouts.
 - **Account Operations**: Full management including creating accounts (with optional admin privileges), renaming account keys, and deleting inactive user accounts.
+- **🔐 Change Default Admin Username Notice (Important)**: The system initial administrator account is `admin`. After successful deployment, please log in immediately and navigate to **"Admin Console" -> "User & Template Manager"** to change the `admin` username key or add your custom admin account. Once updated, logins with the old `admin` username will be rejected to protect your system security.
 
 #### 3. 🎯 Preset-First Architecture (Zero Configuration Required)
 - Ships with **"🎮 Steam Game Package / Virtual Goods Mode"** enabled by default.

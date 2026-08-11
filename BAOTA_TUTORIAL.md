@@ -98,6 +98,9 @@ PHP 模式非常省资源，适合大多数宝塔服务器环境。
 - 支持在顶部导航栏一键切换【暗黑模式】与【中英文 (English / 中文)】！
 - 输入默认管理员账号 `admin` 或默认子账号 `account_a` 即可直接登录进入系统！
 
+> 🔐 **安全安全与修改提示（重要）**：
+> 系统默认初始管理员账号为 `admin`。部署成功后，请务必立即在 **【管理员控制台】 -> 【用户名与模板管理】** 中修改 `admin` 账号 Key（用户名），或重新添加您的专属管理员账号。更改后，系统将拒绝使用原 `admin` 登录，有效保障您的管理权限安全！
+
 ---
 
 ## 5. 方案二：Node.js 部署模式 (备选)
@@ -238,6 +241,9 @@ Open your domain or IP in the browser:
 - The `index.html` single-page application will load automatically.
 - Switch seamlessly between **Dark / Light Mode** and **English / Chinese** from the top header navigation.
 - Log in with default admin account `admin` or user account `account_a`.
+
+> 🔐 **Security & Customization Notice (Important)**:
+> The initial default administrator account is `admin`. After successful deployment, please log in immediately and navigate to **"Admin Console" -> "User & Template Manager"** to change the `admin` username key or add your custom administrator account. Once updated, the system will reject logins with the old `admin` username to protect your system security.
 
 ---
 

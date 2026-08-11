@@ -1632,11 +1632,16 @@
        ======================================================== -->
   <div class="modal-overlay" id="loginModal">
     <div class="modal-card" style="max-width: 440px;">
-      <div class="modal-header">
+      <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between;">
         <div class="modal-title">
           <i class="fa-solid fa-user-lock"></i> <span data-i18n="loginModalTitle">用户登录</span>
         </div>
-        <button class="modal-close" id="loginModalCloseBtn" onclick="closeModal('loginModal')" style="display:none;">&times;</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn btn-black" id="loginModalLangBtn" onclick="toggleLanguage()" title="Language / 语言切换" style="padding: 4px 10px; font-size: 12px; height: auto;">
+            <i class="fa-solid fa-globe"></i> <span id="loginLangText">English</span>
+          </button>
+          <button class="modal-close" id="loginModalCloseBtn" onclick="closeModal('loginModal')" style="display:none;">&times;</button>
+        </div>
       </div>
       <div class="modal-body">
         <div class="tip-box-warning">
@@ -2318,6 +2323,11 @@
         langTextBtn.innerText = lang === 'cn' ? 'English' : '中文';
       }
 
+      const loginLangTextBtn = document.getElementById('loginLangText');
+      if (loginLangTextBtn) {
+        loginLangTextBtn.innerText = lang === 'cn' ? 'English' : '中文';
+      }
+
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (I18N[lang] && I18N[lang][key] !== undefined) {
@@ -2632,15 +2642,16 @@
         const res = await fetch(`${API_BASE}?action=login&username=${encodeURIComponent(username)}`);
         const text = await res.text();
         let data;
+        const isEn = currentLang === 'en';
         try {
           data = JSON.parse(text);
         } catch (jsonErr) {
           console.error('Login response was not JSON:', text);
-          let cleanErrMsg = '接口返回非 JSON 格式数据';
+          let cleanErrMsg = isEn ? 'Server returned non-JSON data' : '接口返回非 JSON 格式数据';
           if (text.includes('<b>') || text.includes('error') || text.includes('Error')) {
             cleanErrMsg = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150);
           }
-          showToast(`登录失败: ${cleanErrMsg}`, true);
+          showToast(isEn ? `Login failed: ${cleanErrMsg}` : `登录失败: ${cleanErrMsg}`, true);
           openLoginModal(true);
           return;
         }
@@ -2651,7 +2662,7 @@
           updateUserUI();
 
           if (!quiet) {
-            showToast(`已成功登录账号 Key: ${currentUser.account_key}`);
+            showToast(isEn ? `Successfully logged in as: ${currentUser.account_key}` : `已成功登录账号 Key: ${currentUser.account_key}`);
           }
 
           closeModal('loginModal');
@@ -2659,12 +2670,13 @@
           // 加载当前账号的游戏库状态
           await loadGames();
         } else {
-          showToast(data.message || '登录失败', true);
+          showToast(data.message || (isEn ? 'Login failed' : '登录失败'), true);
           openLoginModal(true);
         }
       } catch (e) {
         console.error(e);
-        showToast(`登录接口通信错误: ${e.message || '网络连接失败'}`, true);
+        const isEn = currentLang === 'en';
+        showToast(isEn ? `Login connection error: ${e.message || 'Network failed'}` : `登录接口通信错误: ${e.message || '网络连接失败'}`, true);
         openLoginModal(true);
       }
     }
@@ -2683,8 +2695,9 @@
     // 提交免密登录
     function submitLogin() {
       const username = document.getElementById('loginUsernameInput').value.trim();
+      const isEn = currentLang === 'en';
       if (!username) {
-        showToast('请输入账号 Key (用户名)', true);
+        showToast(isEn ? 'Please enter Account Key (username)' : '请输入账号 Key (用户名)', true);
         return;
       }
       performLogin(username);
@@ -2694,13 +2707,14 @@
     function logout() {
       localStorage.removeItem('xianyu_logged_key');
       currentUser = null;
-      document.getElementById('currentAccountKeyDisplay').innerText = '未登录';
+      const isEn = currentLang === 'en';
+      document.getElementById('currentAccountKeyDisplay').innerText = isEn ? 'Not Logged In' : '未登录';
       document.getElementById('barAccountKeyDisplay').innerText = '-';
       document.getElementById('adminBadgeTag').style.display = 'none';
       document.getElementById('adminConsoleBtn').style.display = 'none';
       document.getElementById('logoutBtn').style.display = 'none';
 
-      showToast('已退出登录');
+      showToast(isEn ? 'Logged out successfully' : '已退出登录');
       openLoginModal(true);
     }
 
@@ -2822,7 +2836,8 @@
       const textarea = document.getElementById('myTemplateTextarea');
       if (textarea) {
         textarea.value = originalMyTemplateText;
-        showToast('已恢复为本次修改之前的模板文本');
+        const isEn = currentLang === 'en';
+        showToast(isEn ? 'Restored to template text before edits' : '已恢复为本次修改之前的模板文本');
       }
     }
 
@@ -2831,7 +2846,8 @@
       const textarea = document.getElementById('adminEditTemplateTextarea');
       if (textarea) {
         textarea.value = originalAdminTemplateText;
-        showToast('已恢复为本次修改之前的模板文本');
+        const isEn = currentLang === 'en';
+        showToast(isEn ? 'Restored to template text before edits' : '已恢复为本次修改之前的模板文本');
       }
     }
 
@@ -3138,6 +3154,7 @@
     // 完成发布并隐藏卡片
     async function confirmModalPublishAndHide() {
       if (!activePublishGame || !currentUser) return;
+      const isEn = currentLang === 'en';
 
       try {
         const res = await fetch(`${API_BASE}?action=publish_game`, {
@@ -3151,22 +3168,23 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-          showToast(`已成功发布并将【${activePublishGame.game_name_cn}】归档隐藏！`);
+          showToast(isEn ? `Successfully published and archived [${activePublishGame.game_name_cn}]!` : `已成功发布并将【${activePublishGame.game_name_cn}】归档隐藏！`);
           activePublishGame.is_published = true;
           renderMainView();
           closeModal('publishModal');
         } else {
-          showToast(data.message || '发布失败', true);
+          showToast(data.message || (isEn ? 'Publish failed' : '发布失败'), true);
         }
       } catch (e) {
         console.error(e);
-        showToast('发布接口出现错误', true);
+        showToast(isEn ? 'Publish API error occurred' : '发布接口出现错误', true);
       }
     }
 
     // 取消隐藏单个游戏
     async function unpublishSingleGame(gameId) {
       if (!currentUser) return;
+      const isEn = currentLang === 'en';
 
       try {
         const res = await fetch(`${API_BASE}?action=unpublish_game`, {
@@ -3180,12 +3198,12 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-          showToast('已成功取消隐藏，商品已恢复至待发布列表！');
+          showToast(isEn ? 'Successfully unhidden, item restored to pending list!' : '已成功取消隐藏，商品已恢复至待发布列表！');
           const game = gamesList.find(g => g.id === gameId);
           if (game) game.is_published = false;
           renderMainView();
         } else {
-          showToast(data.message || '操作失败', true);
+          showToast(data.message || (isEn ? 'Operation failed' : '操作失败'), true);
         }
       } catch (e) {
         console.error(e);
@@ -3202,6 +3220,7 @@
     // 确认执行恢复重置该账号的所有已隐藏游戏
     async function confirmResetCurrentAccountGames() {
       if (!currentUser) return;
+      const isEn = currentLang === 'en';
 
       try {
         const res = await fetch(`${API_BASE}?action=reset_account_games`, {
@@ -3212,15 +3231,15 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-          showToast(`已成功恢复账号【${currentUser.account_key}】所有隐藏的游戏商品！`);
+          showToast(isEn ? `Successfully restored all hidden items for account [${currentUser.account_key}]!` : `已成功恢复账号【${currentUser.account_key}】所有隐藏的游戏商品！`);
           closeModal('confirmResetAccountGamesModal');
           await loadGames();
         } else {
-          showToast(data.message || '恢复失败', true);
+          showToast(data.message || (isEn ? 'Restore failed' : '恢复失败'), true);
         }
       } catch (e) {
         console.error(e);
-        showToast('恢复商品请求失败', true);
+        showToast(isEn ? 'Restore request failed' : '恢复商品请求失败', true);
       }
     }
 
@@ -3238,8 +3257,9 @@
     async function saveMyTemplate() {
       if (!currentUser) return;
       const newTpl = document.getElementById('myTemplateTextarea').value.trim();
+      const isEn = currentLang === 'en';
       if (!newTpl) {
-        showToast('模板内容不能为空', true);
+        showToast(isEn ? 'Template content cannot be empty' : '模板内容不能为空', true);
         return;
       }
 
@@ -3258,10 +3278,10 @@
           currentUser.template_text = newTpl;
           updateUserUI();
           renderMainView();
-          showToast('模板修改成功，对应文案已同步更新！');
+          showToast(isEn ? 'Template updated successfully! Rendered text synced.' : '模板修改成功，对应文案已同步更新！');
           closeModal('editTemplateModal');
         } else {
-          showToast(data.message || '更新失败', true);
+          showToast(data.message || (isEn ? 'Update failed' : '更新失败'), true);
         }
       } catch (e) {
         console.error(e);
@@ -3273,8 +3293,9 @@
     // ========================================================
 
     async function openAdminModal() {
+      const isEn = currentLang === 'en';
       if (!currentUser || !currentUser.is_admin) {
-        showToast('只有 admin 角色可以进入管理员控制台', true);
+        showToast(isEn ? 'Only admin accounts can access the Admin Console' : '只有 admin 角色可以进入管理员控制台', true);
         return;
       }
 
@@ -3332,8 +3353,9 @@
     // 提交批量导入游戏
     async function submitBatchImportGames() {
       const importText = document.getElementById('batchImportTextarea').value.trim();
+      const isEn = currentLang === 'en';
       if (!importText) {
-        showToast('请输入游戏清单', true);
+        showToast(isEn ? 'Please enter product list text' : '请输入游戏清单', true);
         return;
       }
 
@@ -3346,12 +3368,12 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-          showToast(data.message || '批量导入成功！');
+          showToast(data.message || (isEn ? 'Batch import successful!' : '批量导入成功！'));
           document.getElementById('batchImportTextarea').value = '';
           await loadGames();
           refreshAdminDashboard();
         } else {
-          showToast(data.message || '导入失败', true);
+          showToast(data.message || (isEn ? 'Import failed' : '导入失败'), true);
         }
       } catch (e) {
         console.error(e);
@@ -3398,6 +3420,7 @@
 
     // 设置或取消管理员权限
     async function toggleAdminStatus(accountKey, setAdmin) {
+      const isEn = currentLang === 'en';
       try {
         const res = await fetch(`${API_BASE}?action=toggle_admin`, {
           method: 'POST',
@@ -3410,7 +3433,7 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-          showToast(data.message || '操作成功');
+          showToast(data.message || (isEn ? 'Operation successful' : '操作成功'));
           await loadAccounts();
           renderAdminAccountsTable();
 
@@ -3420,11 +3443,11 @@
             updateUserUI();
           }
         } else {
-          showToast(data.message || '操作失败', true);
+          showToast(data.message || (isEn ? 'Operation failed' : '操作失败'), true);
         }
       } catch (e) {
         console.error(e);
-        showToast('请求失败，请检查网络', true);
+        showToast(isEn ? 'Request failed, please check network connection' : '请求失败，请检查网络', true);
       }
     }
 
@@ -3442,8 +3465,9 @@
     async function confirmAdminSaveTemplate() {
       if (!targetAdminEditTemplateUser) return;
       const newTpl = document.getElementById('adminEditTemplateTextarea').value.trim();
+      const isEn = currentLang === 'en';
       if (!newTpl) {
-        showToast('模板内容不能为空', true);
+        showToast(isEn ? 'Template content cannot be empty' : '模板内容不能为空', true);
         return;
       }
 
@@ -3459,7 +3483,7 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-          showToast(`用户【${targetAdminEditTemplateUser}】的模板已成功更新！`);
+          showToast(isEn ? `Template for user [${targetAdminEditTemplateUser}] updated successfully!` : `用户【${targetAdminEditTemplateUser}】的模板已成功更新！`);
           closeModal('adminEditTemplateModal');
 
           if (currentUser && currentUser.account_key === targetAdminEditTemplateUser) {
@@ -3471,11 +3495,11 @@
           await loadAccounts();
           renderAdminAccountsTable();
         } else {
-          showToast(data.message || '更新模板失败', true);
+          showToast(data.message || (isEn ? 'Failed to update template' : '更新模板失败'), true);
         }
       } catch (e) {
         console.error(e);
-        showToast('修改模板请求失败', true);
+        showToast(isEn ? 'Update template request failed' : '修改模板请求失败', true);
       }
     }
 
@@ -3490,8 +3514,9 @@
 
     async function confirmEditUsername() {
       const newKey = document.getElementById('editNewUsernameInput').value.trim();
+      const isEn = currentLang === 'en';
       if (!newKey) {
-        showToast('用户名不能为空', true);
+        showToast(isEn ? 'Username key cannot be empty' : '用户名不能为空', true);
         return;
       }
       if (newKey === targetEditOldUsername) {
@@ -3511,7 +3536,7 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-          showToast(`账号已成功更名为【${newKey}】！`);
+          showToast(isEn ? `Account renamed to [${newKey}] successfully!` : `账号已成功更名为【${newKey}】！`);
           closeModal('editUsernameModal');
 
           if (currentUser && currentUser.account_key === targetEditOldUsername) {
@@ -3525,11 +3550,11 @@
           renderAdminAccountsTable();
           refreshAdminDashboard();
         } else {
-          showToast(data.message || '修改失败', true);
+          showToast(data.message || (isEn ? 'Update failed' : '修改失败'), true);
         }
       } catch (e) {
         console.error(e);
-        showToast('修改用户名请求失败', true);
+        showToast(isEn ? 'Rename user request failed' : '修改用户名请求失败', true);
       }
     }
 
@@ -3538,9 +3563,10 @@
       const key = document.getElementById('newAccountKeyInput').value.trim();
       const template = document.getElementById('newAccountTemplateInput').value.trim();
       const isAdmin = document.getElementById('newAccountIsAdminInput').checked;
+      const isEn = currentLang === 'en';
 
       if (!key) {
-        showToast('请填写用户名', true);
+        showToast(isEn ? 'Please enter username' : '请填写用户名', true);
         return;
       }
 
@@ -3557,7 +3583,7 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-          showToast('新账号创建成功！');
+          showToast(isEn ? 'New account created successfully!' : '新账号创建成功！');
           document.getElementById('newAccountKeyInput').value = '';
           document.getElementById('newAccountTemplateInput').value = '';
           document.getElementById('newAccountIsAdminInput').checked = false;
@@ -3566,7 +3592,7 @@
           renderAdminAccountsTable();
           refreshAdminDashboard();
         } else {
-          showToast(data.message || '创建失败', true);
+          showToast(data.message || (isEn ? 'Creation failed' : '创建失败'), true);
         }
       } catch (e) {
         console.error(e);
@@ -3583,6 +3609,7 @@
 
     async function confirmDeleteAccount() {
       if (!targetDeleteAccountKey) return;
+      const isEn = currentLang === 'en';
 
       try {
         const res = await fetch(`${API_BASE}?action=delete_account`, {
@@ -3593,17 +3620,17 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-          showToast(`账号【${targetDeleteAccountKey}】已成功删除`);
+          showToast(isEn ? `Account [${targetDeleteAccountKey}] deleted successfully` : `账号【${targetDeleteAccountKey}】已成功删除`);
           closeModal('confirmDeleteAccountModal');
           await loadAccounts();
           renderAdminAccountsTable();
           refreshAdminDashboard();
         } else {
-          showToast(data.message || '删除失败', true);
+          showToast(data.message || (isEn ? 'Delete failed' : '删除失败'), true);
         }
       } catch (e) {
         console.error(e);
-        showToast('删除账号请求失败', true);
+        showToast(isEn ? 'Delete account request failed' : '删除账号请求失败', true);
       }
     }
 
@@ -3643,9 +3670,10 @@
     async function submitSingleGameAdd() {
       let cn = document.getElementById('singleGameCnInput').value.trim();
       let en = document.getElementById('singleGameEnInput').value.trim();
+      const isEn = currentLang === 'en';
 
       if (!cn) {
-        showToast('商品主名称不能为空', true);
+        showToast(isEn ? 'Product primary title cannot be empty' : '商品主名称不能为空', true);
         return;
       }
 
@@ -3662,14 +3690,14 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-          showToast('商品添加成功');
+          showToast(isEn ? 'Product added successfully' : '商品添加成功');
           document.getElementById('singleGameCnInput').value = '';
           document.getElementById('singleGameEnInput').value = '';
           await loadGames();
           renderAdminGamesTable();
           refreshAdminDashboard();
         } else {
-          showToast(data.message || '添加商品失败', true);
+          showToast(data.message || (isEn ? 'Failed to add product' : '添加商品失败'), true);
         }
       } catch (e) {
         console.error(e);
@@ -3686,6 +3714,7 @@
 
     async function confirmDeleteGame() {
       if (!targetDeleteGameId) return;
+      const isEn = currentLang === 'en';
 
       try {
         const res = await fetch(`${API_BASE}?action=delete_game`, {
@@ -3696,17 +3725,17 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-          showToast('游戏已成功删除');
+          showToast(isEn ? 'Product deleted successfully' : '游戏已成功删除');
           closeModal('confirmDeleteGameModal');
           await loadGames();
           renderAdminGamesTable();
           refreshAdminDashboard();
         } else {
-          showToast(data.message || '删除失败', true);
+          showToast(data.message || (isEn ? 'Delete failed' : '删除失败'), true);
         }
       } catch (e) {
         console.error(e);
-        showToast('删除游戏请求失败', true);
+        showToast(isEn ? 'Delete product request failed' : '删除游戏请求失败', true);
       }
     }
 
@@ -3741,6 +3770,7 @@
     // 批量复制当前展示页面上的所有商品文案
     function copyAllCurrentPageTexts() {
       const searchKeyword = document.getElementById('gameSearchInput').value.trim().toLowerCase();
+      const isEn = currentLang === 'en';
       let list = [];
       if (currentMainTab === 'unpublished') {
         list = gamesList.filter(g => !g.is_published);
@@ -3755,7 +3785,7 @@
       });
 
       if (filtered.length === 0) {
-        showToast('当前视图下没有可批量复制的商品文案', true);
+        showToast(isEn ? 'No product text available to copy in the current view' : '当前视图下没有可批量复制的商品文案', true);
         return;
       }
 
@@ -3858,7 +3888,77 @@
       });
     });
 
+    function formatServerMsg(msg) {
+      if (!msg || typeof msg !== 'string') return msg;
+      if (currentLang !== 'en') return msg;
+
+      // Translate backend or default error/success messages when in English mode
+      if (msg.includes('账号不存在，请联系管理员在控制台添加！') || msg.includes('账号不存在')) {
+        return 'Account does not exist. Please contact administrator to add it in the console!';
+      }
+      if (msg.includes('请输入账号 Key (用户名)')) {
+        return 'Please enter Account Key (username)';
+      }
+      if (msg.includes('未找到该账号')) {
+        return 'Account not found';
+      }
+      if (msg.includes('未知的请求接口 Action') || msg.includes('未知的 action 参数')) {
+        return 'Unknown API action parameter';
+      }
+      if (msg.includes('未找到对应商品') || msg.includes('未找到要修改的商品')) {
+        return 'Product not found';
+      }
+      if (msg.includes('该商品（名称与型号完全一致）已存在') || msg.includes('已存在于数据库中') || msg.includes('无需重复添加')) {
+        return 'This product (identical name & model) already exists in the database!';
+      }
+      if (msg.includes('导入内容不能为空')) {
+        return 'Import content cannot be empty';
+      }
+      if (msg.includes('商品主名称不能为空')) {
+        return 'Product primary title cannot be empty';
+      }
+      if (msg.includes('模板内容不能为空')) {
+        return 'Template content cannot be empty';
+      }
+      if (msg.includes('操作失败：系统中至少需要保留一个管理员账号！')) {
+        return 'Operation failed: At least one administrator account must be retained!';
+      }
+      if (msg.includes('只有 admin 角色可以进入管理员控制台') || msg.includes('只有 admin 账号')) {
+        return 'Only admin accounts can access the Admin Console';
+      }
+      if (msg.includes('已有同名账号存在')) {
+        return 'An account with this username already exists!';
+      }
+      if (msg.includes('成功批量导入')) {
+        return msg.replace(/成功批量导入\s*(\d+)\s*款商品/, 'Successfully imported $1 products');
+      }
+      if (msg.includes('成功导入') && msg.includes('自动过滤并跳过')) {
+        return msg.replace(/成功导入\s*(\d+)\s*款新商品，自动过滤并跳过\s*(\d+)\s*款重复商品/, 'Successfully imported $1 new products, skipped $2 duplicate items');
+      }
+      if (msg.includes('导入列表中所有商品') && msg.includes('均已存在于库中')) {
+        return msg.replace(/导入列表中所有商品（共\s*(\d+)\s*款）均已存在于库中，未重复添加/, 'All $1 items in the import list already exist in database');
+      }
+      if (msg.includes('账号已成功更名为【')) {
+        return msg.replace(/账号已成功更名为【(.*?)】！/, 'Account renamed to [$1] successfully!');
+      }
+      if (msg.includes('模板修改成功，对应文案已同步更新！')) {
+        return 'Template updated successfully! Rendered text synced.';
+      }
+      if (msg.includes('已恢复为本次修改之前的模板文本')) {
+        return 'Restored to template text before edits';
+      }
+      if (msg.includes('登录接口通信错误:')) {
+        return msg.replace('登录接口通信错误:', 'Login connection error:');
+      }
+      if (msg.includes('登录失败:')) {
+        return msg.replace('登录失败:', 'Login failed:');
+      }
+
+      return msg;
+    }
+
     function showToast(msg, isError = false) {
+      msg = formatServerMsg(msg);
       const container = document.getElementById('toast-container');
       const toast = document.createElement('div');
       toast.className = 'toast-item';

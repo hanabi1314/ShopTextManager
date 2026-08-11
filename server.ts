@@ -87,23 +87,13 @@ async function startServer() {
       if (action === "login") {
         const username = (((query.username as string) || body.username || "") as string).trim();
         if (!username) {
-          return res.status(400).json({ status: "error", message: "请输入账号 Key (用户名)" });
+          return res.json({ status: "error", message: "请输入账号 Key (用户名)" });
         }
 
-        let user = accounts.find(a => a.account_key === username);
+        const user = accounts.find(a => a.account_key === username);
 
         if (!user) {
-          if (username === "admin") {
-            user = {
-              id: accounts.length + 1,
-              account_key: "admin",
-              template_text: "【{{GAME_CN}} ({{GAME_EN}}) 独立高性能服务器出租】\n⚡ 秒级开服 | 独享IP | 24H稳定运维！",
-              is_admin: true
-            };
-            accounts.push(user);
-          } else {
-            return res.status(404).json({ status: "error", message: "账号不存在，请联系管理员在控制台添加！" });
-          }
+          return res.json({ status: "error", message: "账号不存在，请联系管理员在控制台添加！" });
         }
 
         const isAdmin = !!(user.is_admin || user.account_key === "admin");
@@ -223,14 +213,16 @@ async function startServer() {
       if (action === "import_games") {
         const { import_text } = body;
         if (!import_text || !import_text.trim()) {
-          return res.status(400).json({ status: "error", message: "导入内容不能为空" });
+          return res.json({ status: "error", message: "导入内容不能为空" });
         }
 
         // 支持真实换行与字面量 \n 字符
         const normalizedText = import_text.replace(/\\n/g, "\n");
         const lines = normalizedText.split(/\r?\n/);
         let count = 0;
+        let skippedCount = 0;
         let nextId = games.length > 0 ? Math.max(...games.map(g => g.id)) + 1 : 1;
+        const seenInBatch = new Set<string>();
 
         for (const line of lines) {
           const trimmed = line.trim();
@@ -256,6 +248,14 @@ async function startServer() {
           }
 
           if (cn) {
+            const key = `${cn}|||${en}`;
+            const existsInDb = games.some(g => g.game_name_cn === cn && g.game_name_en === en);
+            if (existsInDb || seenInBatch.has(key)) {
+              skippedCount++;
+              continue;
+            }
+            seenInBatch.add(key);
+
             games.push({
               id: nextId++,
               game_name_cn: cn,
@@ -266,19 +266,31 @@ async function startServer() {
           }
         }
 
-        return res.json({ status: "success", message: `成功批量导入 ${count} 款商品` });
+        if (count === 0 && skippedCount > 0) {
+          return res.json({ status: "info", message: `导入列表中所有商品（共 ${skippedCount} 款）均已存在于库中，未重复添加` });
+        } else if (skippedCount > 0) {
+          return res.json({ status: "success", message: `成功导入 ${count} 款新商品，自动过滤并跳过 ${skippedCount} 款重复商品` });
+        } else {
+          return res.json({ status: "success", message: `成功批量导入 ${count} 款商品` });
+        }
       }
 
       // 9. 添加单个商品
       if (action === "add_game") {
         const { game_name_cn, game_name_en } = body;
         if (!game_name_cn || !game_name_cn.trim()) {
-          return res.status(400).json({ status: "error", message: "商品主名称不能为空" });
+          return res.json({ status: "error", message: "商品主名称不能为空" });
+        }
+
+        const cn = game_name_cn.replace(/\\n/g, "\n").trim();
+        const en = (game_name_en || "").replace(/\\n/g, "\n").trim();
+
+        const exists = games.some(g => g.game_name_cn === cn && g.game_name_en === en);
+        if (exists) {
+          return res.json({ status: "error", message: "该商品（名称与型号完全一致）已存在，无需重复添加！" });
         }
 
         const nextId = games.length > 0 ? Math.max(...games.map(g => g.id)) + 1 : 1;
-        const cn = game_name_cn.replace(/\\n/g, "\n").trim();
-        const en = (game_name_en || "").replace(/\\n/g, "\n").trim();
 
         games.push({
           id: nextId,
@@ -330,14 +342,14 @@ async function startServer() {
 
         const targetAcc = accounts.find(a => a.account_key === targetKey);
         if (!targetAcc) {
-          return res.status(404).json({ status: "error", message: "未找到该账号" });
+          return res.json({ status: "error", message: "未找到该账号" });
         }
 
         const totalAdmins = accounts.filter(a => !!(a.is_admin || a.account_key === "admin")).length;
         const currentTargetIsAdmin = !!(targetAcc.is_admin || targetAcc.account_key === "admin");
 
         if (!is_admin && currentTargetIsAdmin && totalAdmins <= 1) {
-          return res.status(400).json({ status: "error", message: "操作失败：系统中至少需要保留一个管理员账号！" });
+          return res.json({ status: "error", message: "操作失败：系统中至少需要保留一个管理员账号！" });
         }
 
         targetAcc.is_admin = !!is_admin;
@@ -351,7 +363,7 @@ async function startServer() {
         const targetKey = (account_key || "").trim();
         const acc = accounts.find(a => a.account_key === targetKey);
         if (!acc) {
-          return res.status(404).json({ status: "error", message: "未找到该账号" });
+          return res.json({ status: "error", message: "未找到该账号" });
         }
 
         const isTargetAdmin = !!(acc.is_admin || acc.account_key === "admin");

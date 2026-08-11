@@ -128,7 +128,7 @@ switch ($action) {
     case 'login':
         $username = trim($_GET['username'] ?? $input['username'] ?? '');
         if (empty($username)) {
-            jsonResponse(['status' => 'error', 'message' => '请输入账号 Key (用户名)'], 400);
+            jsonResponse(['status' => 'error', 'message' => '请输入账号 Key (用户名)']);
         }
 
         $stmt = $pdo->prepare("SELECT * FROM templates WHERE account_key = ?");
@@ -136,20 +136,7 @@ switch ($action) {
         $user = $stmt->fetch();
 
         if (!$user) {
-            // 如果是 admin，自动创建 admin 初始账号
-            if ($username === 'admin') {
-                $stmt = $pdo->prepare("INSERT INTO templates (account_key, template_text, is_admin) VALUES (?, ?, 1)");
-                $defaultAdminTpl = "【{{VAR_1}} ({{VAR_2}}) Steam正品游戏安装包 离线版/中文版】\n⚡ 自动发货 | 包含全套完整安装包+DLC扩展+终身更新\n✅ 送详细视频教程+远程协助安装 简体中文 免Steam繁琐步骤\n✅ 拍下即发 极速下载 随时随地畅玩！";
-                $stmt->execute(['admin', $defaultAdminTpl]);
-
-                $user = [
-                    'account_key' => 'admin',
-                    'template_text' => $defaultAdminTpl,
-                    'is_admin' => 1
-                ];
-            } else {
-                jsonResponse(['status' => 'error', 'message' => '账号不存在，请联系管理员在控制台添加！'], 404);
-            }
+            jsonResponse(['status' => 'error', 'message' => '账号不存在，请联系管理员在控制台添加！']);
         }
 
         $isAdmin = ($user['account_key'] === 'admin' || !empty($user['is_admin']));
@@ -305,13 +292,23 @@ switch ($action) {
     case 'import_games':
         $raw_text = $input['import_text'] ?? '';
         if (empty(trim($raw_text))) {
-            jsonResponse(['status' => 'error', 'message' => '导入内容不能为空'], 400);
+            jsonResponse(['status' => 'error', 'message' => '导入内容不能为空']);
+        }
+
+        // 查询数据库中已有商品建立对比映射表，防止重复写入
+        $existingStmt = $pdo->query("SELECT game_name_cn, game_name_en FROM games");
+        $existingMap = [];
+        while ($row = $existingStmt->fetch()) {
+            $key = trim($row['game_name_cn']) . '|||' . trim($row['game_name_en']);
+            $existingMap[$key] = true;
         }
 
         // 支持真实换行与字面量 \n 字符串
         $normalized_text = str_replace(['\n', "\r"], ["\n", ""], $raw_text);
         $lines = explode("\n", $normalized_text);
         $importedCount = 0;
+        $skippedCount = 0;
+        $seenInBatch = [];
 
         $stmtInsert = $pdo->prepare("INSERT INTO games (game_name_cn, game_name_en, is_active) VALUES (?, ?, 1)");
 
@@ -335,12 +332,27 @@ switch ($action) {
             }
 
             if (!empty($cn)) {
+                $uniqueKey = $cn . '|||' . $en;
+                // 检测是否存在于已存储库或批次内重复
+                if (isset($existingMap[$uniqueKey]) || isset($seenInBatch[$uniqueKey])) {
+                    $skippedCount++;
+                    continue;
+                }
+                $seenInBatch[$uniqueKey] = true;
+                $existingMap[$uniqueKey] = true;
+
                 $stmtInsert->execute([$cn, $en]);
                 $importedCount++;
             }
         }
 
-        jsonResponse(['status' => 'success', 'message' => "成功批量导入 {$importedCount} 款商品"]);
+        if ($importedCount === 0 && $skippedCount > 0) {
+            jsonResponse(['status' => 'info', 'message' => "导入列表中所有商品（共 {$skippedCount} 款）均已存在于库中，未重复添加"]);
+        } else if ($skippedCount > 0) {
+            jsonResponse(['status' => 'success', 'message' => "成功导入 {$importedCount} 款新商品，自动过滤并跳过 {$skippedCount} 款重复商品"]);
+        } else {
+            jsonResponse(['status' => 'success', 'message' => "成功批量导入 {$importedCount} 款商品"]);
+        }
         break;
 
     // ----------------------------------------------------
@@ -351,12 +363,19 @@ switch ($action) {
         $game_name_en = trim($input['game_name_en'] ?? '');
 
         if (empty($game_name_cn)) {
-            jsonResponse(['status' => 'error', 'message' => '商品主名称不能为空'], 400);
+            jsonResponse(['status' => 'error', 'message' => '商品主名称不能为空']);
         }
 
         // 支持 \n 字符串与真实换行符
         $game_name_cn = str_replace('\n', "\n", $game_name_cn);
         $game_name_en = str_replace('\n', "\n", $game_name_en);
+
+        // 重复校验：严格查重（主名称 + 副名称）
+        $checkStmt = $pdo->prepare("SELECT id FROM games WHERE game_name_cn = ? AND game_name_en = ?");
+        $checkStmt->execute([$game_name_cn, $game_name_en]);
+        if ($checkStmt->fetch()) {
+            jsonResponse(['status' => 'error', 'message' => '该商品（名称与型号完全一致）已存在，无需重复添加！']);
+        }
 
         $stmt = $pdo->prepare("INSERT INTO games (game_name_cn, game_name_en, is_active) VALUES (?, ?, 1)");
         $stmt->execute([$game_name_cn, $game_name_en]);
@@ -543,6 +562,6 @@ switch ($action) {
         break;
 
     default:
-        jsonResponse(['status' => 'error', 'message' => '未知的请求接口 Action'], 404);
+        jsonResponse(['status' => 'error', 'message' => '未知的请求接口 Action']);
         break;
 }
