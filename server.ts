@@ -45,7 +45,7 @@ async function startServer() {
 
   // 内存数据服务 (与 MySQL 保持一致)
   let games: Game[] = [
-    { id: 1, game_name_cn: "黑神话：悟空", game_name_en: "Black Myth: Wukong", is_active: 1 },
+    { id: 1, game_name_cn: "黑神话：悟空", game_name_en: "Black Myth: Wukong", cover_url: "", is_active: 1 },
     { id: 2, game_name_cn: "幻兽帕鲁", game_name_en: "Palworld", is_active: 1 },
     { id: 3, game_name_cn: "艾尔登法环", game_name_en: "Elden Ring", is_active: 1 },
     { id: 4, game_name_cn: "赛博朋克 2077", game_name_en: "Cyberpunk 2077", is_active: 1 },
@@ -406,6 +406,83 @@ async function startServer() {
         }
 
         return res.json({ status: "success", message: "账号名称修改成功！", new_account_key: newKey });
+      }
+
+      // 15. 更新游戏封面图片 URL
+      if (action === "update_game_cover") {
+        const { game_id, cover_url } = body;
+        const game = games.find(g => g.id === Number(game_id));
+        if (!game) return res.json({ status: "error", message: "商品不存在" });
+        (game as any).cover_url = cover_url || "";
+        return res.json({ status: "success", message: "封面图片已更新" });
+      }
+
+      // 16. 获取闲鱼定时发布配置
+      if (action === "get_xianyu_configs") {
+        return res.json({
+          status: "success",
+          configs: accounts.map(a => ({
+            account_key: a.account_key,
+            is_admin: !!(a.is_admin || a.account_key === "admin"),
+            xy_server_url: "",
+            xy_secret_key: "",
+            xy_account_id: "",
+            xy_account_remark: "",
+            publish_enabled: 0,
+            publish_times: "09:00",
+            publish_price: "9.90",
+            publish_original_price: "0",
+            publish_address: "",
+            publish_quantity: 1,
+            publish_shipping_method: "free",
+            image_source: "auto",
+            custom_image_url: "",
+            last_publish_at: null,
+            last_publish_status: "",
+          }))
+        });
+      }
+
+      // 17. 保存闲鱼配置 (dev 模式仅返回成功)
+      if (action === "save_xianyu_config") {
+        return res.json({ status: "success", message: "闲鱼定时发布配置已保存 (dev 模式不会持久化)" });
+      }
+
+      // 18. 测试闲鱼连接 (dev 模式模拟)
+      if (action === "test_xianyu_connection") {
+        const { xy_server_url, xy_secret_key } = body;
+        if (!xy_server_url || !xy_secret_key) {
+          return res.json({ status: "error", message: "服务地址和分销秘钥不能为空" });
+        }
+        try {
+          const resp = await fetch(xy_server_url.replace(/\/$/, "") + "/api/v1/external/enabled-accounts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ secret_key: xy_secret_key }),
+          });
+          const data = await resp.json();
+          if (data.success) {
+            return res.json({ status: "success", message: `连接成功！共找到 ${data.data?.total || 0} 个闲鱼账号`, accounts: data.data?.accounts || [] });
+          }
+          return res.json({ status: "error", message: data.message || "连接失败" });
+        } catch (e: any) {
+          return res.json({ status: "error", message: "连接失败: " + e.message });
+        }
+      }
+
+      // 19. 手动发布 (dev 模式模拟)
+      if (action === "manual_publish") {
+        return res.json({ status: "success", message: "dev 模式不支持实际发布，请在生产环境 (PHP) 中使用", data: {} });
+      }
+
+      // 20. 获取闲鱼发布日志
+      if (action === "get_xianyu_publish_logs") {
+        return res.json({ status: "success", logs: [], total: 0, page: 1, page_size: 20, total_pages: 1 });
+      }
+
+      // 21. 定时发布调度入口 (dev 模式模拟)
+      if (action === "run_scheduled_publish") {
+        return res.json({ status: "success", message: "dev 模式定时发布调度入口已触发 (无实际发布)", results: [] });
       }
 
       return res.status(404).json({ status: "error", message: "未知的 action 参数" });

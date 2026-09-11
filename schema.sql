@@ -38,6 +38,58 @@ CREATE TABLE IF NOT EXISTS `published_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='账号已发布隐藏日志表';
 
 -- ========================================================
+-- 定时自动发布功能相关表 (v2.0 新增)
+-- ========================================================
+
+-- 4. 闲鱼自动回复配置表 (xianyu_config) - 每个用户对应一个闲鱼账号的对接设置
+CREATE TABLE IF NOT EXISTS `xianyu_config` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `account_key` VARCHAR(50) NOT NULL UNIQUE COMMENT '关联 templates.account_key',
+  `xy_server_url` VARCHAR(500) NOT NULL DEFAULT '' COMMENT 'xianyu-auto-reply 服务地址 (含端口，不含 /api/v1)',
+  `xy_secret_key` VARCHAR(128) NOT NULL DEFAULT '' COMMENT '分销秘钥',
+  `xy_account_id` VARCHAR(80) NOT NULL DEFAULT '' COMMENT '闲鱼账号ID',
+  `xy_account_remark` VARCHAR(100) DEFAULT '' COMMENT '闲鱼账号备注名 (仅用于界面显示)',
+  `publish_enabled` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否启用定时发布：1启用 0关闭',
+  `publish_times` VARCHAR(200) DEFAULT '09:00' COMMENT '每日定时发布时间，多个用逗号分隔如 09:00,12:00,18:00',
+  `publish_price` DECIMAL(10,2) NOT NULL DEFAULT 9.90 COMMENT '默认发布价格',
+  `publish_original_price` DECIMAL(10,2) DEFAULT 0 COMMENT '默认划线原价 (0表示不设)',
+  `publish_address` VARCHAR(200) DEFAULT '' COMMENT '宝贝所在地关键词',
+  `publish_quantity` INT NOT NULL DEFAULT 1 COMMENT '发布库存数量',
+  `publish_shipping_method` VARCHAR(20) DEFAULT 'free' COMMENT '运费方式: free/distance/fixed/template/none',
+  `publish_category_id` VARCHAR(64) DEFAULT '' COMMENT '平台末级分类ID (留空自动推荐)',
+  `publish_category_name` VARCHAR(100) DEFAULT '' COMMENT '平台分类名称',
+  `publish_channel_cat_id` VARCHAR(64) DEFAULT '' COMMENT '频道分类ID',
+  `publish_channel_cat_name` VARCHAR(100) DEFAULT '' COMMENT '频道分类名称',
+  `publish_leaf_id` VARCHAR(64) DEFAULT '' COMMENT '叶子分类ID',
+  `publish_tb_cat_id` VARCHAR(64) DEFAULT '' COMMENT '淘宝分类ID',
+  `image_source` VARCHAR(10) DEFAULT 'auto' COMMENT '图片来源: auto(自动搜索)/cover_url(使用封面)/custom(自定义URL)',
+  `custom_image_url` TEXT COMMENT '自定义图片URL (image_source=custom 时使用)',
+  `last_publish_at` DATETIME DEFAULT NULL COMMENT '上次自动发布时间',
+  `last_publish_status` VARCHAR(20) DEFAULT '' COMMENT '上次发布状态: success/failed/idle',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX `idx_publish_enabled` (`publish_enabled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='闲鱼自动回复定时发布配置表';
+
+-- 5. 闲鱼定时发布日志表 (xianyu_publish_logs) - 记录每次发布到闲鱼的结果
+CREATE TABLE IF NOT EXISTS `xianyu_publish_logs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `account_key` VARCHAR(50) NOT NULL COMMENT '账号标识符',
+  `game_id` INT NOT NULL COMMENT '游戏/商品ID',
+  `game_name_cn` VARCHAR(100) DEFAULT '' COMMENT '商品中文名 (冗余便于查看)',
+  `status` VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT '发布状态: pending/success/failed',
+  `trigger_type` VARCHAR(20) DEFAULT 'scheduled' COMMENT '触发方式: scheduled(定时)/manual(手动)',
+  `message` TEXT COMMENT '发布结果消息或错误信息',
+  `item_url` VARCHAR(500) DEFAULT '' COMMENT '发布后的商品链接',
+  `item_id` VARCHAR(100) DEFAULT '' COMMENT '发布后的平台商品ID',
+  `api_response` TEXT COMMENT 'xianyu-auto-reply API 原始响应 (JSON)',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间',
+  INDEX `idx_account_key` (`account_key`),
+  INDEX `idx_status` (`status`),
+  INDEX `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='闲鱼定时发布执行日志表';
+
+-- ========================================================
 -- 插入示例初始数据
 -- ========================================================
 

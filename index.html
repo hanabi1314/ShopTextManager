@@ -1774,6 +1774,12 @@
           <button class="tab-btn" onclick="switchAdminTab(event, 'gamesManage')">
             <i class="fa-solid fa-boxes-packing"></i> <span data-i18n="tabGamesManage">单个商品管理</span>
           </button>
+          <button class="tab-btn" onclick="switchAdminTab(event, 'scheduledPublish')">
+            <i class="fa-solid fa-clock-rotate-left"></i> <span>定时发布</span>
+          </button>
+          <button class="tab-btn" onclick="switchAdminTab(event, 'xianyuLogs')">
+            <i class="fa-solid fa-clipboard-list"></i> <span>发布日志</span>
+          </button>
         </div>
 
         <!-- Tab 1: 仪表板 Dashboard -->
@@ -1896,11 +1902,66 @@
                 <th data-i18n="colId">ID</th>
                 <th id="adminTableColCnHeader">中文名称</th>
                 <th id="adminTableColEnHeader">英文名称</th>
+                <th>封面图URL</th>
                 <th data-i18n="colOps">操作</th>
               </tr>
             </thead>
             <tbody id="adminGamesTableBody">
               <!-- 单个游戏管理表格 -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tab 5: 定时发布配置 -->
+        <div class="tab-content" id="adminTab-scheduledPublish">
+          <div class="tip-box-info" style="margin-bottom: 16px; font-size: 13px;">
+            <strong>⚙️ 定时发布功能说明：</strong><br>
+            为每个用户配置 xianyu-auto-reply 对接信息后，系统将在设定时间自动从待发布列表中选取下一个商品，获取图片并调用 xianyu-auto-reply API 发布到闲鱼。<br>
+            <strong>需配置服务器 Cron 定时任务：</strong> 每分钟调用 <code>curl -s "http(s)://你的域名/api.php?action=run_scheduled_publish"</code>，详见 README 教程。
+          </div>
+          <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-xianyu" onclick="loadXianyuConfigs()"><i class="fa-solid fa-rotate"></i> 刷新配置列表</button>
+            <button class="btn btn-black" onclick="manualTriggerPublish()"><i class="fa-solid fa-bolt"></i> 手动触发定时调度</button>
+            <button class="btn btn-outline" onclick="openManualPublishModal()"><i class="fa-solid fa-paper-plane"></i> 手动发布指定商品</button>
+            <button class="btn btn-secondary" onclick="switchAdminTab(event, 'xianyuLogs')"><i class="fa-solid fa-list"></i> 查看发布日志</button>
+          </div>
+          <table class="list-table">
+            <thead>
+              <tr>
+                <th>用户名</th>
+                <th>闲鱼账号</th>
+                <th>定时状态</th>
+                <th>发布时间</th>
+                <th>价格</th>
+                <th>上次发布</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="xianyuConfigTableBody">
+              <tr><td colspan="7" style="text-align:center; color:var(--text-muted);">点击「刷新配置列表」加载</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tab 6: 闲鱼发布日志 -->
+        <div class="tab-content" id="adminTab-xianyuLogs">
+          <div style="margin-bottom: 12px;">
+            <button class="btn btn-xianyu" onclick="loadXianyuPublishLogs()"><i class="fa-solid fa-rotate"></i> 刷新日志</button>
+          </div>
+          <table class="list-table">
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>用户名</th>
+                <th>商品</th>
+                <th>触发</th>
+                <th>状态</th>
+                <th>消息</th>
+                <th>链接</th>
+              </tr>
+            </thead>
+            <tbody id="xianyuLogsTableBody">
+              <tr><td colspan="7" style="text-align:center; color:var(--text-muted);">点击「刷新日志」加载</td></tr>
             </tbody>
           </table>
         </div>
@@ -2030,6 +2091,157 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('confirmResetAccountGamesModal')" data-i18n="cancelBtn">取消</button>
         <button class="btn btn-xianyu" onclick="confirmResetCurrentAccountGames()" data-i18n="confirmRestoreBtn">确认恢复</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 10: 闲鱼定时发布配置编辑 Modal -->
+  <div class="modal-overlay" id="xianyuConfigModal">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-clock-rotate-left"></i> <span>闲鱼定时发布配置</span>
+        </div>
+        <button class="modal-close" onclick="closeModal('xianyuConfigModal')">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
+        <div style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">
+          正在配置用户【<strong id="xianyuConfigTargetUser" class="highlight-account-key"></strong>】的闲鱼自动发布设置：
+        </div>
+
+        <div class="admin-card-box" style="margin-bottom: 12px;">
+          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">📡 xianyu-auto-reply 服务对接</div>
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label class="form-label" style="font-size: 12px;">服务地址 (含端口，不含 /api/v1)</label>
+            <input type="text" id="xyServerUrlInput" class="form-input" placeholder="http://127.0.0.1:8080 或 https://xy.example.com">
+          </div>
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label class="form-label" style="font-size: 12px;">分销秘钥 (secret_key)</label>
+            <input type="text" id="xySecretKeyInput" class="form-input" placeholder="在 xianyu-auto-reply 个人设置-分销管理中获取">
+          </div>
+          <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 8px;">
+              <label class="form-label" style="font-size: 12px;">闲鱼账号 ID</label>
+              <input type="text" id="xyAccountIdInput" class="form-input" placeholder="点击右侧测试连接后选择账号">
+            </div>
+            <button class="btn btn-outline" style="height: 38px; white-space: nowrap;" onclick="testXianyuConnection()">
+              <i class="fa-solid fa-plug"></i> 测试连接
+            </button>
+          </div>
+          <div id="xyAccountSelectBox" style="display:none; margin-top: 8px;">
+            <label class="form-label" style="font-size: 12px;">选择闲鱼账号：</label>
+            <select id="xyAccountSelect" class="form-input" onchange="onXyAccountSelected()"></select>
+          </div>
+        </div>
+
+        <div class="admin-card-box" style="margin-bottom: 12px;">
+          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">⏰ 定时发布设置</div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <input type="checkbox" id="xyPublishEnabledInput" style="width: 16px; height: 16px; cursor: pointer;">
+            <label for="xyPublishEnabledInput" style="font-size: 13px; font-weight: 800; cursor: pointer; user-select: none;">启用定时自动发布</label>
+          </div>
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label class="form-label" style="font-size: 12px;">每日发布时间 (多个用英文逗号分隔)</label>
+            <input type="text" id="xyPublishTimesInput" class="form-input" placeholder="如: 09:00,12:00,18:00" value="09:00">
+          </div>
+        </div>
+
+        <div class="admin-card-box" style="margin-bottom: 12px;">
+          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">💰 商品发布参数</div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1; min-width: 100px; margin-bottom: 8px;">
+              <label class="form-label" style="font-size: 12px;">售价 (元)</label>
+              <input type="number" id="xyPublishPriceInput" class="form-input" placeholder="9.90" step="0.01" value="9.90">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 100px; margin-bottom: 8px;">
+              <label class="form-label" style="font-size: 12px;">原价/划线价 (0=不设)</label>
+              <input type="number" id="xyPublishOriginalPriceInput" class="form-input" placeholder="0" step="0.01" value="0">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 80px; margin-bottom: 8px;">
+              <label class="form-label" style="font-size: 12px;">库存数量</label>
+              <input type="number" id="xyPublishQuantityInput" class="form-input" placeholder="1" value="1">
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 8px;">
+              <label class="form-label" style="font-size: 12px;">宝贝所在地</label>
+              <input type="text" id="xyPublishAddressInput" class="form-input" placeholder="如: 上海市">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 8px;">
+              <label class="form-label" style="font-size: 12px;">运费方式</label>
+              <select id="xyPublishShippingInput" class="form-input">
+                <option value="free">包邮</option>
+                <option value="distance">按距离计费</option>
+                <option value="fixed">一口价运费</option>
+                <option value="template">运费模板</option>
+                <option value="none">无需邮寄</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-card-box" style="margin-bottom: 12px;">
+          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">🖼️ 商品图片来源</div>
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label class="form-label" style="font-size: 12px;">图片来源方式</label>
+            <select id="xyImageSourceInput" class="form-input">
+              <option value="auto">自动 (优先使用封面，无封面则搜索)</option>
+              <option value="cover_url">使用商品封面图</option>
+              <option value="custom">自定义图片 URL</option>
+            </select>
+          </div>
+          <div class="form-group" id="xyCustomUrlBox" style="display:none;">
+            <label class="form-label" style="font-size: 12px;">自定义图片 URL</label>
+            <input type="text" id="xyCustomImageUrlInput" class="form-input" placeholder="https://example.com/image.jpg">
+          </div>
+        </div>
+
+        <div class="admin-card-box" style="margin-bottom: 12px;">
+          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">🏷️ 分类设置 (可选，留空自动推荐)</div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 8px;">
+              <label class="form-label" style="font-size: 12px;">平台末级分类 ID</label>
+              <input type="text" id="xyCategoryIdInput" class="form-input" placeholder="留空自动推荐">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 8px;">
+              <label class="form-label" style="font-size: 12px;">分类名称</label>
+              <input type="text" id="xyCategoryNameInput" class="form-input" placeholder="留空自动推荐">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('xianyuConfigModal')">取消</button>
+        <button class="btn btn-xianyu" onclick="saveXianyuConfig()"><i class="fa-solid fa-floppy-disk"></i> 保存配置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 11: 手动发布商品 Modal -->
+  <div class="modal-overlay" id="manualPublishModal">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-paper-plane"></i> <span>手动发布商品到闲鱼</span>
+        </div>
+        <button class="modal-close" onclick="closeModal('manualPublishModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">
+          选择用户和待发布商品，立即调用 xianyu-auto-reply API 发布到闲鱼。
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label class="form-label" style="font-size: 12px;">选择用户</label>
+          <select id="manualPublishAccountSelect" class="form-input"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-size: 12px;">选择待发布商品</label>
+          <select id="manualPublishGameSelect" class="form-input"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('manualPublishModal')">取消</button>
+        <button class="btn btn-xianyu" onclick="confirmManualPublish()"><i class="fa-solid fa-bolt"></i> 立即发布</button>
       </div>
     </div>
   </div>
@@ -3321,6 +3533,8 @@
       if (tabName === 'dashboard') refreshAdminDashboard();
       if (tabName === 'accountsManage') renderAdminAccountsTable();
       if (tabName === 'gamesManage') renderAdminGamesTable();
+      if (tabName === 'scheduledPublish') loadXianyuConfigs();
+      if (tabName === 'xianyuLogs') loadXianyuPublishLogs();
     }
 
     // 刷新仪表板
@@ -3649,7 +3863,7 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">${isEn ? 'No matching product data found' : '未找到匹配的游戏数据'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">${isEn ? 'No matching product data found' : '未找到匹配的游戏数据'}</td></tr>`;
         return;
       }
 
@@ -3658,6 +3872,13 @@
           <td>${g.id}</td>
           <td><strong style="white-space: pre-line;">${escapeHtml(g.game_name_cn)}</strong></td>
           <td><code style="white-space: pre-line;">${escapeHtml(g.game_name_en || '-')}</code></td>
+          <td style="min-width: 180px;">
+            <input type="text" class="form-input" style="font-size: 11px; padding: 4px 6px;"
+              placeholder="${isEn ? 'Paste image URL for auto-publish' : '封面图URL(定时发布用)'}"
+              value="${escapeHtml(g.cover_url || '')}"
+              onchange="saveGameCover(${g.id}, this.value)" onkeydown="if(event.key==='Enter') this.blur();">
+            ${g.cover_url ? '<div style="font-size:10px; color:var(--success-color); margin-top:2px;">✅ 已设置</div>' : '<div style="font-size:10px; color:var(--text-muted); margin-top:2px;">未设置</div>'}
+          </td>
           <td>
             <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="deleteSingleGame(${g.id}, '${escapeJsString(g.game_name_cn)}')">
               <i class="fa-solid fa-trash"></i> ${t('deleteItemBtn') || (isEn ? 'Delete' : '删除')}
@@ -3665,6 +3886,27 @@
           </td>
         </tr>
       `).join('');
+    }
+
+    // 保存商品封面图 URL (定时发布时会优先使用该图片)
+    async function saveGameCover(gameId, coverUrl) {
+      try {
+        const res = await fetch(`${API_BASE}?action=update_game_cover`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ game_id: gameId, cover_url: (coverUrl || '').trim() })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          const game = gamesList.find(g => g.id === gameId);
+          if (game) game.cover_url = (coverUrl || '').trim();
+          showToast('封面图已保存');
+        } else {
+          showToast(data.message || '保存失败', true);
+        }
+      } catch (e) {
+        showToast('保存失败: ' + e.message, true);
+      }
     }
 
     async function submitSingleGameAdd() {
@@ -3994,6 +4236,317 @@
         .replace(/\n/g, '\\n')
         .replace(/\r/g, '\\r');
     }
+
+    // ========================================================
+    // 定时发布功能 JavaScript (v2.0 新增)
+    // ========================================================
+    let xianyuConfigsData = [];
+    let xianyuConfigEditingKey = '';
+    let xianyuTestAccounts = [];
+
+    async function loadXianyuConfigs() {
+      try {
+        const res = await fetch(`${API_BASE}?action=get_xianyu_configs`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          xianyuConfigsData = data.configs || [];
+          renderXianyuConfigTable();
+        } else {
+          alert(data.message || '获取配置失败');
+        }
+      } catch (e) {
+        alert('网络错误: ' + e.message);
+      }
+    }
+
+    function renderXianyuConfigTable() {
+      const tbody = document.getElementById('xianyuConfigTableBody');
+      if (!tbody) return;
+      if (!xianyuConfigsData.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">暂无用户数据</td></tr>';
+        return;
+      }
+      tbody.innerHTML = xianyuConfigsData.map(cfg => {
+        const enabled = cfg.publish_enabled == 1 || cfg.publish_enabled === true;
+        const statusBadge = enabled
+          ? '<span style="color:var(--success-color); font-weight:800;">✅ 已启用</span>'
+          : '<span style="color:var(--text-muted);">⏸ 未启用</span>';
+        const xyAccount = cfg.xy_account_remark ? `${cfg.xy_account_remark}` : (cfg.xy_account_id || '未配置');
+        const lastPub = cfg.last_publish_at ? cfg.last_publish_at.substring(0, 16) : '—';
+        const lastStatus = cfg.last_publish_status === 'success' ? '✅成功' : (cfg.last_publish_status === 'failed' ? '❌失败' : (cfg.last_publish_status === 'idle' ? '⏸无待发' : '—'));
+        return `<tr>
+          <td><strong>${escapeHtml(cfg.account_key)}</strong>${cfg.is_admin ? ' <span class="badge-admin">ADMIN</span>' : ''}</td>
+          <td>${escapeHtml(xyAccount)}</td>
+          <td>${statusBadge}</td>
+          <td>${escapeHtml(cfg.publish_times || '09:00')}</td>
+          <td>¥${escapeHtml(cfg.publish_price || '9.90')}</td>
+          <td style="font-size:12px;">${lastPub}<br>${lastStatus}</td>
+          <td>
+            <button class="btn btn-outline" style="padding:4px 10px; font-size:12px;" onclick="openXianyuConfigModal('${escapeJsString(cfg.account_key)}')">配置</button>
+            ${enabled ? `<button class="btn btn-xianyu" style="padding:4px 10px; font-size:12px;" onclick="openManualPublishForUser('${escapeJsString(cfg.account_key)}')">手动发布</button>` : ''}
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function openXianyuConfigModal(accountKey) {
+      xianyuConfigEditingKey = accountKey;
+      const cfg = xianyuConfigsData.find(c => c.account_key === accountKey) || {};
+      document.getElementById('xianyuConfigTargetUser').textContent = accountKey;
+      document.getElementById('xyServerUrlInput').value = cfg.xy_server_url || '';
+      document.getElementById('xySecretKeyInput').value = cfg.xy_secret_key || '';
+      document.getElementById('xyAccountIdInput').value = cfg.xy_account_id || '';
+      document.getElementById('xyPublishEnabledInput').checked = cfg.publish_enabled == 1 || cfg.publish_enabled === true;
+      document.getElementById('xyPublishTimesInput').value = cfg.publish_times || '09:00';
+      document.getElementById('xyPublishPriceInput').value = cfg.publish_price || '9.90';
+      document.getElementById('xyPublishOriginalPriceInput').value = cfg.publish_original_price || '0';
+      document.getElementById('xyPublishQuantityInput').value = cfg.publish_quantity || 1;
+      document.getElementById('xyPublishAddressInput').value = cfg.publish_address || '';
+      document.getElementById('xyPublishShippingInput').value = cfg.publish_shipping_method || 'free';
+      document.getElementById('xyImageSourceInput').value = cfg.image_source || 'auto';
+      document.getElementById('xyCustomImageUrlInput').value = cfg.custom_image_url || '';
+      document.getElementById('xyCategoryIdInput').value = cfg.publish_category_id || '';
+      document.getElementById('xyCategoryNameInput').value = cfg.publish_category_name || '';
+      document.getElementById('xyAccountSelectBox').style.display = 'none';
+      onXyImageSourceChange();
+      openModal('xianyuConfigModal');
+    }
+
+    function onXyImageSourceChange() {
+      const src = document.getElementById('xyImageSourceInput').value;
+      document.getElementById('xyCustomUrlBox').style.display = src === 'custom' ? 'block' : 'none';
+    }
+
+    async function testXianyuConnection() {
+      const serverUrl = document.getElementById('xyServerUrlInput').value.trim();
+      const secretKey = document.getElementById('xySecretKeyInput').value.trim();
+      if (!serverUrl || !secretKey) {
+        alert('请先填写服务地址和分销秘钥');
+        return;
+      }
+      const btn = event.target.closest('button');
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 测试中...';
+      btn.disabled = true;
+      try {
+        const res = await fetch(`${API_BASE}?action=test_xianyu_connection`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ xy_server_url: serverUrl, xy_secret_key: secretKey })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          xianyuTestAccounts = data.accounts || [];
+          const selectBox = document.getElementById('xyAccountSelectBox');
+          const select = document.getElementById('xyAccountSelect');
+          select.innerHTML = '<option value="">-- 选择闲鱼账号 --</option>' +
+            xianyuTestAccounts.map(a => `<option value="${escapeHtml(a.account_id)}">${escapeHtml(a.remark || a.account_id)} ${a.enabled ? '✅' : '⛔'}</option>`).join('');
+          selectBox.style.display = 'block';
+          alert(`连接成功！找到 ${xianyuTestAccounts.length} 个闲鱼账号，请在下方选择。`);
+        } else {
+          alert('连接失败: ' + (data.message || '未知错误'));
+        }
+      } catch (e) {
+        alert('请求失败: ' + e.message);
+      } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+      }
+    }
+
+    function onXyAccountSelected() {
+      const select = document.getElementById('xyAccountSelect');
+      const accountId = select.value;
+      if (accountId) {
+        document.getElementById('xyAccountIdInput').value = accountId;
+        const account = xianyuTestAccounts.find(a => a.account_id === accountId);
+        if (account && account.remark) {
+          // Store remark for later use
+          select.dataset.remark = account.remark;
+        }
+      }
+    }
+
+    async function saveXianyuConfig() {
+      const accountKey = xianyuConfigEditingKey;
+      const select = document.getElementById('xyAccountSelect');
+      const payload = {
+        account_key: accountKey,
+        xy_server_url: document.getElementById('xyServerUrlInput').value.trim(),
+        xy_secret_key: document.getElementById('xySecretKeyInput').value.trim(),
+        xy_account_id: document.getElementById('xyAccountIdInput').value.trim(),
+        xy_account_remark: select?.dataset?.remark || '',
+        publish_enabled: document.getElementById('xyPublishEnabledInput').checked ? 1 : 0,
+        publish_times: document.getElementById('xyPublishTimesInput').value.trim(),
+        publish_price: parseFloat(document.getElementById('xyPublishPriceInput').value) || 9.90,
+        publish_original_price: parseFloat(document.getElementById('xyPublishOriginalPriceInput').value) || 0,
+        publish_address: document.getElementById('xyPublishAddressInput').value.trim(),
+        publish_quantity: parseInt(document.getElementById('xyPublishQuantityInput').value) || 1,
+        publish_shipping_method: document.getElementById('xyPublishShippingInput').value,
+        publish_category_id: document.getElementById('xyCategoryIdInput').value.trim(),
+        publish_category_name: document.getElementById('xyCategoryNameInput').value.trim(),
+        image_source: document.getElementById('xyImageSourceInput').value,
+        custom_image_url: document.getElementById('xyCustomImageUrlInput').value.trim(),
+      };
+      try {
+        const res = await fetch(`${API_BASE}?action=save_xianyu_config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          alert('配置保存成功！');
+          closeModal('xianyuConfigModal');
+          loadXianyuConfigs();
+        } else {
+          alert('保存失败: ' + (data.message || ''));
+        }
+      } catch (e) {
+        alert('请求失败: ' + e.message);
+      }
+    }
+
+    function openManualPublishForUser(accountKey) {
+      // Open manual publish modal with pre-selected user
+      openManualPublishModal(accountKey);
+    }
+
+    async function openManualPublishModal(preselectedAccount) {
+      // Load configs if not already loaded
+      if (!xianyuConfigsData.length) {
+        await loadXianyuConfigs();
+      }
+      // Load accounts into select
+      const accSelect = document.getElementById('manualPublishAccountSelect');
+      accSelect.innerHTML = '<option value="">-- 选择用户 --</option>' +
+        (xianyuConfigsData.length ? xianyuConfigsData.filter(c => c.xy_account_id).map(c =>
+          `<option value="${escapeHtml(c.account_key)}" ${preselectedAccount === c.account_key ? 'selected' : ''}>${escapeHtml(c.account_key)}</option>`
+        ).join('') : '<option value="">请先加载配置</option>');
+
+      // Load games for the preselected account
+      if (preselectedAccount) {
+        await loadManualPublishGames(preselectedAccount);
+      } else {
+        document.getElementById('manualPublishGameSelect').innerHTML = '<option value="">请先选择用户</option>';
+      }
+      accSelect.onchange = () => loadManualPublishGames(accSelect.value);
+      openModal('manualPublishModal');
+    }
+
+    async function loadManualPublishGames(accountKey) {
+      if (!accountKey) {
+        document.getElementById('manualPublishGameSelect').innerHTML = '<option value="">请先选择用户</option>';
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}?action=get_games&account_key=${encodeURIComponent(accountKey)}`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          const unpublished = (data.games || []).filter(g => !g.is_published);
+          const gameSelect = document.getElementById('manualPublishGameSelect');
+          if (!unpublished.length) {
+            gameSelect.innerHTML = '<option value="">该用户无待发布商品</option>';
+          } else {
+            gameSelect.innerHTML = unpublished.map(g =>
+              `<option value="${g.id}">${escapeHtml(g.game_name_cn)} ${g.game_name_en ? '(' + escapeHtml(g.game_name_en) + ')' : ''}</option>`
+            ).join('');
+          }
+        }
+      } catch (e) {
+        alert('加载商品失败: ' + e.message);
+      }
+    }
+
+    async function confirmManualPublish() {
+      const accountKey = document.getElementById('manualPublishAccountSelect').value;
+      const gameId = document.getElementById('manualPublishGameSelect').value;
+      if (!accountKey || !gameId) {
+        alert('请选择用户和商品');
+        return;
+      }
+      if (!confirm('确认立即发布该商品到闲鱼吗？')) return;
+
+      try {
+        const res = await fetch(`${API_BASE}?action=manual_publish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account_key: accountKey, game_id: parseInt(gameId) })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          alert('发布成功！\n' + (data.message || '') + (data.data?.item_url ? '\n商品链接: ' + data.data.item_url : ''));
+          closeModal('manualPublishModal');
+        } else {
+          alert('发布失败: ' + (data.message || ''));
+        }
+      } catch (e) {
+        alert('请求失败: ' + e.message);
+      }
+    }
+
+    async function manualTriggerPublish() {
+      if (!confirm('手动触发定时发布调度？这将检查所有启用定时发布的用户。')) return;
+      try {
+        const res = await fetch(`${API_BASE}?action=run_scheduled_publish`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          alert(data.message + (data.results?.length ? '\n\n详情:\n' + data.results.map(r => `• ${r.account_key}: ${r.status} - ${r.message}`).join('\n') : ''));
+          loadXianyuConfigs();
+        } else {
+          alert('调度失败: ' + (data.message || ''));
+        }
+      } catch (e) {
+        alert('请求失败: ' + e.message);
+      }
+    }
+
+    async function loadXianyuPublishLogs() {
+      // 注意：此函数只负责拉取并渲染日志，不负责切换选项卡。
+      // 切换由 switchAdminTab 处理，若在此处再触发 tab 点击会造成无限递归。
+      try {
+        const res = await fetch(`${API_BASE}?action=get_xianyu_publish_logs&page=1&page_size=50`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          renderXianyuLogsTable(data.logs || []);
+        }
+      } catch (e) {
+        alert('加载日志失败: ' + e.message);
+      }
+    }
+
+    function renderXianyuLogsTable(logs) {
+      const tbody = document.getElementById('xianyuLogsTableBody');
+      if (!tbody) return;
+      if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">暂无发布日志</td></tr>';
+        return;
+      }
+      tbody.innerHTML = logs.map(log => {
+        const statusBadge = log.status === 'success'
+          ? '<span style="color:var(--success-color);">✅成功</span>'
+          : '<span style="color:var(--danger-color);">❌失败</span>';
+        const trigger = log.trigger_type === 'manual' ? '手动' : '定时';
+        const link = log.item_url ? `<a href="${escapeHtml(log.item_url)}" target="_blank" style="color:var(--xianyu-yellow-hover);">查看</a>` : '—';
+        return `<tr>
+          <td style="font-size:12px;">${escapeHtml(log.created_at || '')}</td>
+          <td><strong>${escapeHtml(log.account_key)}</strong></td>
+          <td>${escapeHtml(log.game_name_cn || '')}</td>
+          <td style="font-size:12px;">${trigger}</td>
+          <td>${statusBadge}</td>
+          <td style="font-size:11px; max-width:200px; word-break:break-all;">${escapeHtml(log.message || '')}</td>
+          <td>${link}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // 图片来源选择变化时显示/隐藏自定义URL输入框
+    document.addEventListener('DOMContentLoaded', () => {
+      const imgSourceSelect = document.getElementById('xyImageSourceInput');
+      if (imgSourceSelect) {
+        imgSourceSelect.addEventListener('change', onXyImageSourceChange);
+      }
+    });
   </script>
 </body>
 </html>
