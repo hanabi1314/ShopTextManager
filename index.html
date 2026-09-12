@@ -22,6 +22,9 @@
       --text-muted: #666666;
       --danger-color: #ef4444;
       --success-color: #10b981;
+      --info-color: #0284c7;
+      --chip-bg: #f1f5f9;
+      --chip-border: #cbd5e1;
       --radius-lg: 16px;
       --radius-md: 10px;
       --shadow-geo: 4px 4px 0px 0px #000000;
@@ -133,6 +136,9 @@
       --text-muted: #94a3b8;
       --danger-color: #f87171;
       --success-color: #34d399;
+      --info-color: #7dd3fc;
+      --chip-bg: #334155;
+      --chip-border: #475569;
     }
 
     html.dark-mode body {
@@ -225,6 +231,11 @@
       background-color: #1e293b !important;
       color: #f8fafc !important;
       border-color: #334155 !important;
+    }
+
+    /* 暗色下卡片底色变深，数字原本是纯黑(--xianyu-black)，会变成黑字压深底几乎看不见 */
+    html.dark-mode .dash-card .num {
+      color: var(--text-main) !important;
     }
 
     html.dark-mode .card-body {
@@ -2149,6 +2160,7 @@
           <div class="form-group" style="margin-bottom: 8px;">
             <label class="form-label" style="font-size: 12px;" data-i18n="xySecretKeyLabel">分销秘钥 (secret_key)</label>
             <input type="text" id="xySecretKeyInput" class="form-input" placeholder="在 xianyu-auto-reply 个人设置-分销管理中获取" data-i18n-placeholder="xySecretKeyPlaceholder">
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;" data-i18n="xySecretKeyHint">出于安全考虑，已保存的秘钥以脱敏形式显示；不改则保持原值，如需更换请填写完整新秘钥。</div>
           </div>
           <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
             <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 8px;">
@@ -2162,6 +2174,7 @@
           <div id="xyAccountSelectBox" style="display:none; margin-top: 8px;">
             <label class="form-label" style="font-size: 12px;" data-i18n="xySelectAccountLabel">选择闲鱼账号：</label>
             <select id="xyAccountSelect" class="form-input" onchange="onXyAccountSelected()"></select>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;" data-i18n="xyAccountCountHint">这里列出的是「该分销秘钥所属用户」名下的全部账号（含已禁用，禁用账号同样可发布）。若数量少于你在 xianyu-auto-reply 看到的，说明其余账号登录在另一个用户下，请改用那个用户的分销秘钥。</div>
           </div>
         </div>
 
@@ -2493,10 +2506,12 @@
         xyServerUrlPlaceholder: "http://127.0.0.1:8080 或 https://xy.example.com",
         xySecretKeyLabel: "分销秘钥 (secret_key)",
         xySecretKeyPlaceholder: "在 xianyu-auto-reply 个人设置-分销管理中获取",
+        xySecretKeyHint: "出于安全考虑，已保存的秘钥以脱敏形式显示；不改则保持原值，如需更换请填写完整新秘钥。",
         xyAccountIdLabel: "闲鱼账号 ID",
         xyAccountIdPlaceholder: "点击右侧测试连接后选择账号，也可手动填写",
         xyTestConnBtn: "测试连接",
         xySelectAccountLabel: "选择闲鱼账号：",
+        xyAccountCountHint: "这里列出的是「该分销秘钥所属用户」名下的全部账号（含已禁用，禁用账号同样可发布）。若数量少于你在 xianyu-auto-reply 看到的，说明其余账号登录在另一个用户下，请改用那个用户的分销秘钥。",
         xySectionSchedule: "定时发布设置",
         xyEnableLabel: "启用定时自动发布",
         xyPublishTimesLabel: "每日发布时间 (多个用英文逗号分隔)",
@@ -2721,10 +2736,12 @@
         xyServerUrlPlaceholder: "http://127.0.0.1:8080 or https://xy.example.com",
         xySecretKeyLabel: "Secret Key (secret_key)",
         xySecretKeyPlaceholder: "Found in xianyu-auto-reply → Personal Settings → Distribution",
+        xySecretKeyHint: "For security, a saved key is shown masked. Leave it unchanged to keep it; enter the full new key to replace it.",
         xyAccountIdLabel: "Xianyu Account ID",
         xyAccountIdPlaceholder: "Click Test Connection to pick one, or type it manually",
         xyTestConnBtn: "Test Connection",
         xySelectAccountLabel: "Select Xianyu account:",
+        xyAccountCountHint: "This lists ALL accounts owned by the user this secret key belongs to (disabled ones included - they can still publish). If you see fewer than in xianyu-auto-reply, the rest are logged in under a different user; use that user's secret key instead.",
         xySectionSchedule: "Schedule Settings",
         xyEnableLabel: "Enable scheduled auto-publishing",
         xyPublishTimesLabel: "Daily publish times (comma separated)",
@@ -3894,7 +3911,7 @@
           <tr>
             <td>
               <code>${escapeHtml(a.account_key)}</code>
-              ${isAdmin ? '<span class="badge-admin" style="margin-left: 6px; font-size: 10px; padding: 2px 6px; background-color: var(--xianyu-yellow); color: #000; border-radius: 4px; font-weight: 800; border: 1px solid var(--xianyu-black);">ADMIN</span>' : `<span style="margin-left: 6px; font-size: 10px; padding: 2px 6px; background-color: #f1f5f9; color: #64748b; border-radius: 4px; font-weight: 700; border: 1px solid #cbd5e1;">${t('userRole')}</span>`}
+              ${isAdmin ? '<span class="badge-admin" style="margin-left: 6px; font-size: 10px; padding: 2px 6px; background-color: var(--xianyu-yellow); color: #000; border-radius: 4px; font-weight: 800; border: 1px solid var(--xianyu-black);">ADMIN</span>' : `<span style="margin-left: 6px; font-size: 10px; padding: 2px 6px; background-color: var(--chip-bg); color: var(--text-muted); border-radius: 4px; font-weight: 700; border: 1px solid var(--chip-border);">${t('userRole')}</span>`}
             </td>
             <td>
               <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
@@ -3905,11 +3922,11 @@
                   <i class="fa-solid fa-pen-to-square"></i> ${t('changeUsername')}
                 </button>
                 ${isAdmin ? `
-                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; color: #dc2626; border-color: #fca5a5;" onclick="toggleAdminStatus('${escapeHtml(escapeJsString(a.account_key))}', false)">
+                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; color: var(--danger-color); border-color: var(--danger-color);" onclick="toggleAdminStatus('${escapeHtml(escapeJsString(a.account_key))}', false)">
                     <i class="fa-solid fa-user-minus"></i> ${t('revokeAdmin')}
                   </button>
                 ` : `
-                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; color: #0284c7; border-color: #7dd3fc;" onclick="toggleAdminStatus('${escapeHtml(escapeJsString(a.account_key))}', true)">
+                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; color: var(--info-color); border-color: var(--info-color);" onclick="toggleAdminStatus('${escapeHtml(escapeJsString(a.account_key))}', true)">
                     <i class="fa-solid fa-user-shield"></i> ${t('setAdmin')}
                   </button>
                 `}
@@ -4198,7 +4215,7 @@
           showToast(data.message || t('xySaveFailed'), true);
         }
       } catch (e) {
-        showToast('保存失败: ' + e.message, true);
+        showToast((isEn ? 'Save failed: ' : '保存失败: ') + e.message, true);
       }
     }
 
@@ -4380,8 +4397,8 @@
 
       if (btnElement && btnElement instanceof HTMLElement) {
         const originalHtml = btnElement.innerHTML;
-        btnElement.innerHTML = `<i class="fa-solid fa-check" style="color: #10b981;"></i> ${isEn ? 'Copied!' : '已复制!'}`;
-        btnElement.style.borderColor = '#10b981';
+        btnElement.innerHTML = `<i class="fa-solid fa-check" style="color: var(--success-color);"></i> ${isEn ? 'Copied!' : '已复制!'}`;
+        btnElement.style.borderColor = 'var(--success-color)';
         setTimeout(() => {
           btnElement.innerHTML = originalHtml;
           btnElement.style.borderColor = '';
@@ -4469,6 +4486,50 @@
       }
       if (msg.includes('登录失败:')) {
         return msg.replace('登录失败:', 'Login failed:');
+      }
+
+      // ---- 闲鱼发布相关（日志表格/提示条都会用到，英文模式下必须翻译）----
+      if (msg.includes('发布成功')) {
+        return msg.replace('发布成功', 'Publish succeeded');
+      }
+      if (msg.includes('图片上传到闲鱼服务器失败:')) {
+        return msg.replace('图片上传到闲鱼服务器失败:', 'Failed to upload image to Xianyu server:');
+      }
+      if (msg.includes('只支持上传图片文件')) {
+        return msg.replace('只支持上传图片文件', 'Only image files are supported');
+      }
+      if (msg.includes('闲鱼发布失败:')) {
+        return msg.replace('闲鱼发布失败:', 'Xianyu publish failed:');
+      }
+      if (msg.includes('未能获取商品图片')) {
+        return msg.replace('未能获取商品图片', 'Could not fetch a product image');
+      }
+      if (msg.includes('所有候选图片均无法下载')) {
+        return msg.replace('所有候选图片均无法下载', 'All candidate images failed to download');
+      }
+      if (msg.includes('请为该商品设置封面图 URL')) {
+        return msg.replace('请为该商品设置封面图 URL', 'Please set a cover image URL for this product');
+      }
+      if (msg.includes('图片处理已超时')) {
+        return msg.replace('图片处理已超时', 'Image processing timed out');
+      }
+      if (msg.includes('图片下载失败或内容不是有效图片:')) {
+        return msg.replace('图片下载失败或内容不是有效图片:', 'Image download failed or content is not a valid image:');
+      }
+      if (msg.includes('媒体上传失败')) {
+        return msg.replace('媒体上传失败', 'Media upload failed');
+      }
+      if (msg.includes('请求失败:')) {
+        return msg.replace('请求失败:', 'Request failed:');
+      }
+      if (msg.includes('响应格式异常')) {
+        return msg.replace('响应格式异常', 'Unexpected response format');
+      }
+      if (msg.includes('服务地址和分销秘钥不能为空')) {
+        return msg.replace('服务地址和分销秘钥不能为空', 'Server URL and secret key cannot be empty');
+      }
+      if (msg.includes('账号不能为空')) {
+        return msg.replace('账号不能为空', 'Account cannot be empty');
       }
 
       return msg;
@@ -4958,7 +5019,7 @@
           <td>${escapeHtml(log.game_name_cn || '')}</td>
           <td style="font-size:12px;">${escapeHtml(trigger)}</td>
           <td>${statusBadge}</td>
-          <td style="font-size:11px; max-width:200px; word-break:break-all;">${escapeHtml(log.message || '')}</td>
+          <td style="font-size:11px; max-width:200px; word-break:break-all;">${escapeHtml(formatServerMsg(log.message || ''))}</td>
           <td>${link}</td>
         </tr>`;
       }).join('');

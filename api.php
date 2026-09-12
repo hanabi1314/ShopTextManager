@@ -31,6 +31,15 @@ set_error_handler(function ($errno, $errstr, $errfile, $errline) {
     if (!(error_reporting() & $errno)) {
         return false;
     }
+    // 只有真正的致命错误才中断请求。
+    // E_WARNING / E_NOTICE / E_DEPRECATED 在老部署上很常见（例如数据库用 CREATE TABLE IF NOT EXISTS
+    // 建表后不会补新列，读取 $cfg['image_source'] 之类新字段就会触发「未定义索引」）。
+    // 若把这类告警也转成 500 并 exit，会让整个定时发布循环静默死掉，且日志里只有一句 Notice，极难排查。
+    $fatalErrors = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR];
+    if (!in_array($errno, $fatalErrors, true)) {
+        @error_log("ShopTextManager PHP[{$errno}]: {$errstr} in {$errfile}:{$errline}");
+        return true; // 已处理，不再交给 PHP 内部处理器，请求继续执行
+    }
     http_response_code(500);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
@@ -110,6 +119,32 @@ try {
     $checkCover = $pdo->query("SHOW COLUMNS FROM games LIKE 'cover_url'")->fetch();
     if (!$checkCover) {
         $pdo->exec("ALTER TABLE games ADD COLUMN cover_url VARCHAR(255) DEFAULT '' COMMENT '游戏封面图片链接'");
+    }
+
+    // 兼容中间版本部署：若 xianyu_config 表缺少后续新增的列则自动补齐，
+    // 否则 SELECT 引用不存在的列会直接抛异常，管理员控制台整块打不开。
+    $xianyuColumns = [
+        'xy_account_remark'        => "VARCHAR(100) DEFAULT ''",
+        'publish_original_price'   => "DECIMAL(10,2) DEFAULT 0",
+        'publish_category_id'      => "VARCHAR(64) DEFAULT ''",
+        'publish_category_name'    => "VARCHAR(100) DEFAULT ''",
+        'publish_channel_cat_id'   => "VARCHAR(64) DEFAULT ''",
+        'publish_channel_cat_name' => "VARCHAR(100) DEFAULT ''",
+        'publish_leaf_id'          => "VARCHAR(64) DEFAULT ''",
+        'publish_tb_cat_id'        => "VARCHAR(64) DEFAULT ''",
+        'image_source'             => "VARCHAR(10) DEFAULT 'auto'",
+        'custom_image_url'         => "TEXT",
+        'last_publish_at'          => "DATETIME DEFAULT NULL",
+        'last_publish_status'      => "VARCHAR(20) DEFAULT ''",
+    ];
+    $existingXyCols = [];
+    foreach ($pdo->query("SHOW COLUMNS FROM xianyu_config")->fetchAll() as $col) {
+        $existingXyCols[$col['Field']] = true;
+    }
+    foreach ($xianyuColumns as $colName => $ddl) {
+        if (!isset($existingXyCols[$colName])) {
+            $pdo->exec("ALTER TABLE xianyu_config ADD COLUMN `{$colName}` {$ddl}");
+        }
     }
 
     // v2.0: 自动创建定时发布相关新表 (兼容旧版部署，不会影响已有数据)
@@ -663,7 +698,10 @@ switch ($action) {
             $cfg['publish_times'] = (string)($cfg['publish_times'] ?? '09:00');
             $cfg['publish_quantity'] = (int)($cfg['publish_quantity'] ?? 1);
             $cfg['xy_server_url'] = (string)($cfg['xy_server_url'] ?? '');
-            $cfg['xy_secret_key'] = (string)($cfg['xy_secret_key'] ?? '');
+            // 只回显脱敏后的秘钥，避免通过公开接口泄露他人 xianyu-auto-reply 分销秘钥
+            $rawSecret = (string)($cfg['xy_secret_key'] ?? '');
+            $cfg['xy_secret_key'] = maskSecretKey($rawSecret);
+            $cfg['xy_secret_key_set'] = $rawSecret !== '' ? 1 : 0;
             $cfg['xy_account_id'] = (string)($cfg['xy_account_id'] ?? '');
             $cfg['xy_account_remark'] = (string)($cfg['xy_account_remark'] ?? '');
             $cfg['publish_address'] = (string)($cfg['publish_address'] ?? '');
@@ -689,9 +727,23 @@ switch ($action) {
         $ak = trim($input['account_key'] ?? '');
         if (empty($ak)) jsonResponse(['status' => 'error', 'message' => '账号不能为空'], 400);
 
+        // 列表接口返回的是脱敏秘钥。若管理员打开配置后未改动直接保存，
+        // 提交上来的就是脱敏串，此时必须保留库里的原值，否则会把真实秘钥覆盖成 "sk****abc"。
+        $submittedSecret = trim($input['xy_secret_key'] ?? '');
+        $prevSecret = '';
+        $prevStmt = $pdo->prepare("SELECT xy_secret_key FROM xianyu_config WHERE account_key = ?");
+        $prevStmt->execute([$ak]);
+        $prevRow = $prevStmt->fetch();
+        if ($prevRow) {
+            $prevSecret = (string)$prevRow['xy_secret_key'];
+            if ($submittedSecret !== '' && $submittedSecret === maskSecretKey($prevSecret)) {
+                $submittedSecret = $prevSecret; // 未修改，沿用原值
+            }
+        }
+
         $fields = [
             'xy_server_url' => trim($input['xy_server_url'] ?? ''),
-            'xy_secret_key' => trim($input['xy_secret_key'] ?? ''),
+            'xy_secret_key' => $submittedSecret,
             'xy_account_id' => trim($input['xy_account_id'] ?? ''),
             'xy_account_remark' => trim($input['xy_account_remark'] ?? ''),
             'publish_enabled' => !empty($input['publish_enabled']) ? 1 : 0,
@@ -823,11 +875,14 @@ switch ($action) {
                     if (!empty($a['enabled'])) $enabledTotal++;
                 }
             }
-            // 说明：该接口返回的是「该分销秘钥所属用户」名下的全部账号。
-            // 若账号数少于预期，通常是这些账号挂在 xianyu-auto-reply 的其它用户下。
+            // 说明（已核对 xianyu-auto-reply 源码 external_account_service.list_accounts_by_secret）：
+            // 该接口按 XYAccount.owner_id == 秘钥所属用户 查询，无分页、无数量上限、也不过滤禁用账号，
+            // 因此这里返回的就是「该分销秘钥所属用户」名下的全部账号。
+            // 若数量少于预期，原因只可能是：那些账号是在 xianyu-auto-reply 的**另一个用户**下登录的，
+            // 需要用生成该分销秘钥的那个账号登录 xianyu-auto-reply，把账号移过来或改用那个用户的秘钥。
             $hint = '';
             if ($total > 0 && $enabledTotal < $total) {
-                $hint = "（其中 {$enabledTotal} 个启用、" . ($total - $enabledTotal) . " 个已禁用；禁用账号同样可用于发布）";
+                $hint = "（其中 {$enabledTotal} 个启用、" . ($total - $enabledTotal) . " 个已禁用；已禁用账号同样可以发布）";
             }
             jsonResponse([
                 'status' => 'success',
@@ -1099,16 +1154,19 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
                     break;
                 }
                 $searched = true;
-                if (microtime(true) > $deadline) {
+                $left = (int)($deadline - microtime(true));
+                if ($left <= 1) {
                     if ($lastErr === '') {
                         $lastErr = '图片处理已超时，请为该商品设置封面图 URL 以减少联网搜索耗时';
                     }
                     break;
                 }
-                $queue = searchImagesOnline($cn, $en, 8);
+                // 把剩余预算下发给搜索，且只给它一小半，给后面的下载/上传留足时间
+                $queue = searchImagesOnline($cn, $en, 8, (int)max(4, $left * 0.4));
                 continue;
             }
-            if (microtime(true) > $deadline) {
+            $left = (int)($deadline - microtime(true));
+            if ($left <= 1) {
                 if ($lastErr === '') {
                     $lastErr = '图片处理已超时，请为该商品设置封面图 URL 以减少联网搜索耗时';
                 }
@@ -1122,7 +1180,8 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
             $candidateUrl = trim($candidateUrl);
             $candidateCount++;
 
-            $img = downloadImageToTemp($candidateUrl);
+            // 下载最多用掉剩余预算的 40%，上传用掉剩余的全部（留 2 秒余量）
+            $img = downloadImageToTemp($candidateUrl, (int)max(3, $left * 0.4));
             if (!$img) {
                 $lastErr = '图片下载失败或内容不是有效图片: ' . safeTruncate($candidateUrl, 120);
                 continue;
@@ -1130,6 +1189,7 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
 
             $tmpFile = $img['path'];
             $triedCount++;
+            $left = (int)($deadline - microtime(true));
             try {
                 $mediaResp = uploadMediaToXianyu(
                     $serverUrl,
@@ -1138,7 +1198,8 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
                     'image',
                     $img['path'],
                     $img['mime'],
-                    'image' . $img['ext']
+                    'image' . $img['ext'],
+                    max(5, $left - 2)
                 );
             } finally {
                 @unlink($tmpFile);
@@ -1329,15 +1390,17 @@ function safeHttpGet(string $url, int $timeout = 20, int $maxRedirects = 5): ?ar
  *
  * @return string[] 候选图片 URL 列表
  */
-function searchImagesOnline(string $cn, string $en, int $limit = 10): array {
+function searchImagesOnline(string $cn, string $en, int $limit = 10, int $timeout = 12): array {
     $keyword = trim($en ?: $cn);
     if ($keyword === '') return [];
     $query = urlencode($keyword);
+    // 单次请求的超时上限：由调用方按剩余预算传入，避免 3 次搜索就吃满整个时间预算
+    $timeout = max(3, min(20, $timeout));
 
     $candidates = [];
 
     // 1) Bing 图片异步接口：返回片段中含原始图 murl，比主页面结构更稳定
-    $resp = safeHttpGet("https://www.bing.com/images/async?q={$query}&first=0&count=35&mmasync=1", 12);
+    $resp = safeHttpGet("https://www.bing.com/images/async?q={$query}&first=0&count=35&mmasync=1", $timeout);
     if ($resp && !empty($resp['body'])) {
         if (preg_match_all('/murl&quot;:&quot;(https?:\/\/.+?)&quot;/', $resp['body'], $m)) {
             foreach ($m[1] as $u) $candidates[] = html_entity_decode($u);
@@ -1346,7 +1409,7 @@ function searchImagesOnline(string $cn, string $en, int $limit = 10): array {
 
     // 2) Bing 图片主页面（异步接口无结果时的回退）
     if (count($candidates) < $limit) {
-        $resp2 = safeHttpGet("https://www.bing.com/images/search?q={$query}&form=HDRSC2&first=1", 12);
+        $resp2 = safeHttpGet("https://www.bing.com/images/search?q={$query}&form=HDRSC2&first=1", $timeout);
         if ($resp2 && !empty($resp2['body'])) {
             if (preg_match_all('/murl&quot;:&quot;(https?:\/\/.+?)&quot;/', $resp2['body'], $m2)) {
                 foreach ($m2[1] as $u) $candidates[] = html_entity_decode($u);
@@ -1360,7 +1423,7 @@ function searchImagesOnline(string $cn, string $en, int $limit = 10): array {
     // 3) 英文关键词再搜一轮（中文结果质量差时经常能救回来）
     if (count($candidates) < 3 && $en !== '' && $cn !== '' && $en !== $cn) {
         $q2 = urlencode($cn);
-        $resp3 = safeHttpGet("https://www.bing.com/images/async?q={$q2}&first=0&count=35&mmasync=1", 12);
+        $resp3 = safeHttpGet("https://www.bing.com/images/async?q={$q2}&first=0&count=35&mmasync=1", $timeout);
         if ($resp3 && !empty($resp3['body'])) {
             if (preg_match_all('/murl&quot;:&quot;(https?:\/\/.+?)&quot;/', $resp3['body'], $m4)) {
                 foreach ($m4[1] as $u) $candidates[] = html_entity_decode($u);
@@ -1444,8 +1507,8 @@ function isPublicIp(string $ip): bool {
  *
  * @return array{path:string,mime:string,ext:string,size:int}|null
  */
-function downloadImageToTemp(string $url): ?array {
-    $resp = safeHttpGet($url, 30);
+function downloadImageToTemp(string $url, int $timeout = 20): ?array {
+    $resp = safeHttpGet($url, max(3, min(30, $timeout)));
     if (!$resp) return null;
 
     $data = $resp['body'];
@@ -1476,8 +1539,9 @@ function downloadImageToTemp(string $url): ?array {
  * Content-Type: application/octet-stream，而服务端强制要求 image/* 开头，
  * 不显式声明会 100% 报「只支持上传图片文件」。
  */
-function uploadMediaToXianyu(string $serverUrl, string $secretKey, string $accountId, string $mediaType, string $filePath, string $mime = '', string $fileName = ''): array {
+function uploadMediaToXianyu(string $serverUrl, string $secretKey, string $accountId, string $mediaType, string $filePath, string $mime = '', string $fileName = '', int $timeout = 45): array {
     if (!file_exists($filePath)) return ['success' => false, 'message' => '图片文件不存在'];
+    $timeout = max(5, min(120, $timeout));
 
     if ($mime === '' || stripos($mime, 'image/') !== 0) {
         // 兜底：按文件内容再嗅探一次，保证一定是 image/*
@@ -1502,7 +1566,7 @@ function uploadMediaToXianyu(string $serverUrl, string $secretKey, string $accou
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $postFields,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 60,
+        CURLOPT_TIMEOUT => $timeout,
         CURLOPT_SSL_VERIFYPEER => false,
     ]);
     $resp = curl_exec($ch);
@@ -1601,4 +1665,18 @@ function safeTruncate(string $s, int $max): string {
     $chars = preg_split('//u', $s, -1, PREG_SPLIT_NO_EMPTY);
     if ($chars === false) return substr($s, 0, $max);
     return implode('', array_slice($chars, 0, $max));
+}
+
+/**
+ * 分销秘钥脱敏。
+ *
+ * get_xianyu_configs 是无身份校验的公开接口（项目整体采用"输入账号 Key 即登录"的免密设计），
+ * 若把 secret_key 原样返回，任何匿名请求者都能拿到他人 xianyu-auto-reply 的分销秘钥。
+ * 这里只回显首尾几位，保存时若前端原样提交了这个脱敏值，则视为"未修改"并保留原值。
+ */
+function maskSecretKey(string $key): string {
+    if ($key === '') return '';
+    $len = strlen($key);
+    if ($len <= 8) return str_repeat('*', $len);
+    return substr($key, 0, 3) . str_repeat('*', 6) . substr($key, -3);
 }
