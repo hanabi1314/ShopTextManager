@@ -1251,7 +1251,38 @@
       align-items: center;
       gap: 10px;
       animation: slideIn 0.2s ease-out;
+      max-width: 460px;
+      /* 保留换行，便于展示「发布成功 + 商品链接」这类多行结果 */
+      white-space: pre-line;
+      word-break: break-word;
+      line-height: 1.5;
     }
+
+    /* 通用确认对话框：替代浏览器原生 confirm，统一走网站 UI 与主题 */
+    .confirm-message {
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-line;
+      word-break: break-word;
+      color: var(--text-main);
+    }
+
+    /* 明暗主题通用的状态徽章 */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid currentColor;
+      white-space: nowrap;
+    }
+    .status-pill.ok { color: var(--success-color); }
+    .status-pill.off { color: var(--text-muted); }
+    .status-pill.warn { color: #f59e0b; }
+    .status-pill.err { color: var(--danger-color); }
 
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
@@ -1775,10 +1806,10 @@
             <i class="fa-solid fa-boxes-packing"></i> <span data-i18n="tabGamesManage">单个商品管理</span>
           </button>
           <button class="tab-btn" onclick="switchAdminTab(event, 'scheduledPublish')">
-            <i class="fa-solid fa-clock-rotate-left"></i> <span>定时发布</span>
+            <i class="fa-solid fa-clock-rotate-left"></i> <span data-i18n="tabScheduledPublish">定时发布</span>
           </button>
           <button class="tab-btn" onclick="switchAdminTab(event, 'xianyuLogs')">
-            <i class="fa-solid fa-clipboard-list"></i> <span>发布日志</span>
+            <i class="fa-solid fa-clipboard-list"></i> <span data-i18n="tabXianyuLogs">发布日志</span>
           </button>
         </div>
 
@@ -1902,7 +1933,7 @@
                 <th data-i18n="colId">ID</th>
                 <th id="adminTableColCnHeader">中文名称</th>
                 <th id="adminTableColEnHeader">英文名称</th>
-                <th>封面图URL</th>
+                <th data-i18n="colCoverUrl">封面图URL</th>
                 <th data-i18n="colOps">操作</th>
               </tr>
             </thead>
@@ -1915,30 +1946,30 @@
         <!-- Tab 5: 定时发布配置 -->
         <div class="tab-content" id="adminTab-scheduledPublish">
           <div class="tip-box-info" style="margin-bottom: 16px; font-size: 13px;">
-            <strong>⚙️ 定时发布功能说明：</strong><br>
-            为每个用户配置 xianyu-auto-reply 对接信息后，系统将在设定时间自动从待发布列表中选取下一个商品，获取图片并调用 xianyu-auto-reply API 发布到闲鱼。<br>
-            <strong>需配置服务器 Cron 定时任务：</strong> 每分钟调用 <code>curl -s "http(s)://你的域名/api.php?action=run_scheduled_publish"</code>，详见 README 教程。
+            <strong><span data-i18n="xyTipTitle">⚙️ 定时发布功能说明：</span></strong><br>
+            <span data-i18n="xyTipBody">为每个用户配置 xianyu-auto-reply 对接信息后，系统将在设定时间自动从待发布列表中选取下一个商品，联网获取图片并调用 xianyu-auto-reply API 发布到闲鱼。</span><br>
+            <strong>⚠️ </strong><span data-i18n="xyCronTip">需配置服务器 Cron 定时任务：每分钟调用 curl -s "http(s)://你的域名/api.php?action=run_scheduled_publish"，详见 README 教程。</span>
           </div>
           <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
-            <button class="btn btn-xianyu" onclick="loadXianyuConfigs()"><i class="fa-solid fa-rotate"></i> 刷新配置列表</button>
-            <button class="btn btn-black" onclick="manualTriggerPublish()"><i class="fa-solid fa-bolt"></i> 手动触发定时调度</button>
-            <button class="btn btn-outline" onclick="openManualPublishModal()"><i class="fa-solid fa-paper-plane"></i> 手动发布指定商品</button>
-            <button class="btn btn-secondary" onclick="switchAdminTab(event, 'xianyuLogs')"><i class="fa-solid fa-list"></i> 查看发布日志</button>
+            <button class="btn btn-xianyu" onclick="loadXianyuConfigs()"><i class="fa-solid fa-rotate"></i> <span data-i18n="xyRefreshConfigs">刷新配置列表</span></button>
+            <button class="btn btn-black" onclick="manualTriggerPublish()"><i class="fa-solid fa-bolt"></i> <span data-i18n="xyManualTrigger">手动触发定时调度</span></button>
+            <button class="btn btn-outline" onclick="openManualPublishModal()"><i class="fa-solid fa-paper-plane"></i> <span data-i18n="xyManualPublish">手动发布指定商品</span></button>
+            <button class="btn btn-secondary" onclick="switchAdminTab(event, 'xianyuLogs')"><i class="fa-solid fa-list"></i> <span data-i18n="xyViewLogs">查看发布日志</span></button>
           </div>
           <table class="list-table">
             <thead>
               <tr>
-                <th>用户名</th>
-                <th>闲鱼账号</th>
-                <th>定时状态</th>
-                <th>发布时间</th>
-                <th>价格</th>
-                <th>上次发布</th>
-                <th>操作</th>
+                <th data-i18n="colUserKey">用户名</th>
+                <th data-i18n="xyColXyAccount">闲鱼账号</th>
+                <th data-i18n="xyColScheduleStatus">定时状态</th>
+                <th data-i18n="xyColPublishTimes">发布时间</th>
+                <th data-i18n="xyColPrice">价格</th>
+                <th data-i18n="xyColLastPublish">上次发布</th>
+                <th data-i18n="colOps">操作</th>
               </tr>
             </thead>
             <tbody id="xianyuConfigTableBody">
-              <tr><td colspan="7" style="text-align:center; color:var(--text-muted);">点击「刷新配置列表」加载</td></tr>
+              <tr><td colspan="7" style="text-align:center; color:var(--text-muted);"><span data-i18n="xyNoUserData">暂无用户数据</span></td></tr>
             </tbody>
           </table>
         </div>
@@ -1946,22 +1977,22 @@
         <!-- Tab 6: 闲鱼发布日志 -->
         <div class="tab-content" id="adminTab-xianyuLogs">
           <div style="margin-bottom: 12px;">
-            <button class="btn btn-xianyu" onclick="loadXianyuPublishLogs()"><i class="fa-solid fa-rotate"></i> 刷新日志</button>
+            <button class="btn btn-xianyu" onclick="loadXianyuPublishLogs()"><i class="fa-solid fa-rotate"></i> <span data-i18n="xyRefreshLogs">刷新日志</span></button>
           </div>
           <table class="list-table">
             <thead>
               <tr>
-                <th>时间</th>
-                <th>用户名</th>
-                <th>商品</th>
-                <th>触发</th>
-                <th>状态</th>
-                <th>消息</th>
-                <th>链接</th>
+                <th data-i18n="xyLogColTime">时间</th>
+                <th data-i18n="colUserKey">用户名</th>
+                <th data-i18n="xyLogColGame">商品</th>
+                <th data-i18n="xyLogColTrigger">触发</th>
+                <th data-i18n="xyLogColStatus">状态</th>
+                <th data-i18n="xyLogColMessage">消息</th>
+                <th data-i18n="xyLogColLink">链接</th>
               </tr>
             </thead>
             <tbody id="xianyuLogsTableBody">
-              <tr><td colspan="7" style="text-align:center; color:var(--text-muted);">点击「刷新日志」加载</td></tr>
+              <tr><td colspan="7" style="text-align:center; color:var(--text-muted);"><span data-i18n="xyNoLogs">暂无发布日志</span></td></tr>
             </tbody>
           </table>
         </div>
@@ -2100,119 +2131,119 @@
     <div class="modal-card" style="max-width: 620px;">
       <div class="modal-header">
         <div class="modal-title">
-          <i class="fa-solid fa-clock-rotate-left"></i> <span>闲鱼定时发布配置</span>
+          <i class="fa-solid fa-clock-rotate-left"></i> <span data-i18n="xyConfigModalTitle">闲鱼定时发布配置</span>
         </div>
         <button class="modal-close" onclick="closeModal('xianyuConfigModal')">&times;</button>
       </div>
       <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
         <div style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">
-          正在配置用户【<strong id="xianyuConfigTargetUser" class="highlight-account-key"></strong>】的闲鱼自动发布设置：
+          <span data-i18n="xyConfigTargetPrefix">正在配置用户【</span><strong id="xianyuConfigTargetUser" class="highlight-account-key"></strong><span data-i18n="xyConfigTargetSuffix">】的闲鱼自动发布设置：</span>
         </div>
 
         <div class="admin-card-box" style="margin-bottom: 12px;">
-          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">📡 xianyu-auto-reply 服务对接</div>
+          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">📡 <span data-i18n="xySectionServer">xianyu-auto-reply 服务对接</span></div>
           <div class="form-group" style="margin-bottom: 8px;">
-            <label class="form-label" style="font-size: 12px;">服务地址 (含端口，不含 /api/v1)</label>
-            <input type="text" id="xyServerUrlInput" class="form-input" placeholder="http://127.0.0.1:8080 或 https://xy.example.com">
+            <label class="form-label" style="font-size: 12px;" data-i18n="xyServerUrlLabel">服务地址 (含端口，不含 /api/v1)</label>
+            <input type="text" id="xyServerUrlInput" class="form-input" placeholder="http://127.0.0.1:8080 或 https://xy.example.com" data-i18n-placeholder="xyServerUrlPlaceholder">
           </div>
           <div class="form-group" style="margin-bottom: 8px;">
-            <label class="form-label" style="font-size: 12px;">分销秘钥 (secret_key)</label>
-            <input type="text" id="xySecretKeyInput" class="form-input" placeholder="在 xianyu-auto-reply 个人设置-分销管理中获取">
+            <label class="form-label" style="font-size: 12px;" data-i18n="xySecretKeyLabel">分销秘钥 (secret_key)</label>
+            <input type="text" id="xySecretKeyInput" class="form-input" placeholder="在 xianyu-auto-reply 个人设置-分销管理中获取" data-i18n-placeholder="xySecretKeyPlaceholder">
           </div>
           <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
             <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 8px;">
-              <label class="form-label" style="font-size: 12px;">闲鱼账号 ID</label>
-              <input type="text" id="xyAccountIdInput" class="form-input" placeholder="点击右侧测试连接后选择账号">
+              <label class="form-label" style="font-size: 12px;" data-i18n="xyAccountIdLabel">闲鱼账号 ID</label>
+              <input type="text" id="xyAccountIdInput" class="form-input" placeholder="点击右侧测试连接后选择账号，也可手动填写" data-i18n-placeholder="xyAccountIdPlaceholder">
             </div>
-            <button class="btn btn-outline" style="height: 38px; white-space: nowrap;" onclick="testXianyuConnection()">
-              <i class="fa-solid fa-plug"></i> 测试连接
+            <button class="btn btn-outline" style="height: 38px; white-space: nowrap;" onclick="testXianyuConnection(this)">
+              <i class="fa-solid fa-plug"></i> <span data-i18n="xyTestConnBtn">测试连接</span>
             </button>
           </div>
           <div id="xyAccountSelectBox" style="display:none; margin-top: 8px;">
-            <label class="form-label" style="font-size: 12px;">选择闲鱼账号：</label>
+            <label class="form-label" style="font-size: 12px;" data-i18n="xySelectAccountLabel">选择闲鱼账号：</label>
             <select id="xyAccountSelect" class="form-input" onchange="onXyAccountSelected()"></select>
           </div>
         </div>
 
         <div class="admin-card-box" style="margin-bottom: 12px;">
-          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">⏰ 定时发布设置</div>
+          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">⏰ <span data-i18n="xySectionSchedule">定时发布设置</span></div>
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
             <input type="checkbox" id="xyPublishEnabledInput" style="width: 16px; height: 16px; cursor: pointer;">
-            <label for="xyPublishEnabledInput" style="font-size: 13px; font-weight: 800; cursor: pointer; user-select: none;">启用定时自动发布</label>
+            <label for="xyPublishEnabledInput" style="font-size: 13px; font-weight: 800; cursor: pointer; user-select: none;" data-i18n="xyEnableLabel">启用定时自动发布</label>
           </div>
           <div class="form-group" style="margin-bottom: 8px;">
-            <label class="form-label" style="font-size: 12px;">每日发布时间 (多个用英文逗号分隔)</label>
-            <input type="text" id="xyPublishTimesInput" class="form-input" placeholder="如: 09:00,12:00,18:00" value="09:00">
+            <label class="form-label" style="font-size: 12px;" data-i18n="xyPublishTimesLabel">每日发布时间 (多个用英文逗号分隔)</label>
+            <input type="text" id="xyPublishTimesInput" class="form-input" placeholder="如: 09:00,12:00,18:00" value="09:00" data-i18n-placeholder="xyPublishTimesPlaceholder">
           </div>
         </div>
 
         <div class="admin-card-box" style="margin-bottom: 12px;">
-          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">💰 商品发布参数</div>
+          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">💰 <span data-i18n="xySectionParams">商品发布参数</span></div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <div class="form-group" style="flex: 1; min-width: 100px; margin-bottom: 8px;">
-              <label class="form-label" style="font-size: 12px;">售价 (元)</label>
+              <label class="form-label" style="font-size: 12px;" data-i18n="xyPriceLabel">售价 (元)</label>
               <input type="number" id="xyPublishPriceInput" class="form-input" placeholder="9.90" step="0.01" value="9.90">
             </div>
             <div class="form-group" style="flex: 1; min-width: 100px; margin-bottom: 8px;">
-              <label class="form-label" style="font-size: 12px;">原价/划线价 (0=不设)</label>
+              <label class="form-label" style="font-size: 12px;" data-i18n="xyOriginalPriceLabel">原价/划线价 (0=不设)</label>
               <input type="number" id="xyPublishOriginalPriceInput" class="form-input" placeholder="0" step="0.01" value="0">
             </div>
             <div class="form-group" style="flex: 1; min-width: 80px; margin-bottom: 8px;">
-              <label class="form-label" style="font-size: 12px;">库存数量</label>
+              <label class="form-label" style="font-size: 12px;" data-i18n="xyQuantityLabel">库存数量</label>
               <input type="number" id="xyPublishQuantityInput" class="form-input" placeholder="1" value="1">
             </div>
           </div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 8px;">
-              <label class="form-label" style="font-size: 12px;">宝贝所在地</label>
-              <input type="text" id="xyPublishAddressInput" class="form-input" placeholder="如: 上海市">
+              <label class="form-label" style="font-size: 12px;" data-i18n="xyAddressLabel">宝贝所在地</label>
+              <input type="text" id="xyPublishAddressInput" class="form-input" placeholder="如: 上海市" data-i18n-placeholder="xyAddressPlaceholder">
             </div>
             <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 8px;">
-              <label class="form-label" style="font-size: 12px;">运费方式</label>
+              <label class="form-label" style="font-size: 12px;" data-i18n="xyShippingLabel">运费方式</label>
               <select id="xyPublishShippingInput" class="form-input">
-                <option value="free">包邮</option>
-                <option value="distance">按距离计费</option>
-                <option value="fixed">一口价运费</option>
-                <option value="template">运费模板</option>
-                <option value="none">无需邮寄</option>
+                <option value="free" data-i18n="xyShipFree">包邮</option>
+                <option value="distance" data-i18n="xyShipDistance">按距离计费</option>
+                <option value="fixed" data-i18n="xyShipFixed">一口价运费</option>
+                <option value="template" data-i18n="xyShipTemplate">运费模板</option>
+                <option value="none" data-i18n="xyShipNone">无需邮寄</option>
               </select>
             </div>
           </div>
         </div>
 
         <div class="admin-card-box" style="margin-bottom: 12px;">
-          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">🖼️ 商品图片来源</div>
+          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">🖼️ <span data-i18n="xySectionImage">商品图片来源</span></div>
           <div class="form-group" style="margin-bottom: 8px;">
-            <label class="form-label" style="font-size: 12px;">图片来源方式</label>
+            <label class="form-label" style="font-size: 12px;" data-i18n="xyImageSourceLabel">图片来源方式</label>
             <select id="xyImageSourceInput" class="form-input">
-              <option value="auto">自动 (优先使用封面，无封面则搜索)</option>
-              <option value="cover_url">使用商品封面图</option>
-              <option value="custom">自定义图片 URL</option>
+              <option value="auto" data-i18n="xyImgAuto">自动 (优先使用封面，无封面则联网搜索)</option>
+              <option value="cover_url" data-i18n="xyImgCover">使用商品封面图</option>
+              <option value="custom" data-i18n="xyImgCustom">自定义图片 URL</option>
             </select>
           </div>
           <div class="form-group" id="xyCustomUrlBox" style="display:none;">
-            <label class="form-label" style="font-size: 12px;">自定义图片 URL</label>
-            <input type="text" id="xyCustomImageUrlInput" class="form-input" placeholder="https://example.com/image.jpg">
+            <label class="form-label" style="font-size: 12px;" data-i18n="xyCustomUrlLabel">自定义图片 URL</label>
+            <input type="text" id="xyCustomImageUrlInput" class="form-input" placeholder="https://example.com/image.jpg" data-i18n-placeholder="xyCustomUrlPlaceholder">
           </div>
         </div>
 
         <div class="admin-card-box" style="margin-bottom: 12px;">
-          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">🏷️ 分类设置 (可选，留空自动推荐)</div>
+          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">🏷️ <span data-i18n="xySectionCategory">分类设置 (可选，留空自动推荐)</span></div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 8px;">
-              <label class="form-label" style="font-size: 12px;">平台末级分类 ID</label>
-              <input type="text" id="xyCategoryIdInput" class="form-input" placeholder="留空自动推荐">
+              <label class="form-label" style="font-size: 12px;" data-i18n="xyCategoryIdLabel">平台末级分类 ID</label>
+              <input type="text" id="xyCategoryIdInput" class="form-input" placeholder="留空自动推荐" data-i18n-placeholder="xyCategoryPlaceholder">
             </div>
             <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 8px;">
-              <label class="form-label" style="font-size: 12px;">分类名称</label>
-              <input type="text" id="xyCategoryNameInput" class="form-input" placeholder="留空自动推荐">
+              <label class="form-label" style="font-size: 12px;" data-i18n="xyCategoryNameLabel">分类名称</label>
+              <input type="text" id="xyCategoryNameInput" class="form-input" placeholder="留空自动推荐" data-i18n-placeholder="xyCategoryPlaceholder">
             </div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('xianyuConfigModal')">取消</button>
-        <button class="btn btn-xianyu" onclick="saveXianyuConfig()"><i class="fa-solid fa-floppy-disk"></i> 保存配置</button>
+        <button class="btn btn-secondary" onclick="closeModal('xianyuConfigModal')" data-i18n="cancelBtn">取消</button>
+        <button class="btn btn-xianyu" onclick="saveXianyuConfig()"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="xySaveConfigBtn">保存配置</span></button>
       </div>
     </div>
   </div>
@@ -2222,26 +2253,45 @@
     <div class="modal-card" style="max-width: 500px;">
       <div class="modal-header">
         <div class="modal-title">
-          <i class="fa-solid fa-paper-plane"></i> <span>手动发布商品到闲鱼</span>
+          <i class="fa-solid fa-paper-plane"></i> <span data-i18n="xyManualPublishTitle">手动发布商品到闲鱼</span>
         </div>
         <button class="modal-close" onclick="closeModal('manualPublishModal')">&times;</button>
       </div>
       <div class="modal-body">
         <div style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">
-          选择用户和待发布商品，立即调用 xianyu-auto-reply API 发布到闲鱼。
+          <span data-i18n="xyManualPublishDesc">选择用户和待发布商品，立即调用 xianyu-auto-reply API 发布到闲鱼。</span>
         </div>
         <div class="form-group" style="margin-bottom: 10px;">
-          <label class="form-label" style="font-size: 12px;">选择用户</label>
+          <label class="form-label" style="font-size: 12px;" data-i18n="xyManualUserLabel">选择用户</label>
           <select id="manualPublishAccountSelect" class="form-input"></select>
         </div>
         <div class="form-group">
-          <label class="form-label" style="font-size: 12px;">选择待发布商品</label>
+          <label class="form-label" style="font-size: 12px;" data-i18n="xyManualGameLabel">选择待发布商品</label>
           <select id="manualPublishGameSelect" class="form-input"></select>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('manualPublishModal')">取消</button>
-        <button class="btn btn-xianyu" onclick="confirmManualPublish()"><i class="fa-solid fa-bolt"></i> 立即发布</button>
+        <button class="btn btn-secondary" onclick="closeModal('manualPublishModal')" data-i18n="cancelBtn">取消</button>
+        <button class="btn btn-xianyu" onclick="confirmManualPublish()"><i class="fa-solid fa-bolt"></i> <span data-i18n="xyPublishNowBtn">立即发布</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 12: 通用确认对话框 (替代浏览器原生 confirm / alert，统一网站 UI 与明暗主题) -->
+  <div class="modal-overlay" id="confirmDialogModal">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-circle-question"></i> <span id="confirmDialogTitle" data-i18n="confirmDialogDefaultTitle">请确认操作</span>
+        </div>
+        <button class="modal-close" onclick="closeConfirmDialog(false)">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="confirm-message" id="confirmDialogMessage"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="confirmDialogCancelBtn" onclick="closeConfirmDialog(false)" data-i18n="cancelBtn">取消</button>
+        <button class="btn btn-xianyu" id="confirmDialogOkBtn" onclick="closeConfirmDialog(true)"><i class="fa-solid fa-circle-check"></i> <span>确认</span></button>
       </div>
     </div>
   </div>
@@ -2359,7 +2409,126 @@
         setAdmin: "设为管理员",
         revokeAdmin: "取消管理员",
         deleteAccount: "删除账号",
-        archivedHiddenTag: "[已隐藏/已归档]"
+        archivedHiddenTag: "[已隐藏/已归档]",
+
+        // ====== 定时发布 / 发布日志 (v2.1) ======
+        tabScheduledPublish: "定时发布",
+        tabXianyuLogs: "发布日志",
+        colCoverUrl: "封面图URL",
+        coverUrlPlaceholder: "封面图片 URL（留空则自动联网搜索）",
+        coverSet: "已设置",
+        coverUnset: "未设置",
+        coverSaved: "封面图已保存",
+        confirmDialogDefaultTitle: "请确认操作",
+        xyTipTitle: "⚙️ 定时发布功能说明：",
+        xyTipBody: "为每个用户配置 xianyu-auto-reply 对接信息后，系统将在设定时间自动从待发布列表中选取下一个商品，联网获取图片并调用 xianyu-auto-reply API 发布到闲鱼。",
+        xyCronTip: "需配置服务器 Cron 定时任务：每分钟调用 curl -s \"http(s)://你的域名/api.php?action=run_scheduled_publish\"，详见 README 教程。",
+        xyRefreshConfigs: "刷新配置列表",
+        xyManualTrigger: "手动触发定时调度",
+        xyManualPublish: "手动发布指定商品",
+        xyViewLogs: "查看发布日志",
+        xyRefreshLogs: "刷新日志",
+        xyColXyAccount: "闲鱼账号",
+        xyColScheduleStatus: "定时状态",
+        xyColPublishTimes: "发布时间",
+        xyColPrice: "价格",
+        xyColLastPublish: "上次发布",
+        xyNoUserData: "暂无用户数据",
+        xyEnabled: "已启用",
+        xyDisabled: "未启用",
+        xyBtnEnable: "启用",
+        xyBtnDisable: "停用",
+        xyBtnConfig: "配置",
+        xyBtnManualPublish: "手动发布",
+        xyBtnRunNow: "立即执行",
+        xyNotConfigured: "未配置",
+        xyStatusSuccess: "成功",
+        xyStatusFailed: "失败",
+        xyStatusIdle: "无待发",
+        xyLoadConfigFailed: "获取配置失败",
+        xyNetworkError: "网络错误: ",
+        xySaveFailed: "保存失败:",
+        xySaveSuccess: "配置保存成功！",
+        xyFillServerAndKey: "请先填写服务地址和分销秘钥",
+        xyTesting: "测试中...",
+        xySelectAccountPlaceholder: "-- 选择闲鱼账号 --",
+        xyConnectFailed: "连接失败: ",
+        xyConnectOkFallback: "连接成功，请在下方选择闲鱼账号",
+        xyUnknownError: "未知错误",
+        xyRequestFailed: "请求失败: ",
+        xySelectUserFirst: "请先选择用户",
+        xyNoPendingGames: "该用户无待发布商品",
+        xyLoadGamesFailed: "加载商品失败: ",
+        xySelectUserAndGame: "请选择用户和商品",
+        xyConfirmPublishTitle: "确认发布商品",
+        xyConfirmPublishText: "确认立即发布该商品到闲鱼吗？",
+        xyPublishNowBtn: "立即发布",
+        xyPublishing: "发布中...",
+        xyPublishSuccess: "发布成功！",
+        xyPublishFailed: "发布失败: ",
+        xyItemUrlLabel: "商品链接",
+        xyConfirmTriggerTitle: "确认手动触发",
+        xyConfirmTriggerText: "手动触发定时发布调度？这将检查所有启用定时发布的用户。",
+        xyTriggerFailed: "调度失败: ",
+        xyLoadLogsFailed: "加载日志失败: ",
+        xyNoLogs: "暂无发布日志",
+        xyLogColTime: "时间",
+        xyLogColGame: "商品",
+        xyLogColTrigger: "触发",
+        xyLogColStatus: "状态",
+        xyLogColMessage: "消息",
+        xyLogColLink: "链接",
+        xyLogTriggerManual: "手动",
+        xyLogTriggerScheduled: "定时",
+        xyLogStatusSuccess: "成功",
+        xyLogStatusFailed: "失败",
+        xyLogViewLink: "查看",
+        xySelectUserPlaceholder: "-- 选择用户 --",
+        xyNoConfiguredAccount: "请先为至少一个用户配置闲鱼账号",
+        xyConfigModalTitle: "闲鱼定时发布配置",
+        xyConfigTargetPrefix: "正在配置用户【",
+        xyConfigTargetSuffix: "】的闲鱼自动发布设置：",
+        xySectionServer: "xianyu-auto-reply 服务对接",
+        xyServerUrlLabel: "服务地址 (含端口，不含 /api/v1)",
+        xyServerUrlPlaceholder: "http://127.0.0.1:8080 或 https://xy.example.com",
+        xySecretKeyLabel: "分销秘钥 (secret_key)",
+        xySecretKeyPlaceholder: "在 xianyu-auto-reply 个人设置-分销管理中获取",
+        xyAccountIdLabel: "闲鱼账号 ID",
+        xyAccountIdPlaceholder: "点击右侧测试连接后选择账号，也可手动填写",
+        xyTestConnBtn: "测试连接",
+        xySelectAccountLabel: "选择闲鱼账号：",
+        xySectionSchedule: "定时发布设置",
+        xyEnableLabel: "启用定时自动发布",
+        xyPublishTimesLabel: "每日发布时间 (多个用英文逗号分隔)",
+        xyPublishTimesPlaceholder: "如: 09:00,12:00,18:00",
+        xySectionParams: "商品发布参数",
+        xyPriceLabel: "售价 (元)",
+        xyOriginalPriceLabel: "原价/划线价 (0=不设)",
+        xyQuantityLabel: "库存数量",
+        xyAddressLabel: "宝贝所在地",
+        xyAddressPlaceholder: "如: 上海市",
+        xyShippingLabel: "运费方式",
+        xyShipFree: "包邮",
+        xyShipDistance: "按距离计费",
+        xyShipFixed: "一口价运费",
+        xyShipTemplate: "运费模板",
+        xyShipNone: "无需邮寄",
+        xySectionImage: "商品图片来源",
+        xyImageSourceLabel: "图片来源方式",
+        xyImgAuto: "自动 (优先使用封面，无封面则联网搜索)",
+        xyImgCover: "使用商品封面图",
+        xyImgCustom: "自定义图片 URL",
+        xyCustomUrlLabel: "自定义图片 URL",
+        xyCustomUrlPlaceholder: "https://example.com/image.jpg",
+        xySectionCategory: "分类设置 (可选，留空自动推荐)",
+        xyCategoryIdLabel: "平台末级分类 ID",
+        xyCategoryNameLabel: "分类名称",
+        xyCategoryPlaceholder: "留空自动推荐",
+        xyManualPublishTitle: "手动发布商品到闲鱼",
+        xyManualPublishDesc: "选择用户和待发布商品，立即调用 xianyu-auto-reply API 发布到闲鱼。",
+        xyManualUserLabel: "选择用户",
+        xyManualGameLabel: "选择待发布商品",
+        xySaveConfigBtn: "保存配置"
       },
       en: {
         appSubtitle: "Shop Copy Studio",
@@ -2468,7 +2637,126 @@
         setAdmin: "Set as Admin",
         revokeAdmin: "Revoke Admin",
         deleteAccount: "Delete Account",
-        archivedHiddenTag: "[Hidden / Archived]"
+        archivedHiddenTag: "[Hidden / Archived]",
+
+        // ====== Scheduled Publish / Publish Logs (v2.1) ======
+        tabScheduledPublish: "Scheduled Publish",
+        tabXianyuLogs: "Publish Logs",
+        colCoverUrl: "Cover Image URL",
+        coverUrlPlaceholder: "Cover image URL (leave blank to auto-search online)",
+        coverSet: "Set",
+        coverUnset: "Not set",
+        coverSaved: "Cover image saved",
+        confirmDialogDefaultTitle: "Please Confirm",
+        xyTipTitle: "⚙️ How Scheduled Publishing Works:",
+        xyTipBody: "Once you configure the xianyu-auto-reply credentials for each user, the system will automatically pick the next pending item at the configured times, fetch an image online and publish it to Xianyu via the xianyu-auto-reply API.",
+        xyCronTip: "A server cron job is required: call curl -s \"http(s)://your-domain/api.php?action=run_scheduled_publish\" every minute. See README for details.",
+        xyRefreshConfigs: "Refresh Config List",
+        xyManualTrigger: "Trigger Scheduler Now",
+        xyManualPublish: "Publish a Specific Item",
+        xyViewLogs: "View Publish Logs",
+        xyRefreshLogs: "Refresh Logs",
+        xyColXyAccount: "Xianyu Account",
+        xyColScheduleStatus: "Schedule Status",
+        xyColPublishTimes: "Publish Times",
+        xyColPrice: "Price",
+        xyColLastPublish: "Last Publish",
+        xyNoUserData: "No user data yet",
+        xyEnabled: "Enabled",
+        xyDisabled: "Disabled",
+        xyBtnEnable: "Enable",
+        xyBtnDisable: "Disable",
+        xyBtnConfig: "Configure",
+        xyBtnManualPublish: "Publish Now",
+        xyBtnRunNow: "Run Now",
+        xyNotConfigured: "Not configured",
+        xyStatusSuccess: "Success",
+        xyStatusFailed: "Failed",
+        xyStatusIdle: "Nothing pending",
+        xyLoadConfigFailed: "Failed to load configurations",
+        xyNetworkError: "Network error: ",
+        xySaveFailed: "Save failed:",
+        xySaveSuccess: "Configuration saved!",
+        xyFillServerAndKey: "Please fill in the server URL and secret key first",
+        xyTesting: "Testing...",
+        xySelectAccountPlaceholder: "-- Select a Xianyu account --",
+        xyConnectFailed: "Connection failed: ",
+        xyConnectOkFallback: "Connected. Please select a Xianyu account below",
+        xyUnknownError: "Unknown error",
+        xyRequestFailed: "Request failed: ",
+        xySelectUserFirst: "Please select a user first",
+        xyNoPendingGames: "No pending items for this user",
+        xyLoadGamesFailed: "Failed to load items: ",
+        xySelectUserAndGame: "Please select both a user and an item",
+        xyConfirmPublishTitle: "Confirm Publishing",
+        xyConfirmPublishText: "Publish this item to Xianyu right now?",
+        xyPublishNowBtn: "Publish Now",
+        xyPublishing: "Publishing...",
+        xyPublishSuccess: "Published successfully!",
+        xyPublishFailed: "Publish failed: ",
+        xyItemUrlLabel: "Item URL",
+        xyConfirmTriggerTitle: "Confirm Manual Trigger",
+        xyConfirmTriggerText: "Trigger the scheduled publish task now? This will check every user with scheduled publishing enabled.",
+        xyTriggerFailed: "Scheduler failed: ",
+        xyLoadLogsFailed: "Failed to load logs: ",
+        xyNoLogs: "No publish logs yet",
+        xyLogColTime: "Time",
+        xyLogColGame: "Item",
+        xyLogColTrigger: "Trigger",
+        xyLogColStatus: "Status",
+        xyLogColMessage: "Message",
+        xyLogColLink: "Link",
+        xyLogTriggerManual: "Manual",
+        xyLogTriggerScheduled: "Scheduled",
+        xyLogStatusSuccess: "Success",
+        xyLogStatusFailed: "Failed",
+        xyLogViewLink: "Open",
+        xySelectUserPlaceholder: "-- Select a user --",
+        xyNoConfiguredAccount: "Configure a Xianyu account for at least one user first",
+        xyConfigModalTitle: "Xianyu Scheduled Publish Settings",
+        xyConfigTargetPrefix: "Configuring Xianyu auto-publish for user [",
+        xyConfigTargetSuffix: "]:",
+        xySectionServer: "xianyu-auto-reply Connection",
+        xyServerUrlLabel: "Server URL (with port, without /api/v1)",
+        xyServerUrlPlaceholder: "http://127.0.0.1:8080 or https://xy.example.com",
+        xySecretKeyLabel: "Secret Key (secret_key)",
+        xySecretKeyPlaceholder: "Found in xianyu-auto-reply → Personal Settings → Distribution",
+        xyAccountIdLabel: "Xianyu Account ID",
+        xyAccountIdPlaceholder: "Click Test Connection to pick one, or type it manually",
+        xyTestConnBtn: "Test Connection",
+        xySelectAccountLabel: "Select Xianyu account:",
+        xySectionSchedule: "Schedule Settings",
+        xyEnableLabel: "Enable scheduled auto-publishing",
+        xyPublishTimesLabel: "Daily publish times (comma separated)",
+        xyPublishTimesPlaceholder: "e.g. 09:00,12:00,18:00",
+        xySectionParams: "Item Parameters",
+        xyPriceLabel: "Price (CNY)",
+        xyOriginalPriceLabel: "Original price (0 = none)",
+        xyQuantityLabel: "Stock quantity",
+        xyAddressLabel: "Item location",
+        xyAddressPlaceholder: "e.g. Shanghai",
+        xyShippingLabel: "Shipping method",
+        xyShipFree: "Free shipping",
+        xyShipDistance: "By distance",
+        xyShipFixed: "Flat rate",
+        xyShipTemplate: "Shipping template",
+        xyShipNone: "No shipping needed",
+        xySectionImage: "Product Image Source",
+        xyImageSourceLabel: "Image source",
+        xyImgAuto: "Auto (cover image first, online search as fallback)",
+        xyImgCover: "Use the item cover image",
+        xyImgCustom: "Custom image URL",
+        xyCustomUrlLabel: "Custom image URL",
+        xyCustomUrlPlaceholder: "https://example.com/image.jpg",
+        xySectionCategory: "Category (optional, auto-recommended when blank)",
+        xyCategoryIdLabel: "Platform leaf category ID",
+        xyCategoryNameLabel: "Category name",
+        xyCategoryPlaceholder: "Blank = auto recommend",
+        xyManualPublishTitle: "Publish Item to Xianyu Manually",
+        xyManualPublishDesc: "Pick a user and a pending item, then publish it to Xianyu via the xianyu-auto-reply API right away.",
+        xyManualUserLabel: "Select user",
+        xyManualGameLabel: "Select pending item",
+        xySaveConfigBtn: "Save Configuration"
       }
     };
 
@@ -2560,6 +2848,9 @@
       if (typeof renderAdminAccountsTable === 'function') renderAdminAccountsTable();
       if (typeof renderAdminGamesTable === 'function') renderAdminGamesTable();
       if (typeof updateUserUI === 'function') updateUserUI();
+      // 定时发布 / 发布日志表格由 JS 动态生成，切换语言时必须重渲染
+      if (typeof renderXianyuConfigTable === 'function') renderXianyuConfigTable();
+      if (typeof renderXianyuLogsTable === 'function' && Array.isArray(xianyuLogsData)) renderXianyuLogsTable(xianyuLogsData);
     }
 
     // ========================================================
@@ -3288,7 +3579,7 @@
               </div>
 
               <div class="card-actions">
-                <button class="btn btn-outline" style="flex: 1; padding: 8px; font-size: 13px;" onclick="copyToClipboardText('${escapeJsString(finalText)}', this)">
+                <button class="btn btn-outline" style="flex: 1; padding: 8px; font-size: 13px;" onclick="copyToClipboardText('${escapeHtml(escapeJsString(finalText))}', this)">
                   <i class="fa-solid fa-copy"></i> ${t('copyTextOnly')}
                 </button>
                 <button class="btn btn-danger" style="flex: 1; padding: 8px; font-size: 13px;" onclick="unpublishSingleGame(${g.id})">
@@ -3607,22 +3898,22 @@
             </td>
             <td>
               <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                <button class="btn btn-xianyu" style="padding: 4px 10px; font-size: 12px;" onclick="openAdminEditTemplateModal('${escapeJsString(a.account_key)}')">
+                <button class="btn btn-xianyu" style="padding: 4px 10px; font-size: 12px;" onclick="openAdminEditTemplateModal('${escapeHtml(escapeJsString(a.account_key))}')">
                   <i class="fa-solid fa-file-pen"></i> ${t('viewEditTpl')}
                 </button>
-                <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="editAccountKey('${escapeJsString(a.account_key)}')">
+                <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="editAccountKey('${escapeHtml(escapeJsString(a.account_key))}')">
                   <i class="fa-solid fa-pen-to-square"></i> ${t('changeUsername')}
                 </button>
                 ${isAdmin ? `
-                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; color: #dc2626; border-color: #fca5a5;" onclick="toggleAdminStatus('${escapeJsString(a.account_key)}', false)">
+                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; color: #dc2626; border-color: #fca5a5;" onclick="toggleAdminStatus('${escapeHtml(escapeJsString(a.account_key))}', false)">
                     <i class="fa-solid fa-user-minus"></i> ${t('revokeAdmin')}
                   </button>
                 ` : `
-                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; color: #0284c7; border-color: #7dd3fc;" onclick="toggleAdminStatus('${escapeJsString(a.account_key)}', true)">
+                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; color: #0284c7; border-color: #7dd3fc;" onclick="toggleAdminStatus('${escapeHtml(escapeJsString(a.account_key))}', true)">
                     <i class="fa-solid fa-user-shield"></i> ${t('setAdmin')}
                   </button>
                 `}
-                <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="deleteSubAccount('${escapeJsString(a.account_key)}')">
+                <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="deleteSubAccount('${escapeHtml(escapeJsString(a.account_key))}')">
                   <i class="fa-solid fa-trash"></i> ${t('deleteAccount')}
                 </button>
               </div>
@@ -3874,13 +4165,15 @@
           <td><code style="white-space: pre-line;">${escapeHtml(g.game_name_en || '-')}</code></td>
           <td style="min-width: 180px;">
             <input type="text" class="form-input" style="font-size: 11px; padding: 4px 6px;"
-              placeholder="${isEn ? 'Paste image URL for auto-publish' : '封面图URL(定时发布用)'}"
+              placeholder="${escapeHtml(t('coverUrlPlaceholder'))}"
               value="${escapeHtml(g.cover_url || '')}"
               onchange="saveGameCover(${g.id}, this.value)" onkeydown="if(event.key==='Enter') this.blur();">
-            ${g.cover_url ? '<div style="font-size:10px; color:var(--success-color); margin-top:2px;">✅ 已设置</div>' : '<div style="font-size:10px; color:var(--text-muted); margin-top:2px;">未设置</div>'}
+            ${g.cover_url
+              ? `<div style="font-size:10px; color:var(--success-color); margin-top:2px;">✅ ${escapeHtml(t('coverSet'))}</div>`
+              : `<div style="font-size:10px; color:var(--text-muted); margin-top:2px;">${escapeHtml(t('coverUnset'))}</div>`}
           </td>
           <td>
-            <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="deleteSingleGame(${g.id}, '${escapeJsString(g.game_name_cn)}')">
+            <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="deleteSingleGame(${g.id}, '${escapeHtml(escapeJsString(g.game_name_cn))}')">
               <i class="fa-solid fa-trash"></i> ${t('deleteItemBtn') || (isEn ? 'Delete' : '删除')}
             </button>
           </td>
@@ -3900,9 +4193,9 @@
         if (data.status === 'success') {
           const game = gamesList.find(g => g.id === gameId);
           if (game) game.cover_url = (coverUrl || '').trim();
-          showToast('封面图已保存');
+          showToast(t('coverSaved'));
         } else {
-          showToast(data.message || '保存失败', true);
+          showToast(data.message || t('xySaveFailed'), true);
         }
       } catch (e) {
         showToast('保存失败: ' + e.message, true);
@@ -4096,35 +4389,17 @@
       }
     }
 
-    // 全局 Esc 快捷键与 Modal 点击背景关闭事件
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        const activeModals = document.querySelectorAll('.modal-overlay.active');
-        activeModals.forEach(m => {
-          if (m.id === 'loginModal') {
-            const closeBtn = document.getElementById('loginModalCloseBtn');
-            if (closeBtn && closeBtn.style.display !== 'none') {
-              closeModal('loginModal');
-            }
-          } else {
-            closeModal(m.id);
-          }
-        });
-      }
-    });
-
+    // 弹窗关闭策略：只能通过弹窗内的「×」/「取消」/「关闭」按钮关闭。
+    //
+    // 这里刻意**不**绑定「点击遮罩关闭」和「Esc 关闭」：管理员控制台里有大量表单
+    // （闲鱼配置、模板编辑、批量导入等），误触遮罩或按到 Esc 会直接丢弃未保存的输入。
+    // 遮罩点击事件仍然被监听，但只用于吞掉冒泡，不做任何关闭动作。
     document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', (e) => {
+        overlay.addEventListener('mousedown', (e) => {
+          // 点击遮罩空白处：不做任何事（保留监听仅为阻止其它默认行为）
           if (e.target === overlay) {
-            if (overlay.id === 'loginModal') {
-              const closeBtn = document.getElementById('loginModalCloseBtn');
-              if (closeBtn && closeBtn.style.display !== 'none') {
-                closeModal('loginModal');
-              }
-            } else {
-              closeModal(overlay.id);
-            }
+            e.preventDefault();
           }
         });
       });
@@ -4199,13 +4474,20 @@
       return msg;
     }
 
-    function showToast(msg, isError = false) {
+    /**
+     * 网站 UI 提示条（替代浏览器原生 alert）。
+     * @param {string} msg 提示内容，支持 \n 换行
+     * @param {boolean} isError 是否错误样式
+     * @param {number} durationMs 停留毫秒数，内容较长时可传更大的值
+     */
+    function showToast(msg, isError = false, durationMs = 3200) {
       msg = formatServerMsg(msg);
       const container = document.getElementById('toast-container');
+      if (!container) return;
       const toast = document.createElement('div');
       toast.className = 'toast-item';
       if (isError) {
-        toast.style.borderColor = '#ef4444';
+        toast.style.borderColor = 'var(--danger-color)';
       }
       toast.innerHTML = `<i class="fa-solid ${isError ? 'fa-circle-exclamation' : 'fa-circle-check'}"></i> <span>${escapeHtml(msg)}</span>`;
       container.appendChild(toast);
@@ -4214,7 +4496,45 @@
         toast.style.opacity = '0';
         toast.style.transition = 'opacity 0.3s ease';
         setTimeout(() => toast.remove(), 300);
-      }, 3000);
+      }, durationMs);
+    }
+
+    let confirmDialogResolve = null;
+
+    /**
+     * 网站 UI 确认对话框（替代浏览器原生 confirm）。
+     * @param {string} message 确认内容
+     * @param {object} [options] { title, okText, danger }
+     * @returns {Promise<boolean>} 点「确认」为 true，取消或关闭为 false
+     */
+    function showConfirm(message, options = {}) {
+      return new Promise(resolve => {
+        // 若上一个确认框还未关闭，先按「取消」结算，避免 Promise 永久挂起
+        if (confirmDialogResolve) {
+          const prev = confirmDialogResolve;
+          confirmDialogResolve = null;
+          prev(false);
+        }
+        const titleEl = document.getElementById('confirmDialogTitle');
+        const msgEl = document.getElementById('confirmDialogMessage');
+        const okBtn = document.getElementById('confirmDialogOkBtn');
+        const cancelBtn = document.getElementById('confirmDialogCancelBtn');
+        if (titleEl) titleEl.textContent = options.title || t('confirmDialogDefaultTitle');
+        if (msgEl) msgEl.textContent = message || '';
+        if (okBtn) {
+          okBtn.innerHTML = `<i class="fa-solid ${options.danger ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i> <span>${escapeHtml(options.okText || t('confirmBtn'))}</span>`;
+        }
+        if (cancelBtn) cancelBtn.textContent = t('cancelBtn');
+        confirmDialogResolve = resolve;
+        openModal('confirmDialogModal');
+      });
+    }
+
+    function closeConfirmDialog(result) {
+      closeModal('confirmDialogModal');
+      const resolve = confirmDialogResolve;
+      confirmDialogResolve = null;
+      if (resolve) resolve(!!result);
     }
 
     function escapeHtml(str) {
@@ -4237,12 +4557,24 @@
         .replace(/\r/g, '\\r');
     }
 
+    // 只允许 http/https 外链，拦截 javascript: / data: 等伪协议
+    function safeExternalUrl(url) {
+      if (!url) return false;
+      try {
+        const u = new URL(String(url), window.location.href);
+        return u.protocol === 'http:' || u.protocol === 'https:';
+      } catch (e) {
+        return false;
+      }
+    }
+
     // ========================================================
     // 定时发布功能 JavaScript (v2.0 新增)
     // ========================================================
     let xianyuConfigsData = [];
     let xianyuConfigEditingKey = '';
     let xianyuTestAccounts = [];
+    let xianyuLogsData = []; // 保存最近一次日志数据，供切换语言时重渲染
 
     async function loadXianyuConfigs() {
       try {
@@ -4252,10 +4584,36 @@
           xianyuConfigsData = data.configs || [];
           renderXianyuConfigTable();
         } else {
-          alert(data.message || '获取配置失败');
+          showToast(data.message || t('xyLoadConfigFailed'), true);
         }
       } catch (e) {
-        alert('网络错误: ' + e.message);
+        showToast(t('xyNetworkError') + e.message, true);
+      }
+    }
+
+    /**
+     * 一键启用/停用某用户的定时发布。
+     * 服务端会回读数据库状态并返回，界面直接采用该值渲染，
+     * 避免出现「库里已开启、界面仍显示未启用」的不一致。
+     */
+    async function toggleXianyuPublish(accountKey, enable) {
+      try {
+        const res = await fetch(`${API_BASE}?action=toggle_xianyu_publish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account_key: accountKey, publish_enabled: enable })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          const row = xianyuConfigsData.find(c => c.account_key === accountKey);
+          if (row) row.publish_enabled = Number(data.publish_enabled);
+          renderXianyuConfigTable();
+          showToast(data.message || (Number(data.publish_enabled) ? t('xyEnabled') : t('xyDisabled')));
+        } else {
+          showToast(data.message || t('xySaveFailed'), true);
+        }
+      } catch (e) {
+        showToast(t('xyNetworkError') + e.message, true);
       }
     }
 
@@ -4263,27 +4621,39 @@
       const tbody = document.getElementById('xianyuConfigTableBody');
       if (!tbody) return;
       if (!xianyuConfigsData.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">暂无用户数据</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">${escapeHtml(t('xyNoUserData'))}</td></tr>`;
         return;
       }
       tbody.innerHTML = xianyuConfigsData.map(cfg => {
-        const enabled = cfg.publish_enabled == 1 || cfg.publish_enabled === true;
+        // 统一用 Number() 判定：后端已做 int 归一化，双保险避免字符串/布尔导致的误判
+        const enabled = Number(cfg.publish_enabled) === 1;
         const statusBadge = enabled
-          ? '<span style="color:var(--success-color); font-weight:800;">✅ 已启用</span>'
-          : '<span style="color:var(--text-muted);">⏸ 未启用</span>';
-        const xyAccount = cfg.xy_account_remark ? `${cfg.xy_account_remark}` : (cfg.xy_account_id || '未配置');
+          ? `<span class="status-pill ok"><i class="fa-solid fa-circle-play"></i> ${escapeHtml(t('xyEnabled'))}</span>`
+          : `<span class="status-pill off"><i class="fa-solid fa-circle-pause"></i> ${escapeHtml(t('xyDisabled'))}</span>`;
+        const xyAccount = cfg.xy_account_remark ? `${cfg.xy_account_remark}` : (cfg.xy_account_id || t('xyNotConfigured'));
         const lastPub = cfg.last_publish_at ? cfg.last_publish_at.substring(0, 16) : '—';
-        const lastStatus = cfg.last_publish_status === 'success' ? '✅成功' : (cfg.last_publish_status === 'failed' ? '❌失败' : (cfg.last_publish_status === 'idle' ? '⏸无待发' : '—'));
+        const lastStatusMap = {
+          success: '<span class="status-pill ok">✔ ' + escapeHtml(t('xyStatusSuccess')) + '</span>',
+          failed: '<span class="status-pill err">✘ ' + escapeHtml(t('xyStatusFailed')) + '</span>',
+          idle: '<span class="status-pill off">⏸ ' + escapeHtml(t('xyStatusIdle')) + '</span>',
+        };
+        const lastStatus = lastStatusMap[cfg.last_publish_status] || '—';
         return `<tr>
           <td><strong>${escapeHtml(cfg.account_key)}</strong>${cfg.is_admin ? ' <span class="badge-admin">ADMIN</span>' : ''}</td>
           <td>${escapeHtml(xyAccount)}</td>
-          <td>${statusBadge}</td>
+          <td>
+            <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
+              ${statusBadge}
+              <button class="btn ${enabled ? 'btn-outline' : 'btn-xianyu'}" style="padding:2px 8px; font-size:11px;"
+                onclick="toggleXianyuPublish('${escapeHtml(escapeJsString(cfg.account_key))}', ${enabled ? 0 : 1})">${escapeHtml(enabled ? t('xyBtnDisable') : t('xyBtnEnable'))}</button>
+            </div>
+          </td>
           <td>${escapeHtml(cfg.publish_times || '09:00')}</td>
           <td>¥${escapeHtml(cfg.publish_price || '9.90')}</td>
           <td style="font-size:12px;">${lastPub}<br>${lastStatus}</td>
           <td>
-            <button class="btn btn-outline" style="padding:4px 10px; font-size:12px;" onclick="openXianyuConfigModal('${escapeJsString(cfg.account_key)}')">配置</button>
-            ${enabled ? `<button class="btn btn-xianyu" style="padding:4px 10px; font-size:12px;" onclick="openManualPublishForUser('${escapeJsString(cfg.account_key)}')">手动发布</button>` : ''}
+            <button class="btn btn-outline" style="padding:4px 10px; font-size:12px;" onclick="openXianyuConfigModal('${escapeHtml(escapeJsString(cfg.account_key))}')">${escapeHtml(t('xyBtnConfig'))}</button>
+            <button class="btn btn-xianyu" style="padding:4px 10px; font-size:12px;" onclick="openManualPublishForUser('${escapeHtml(escapeJsString(cfg.account_key))}')">${escapeHtml(t('xyBtnManualPublish'))}</button>
           </td>
         </tr>`;
       }).join('');
@@ -4307,6 +4677,11 @@
       document.getElementById('xyCustomImageUrlInput').value = cfg.custom_image_url || '';
       document.getElementById('xyCategoryIdInput').value = cfg.publish_category_id || '';
       document.getElementById('xyCategoryNameInput').value = cfg.publish_category_name || '';
+      // 重置账号下拉：避免上一次"测试连接"残留的选项/备注被串写到另一个用户身上
+      const accSelect = document.getElementById('xyAccountSelect');
+      accSelect.innerHTML = `<option value="">${escapeHtml(t('xySelectAccountPlaceholder'))}</option>`;
+      accSelect.value = '';
+      accSelect.dataset.remark = cfg.xy_account_remark || '';
       document.getElementById('xyAccountSelectBox').style.display = 'none';
       onXyImageSourceChange();
       openModal('xianyuConfigModal');
@@ -4317,17 +4692,19 @@
       document.getElementById('xyCustomUrlBox').style.display = src === 'custom' ? 'block' : 'none';
     }
 
-    async function testXianyuConnection() {
+    async function testXianyuConnection(btn) {
       const serverUrl = document.getElementById('xyServerUrlInput').value.trim();
       const secretKey = document.getElementById('xySecretKeyInput').value.trim();
       if (!serverUrl || !secretKey) {
-        alert('请先填写服务地址和分销秘钥');
+        showToast(t('xyFillServerAndKey'), true);
         return;
       }
-      const btn = event.target.closest('button');
-      const originalHtml = btn.innerHTML;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 测试中...';
-      btn.disabled = true;
+      const button = btn || document.querySelector('#xianyuConfigModal button[onclick*="testXianyuConnection"]');
+      const originalHtml = button ? button.innerHTML : '';
+      if (button) {
+        button.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t('xyTesting'))}`;
+        button.disabled = true;
+      }
       try {
         const res = await fetch(`${API_BASE}?action=test_xianyu_connection`, {
           method: 'POST',
@@ -4339,18 +4716,25 @@
           xianyuTestAccounts = data.accounts || [];
           const selectBox = document.getElementById('xyAccountSelectBox');
           const select = document.getElementById('xyAccountSelect');
-          select.innerHTML = '<option value="">-- 选择闲鱼账号 --</option>' +
-            xianyuTestAccounts.map(a => `<option value="${escapeHtml(a.account_id)}">${escapeHtml(a.remark || a.account_id)} ${a.enabled ? '✅' : '⛔'}</option>`).join('');
+          // 账号选项带上启用/禁用状态与禁用原因，便于排查「账号数少于预期」
+          select.innerHTML = `<option value="">${escapeHtml(t('xySelectAccountPlaceholder'))}</option>` +
+            xianyuTestAccounts.map(a => {
+              const badge = a.enabled ? '✅' : '⛔';
+              const reason = a.disable_reason ? `（${a.disable_reason}）` : '';
+              return `<option value="${escapeHtml(a.account_id)}">${escapeHtml(a.remark || a.account_id)} ${badge}${escapeHtml(reason)}</option>`;
+            }).join('');
           selectBox.style.display = 'block';
-          alert(`连接成功！找到 ${xianyuTestAccounts.length} 个闲鱼账号，请在下方选择。`);
+          showToast(data.message || t('xyConnectOkFallback'), false, 5000);
         } else {
-          alert('连接失败: ' + (data.message || '未知错误'));
+          showToast(t('xyConnectFailed') + (data.message || t('xyUnknownError')), true, 5000);
         }
       } catch (e) {
-        alert('请求失败: ' + e.message);
+        showToast(t('xyRequestFailed') + e.message, true);
       } finally {
-        btn.innerHTML = originalHtml;
-        btn.disabled = false;
+        if (button) {
+          button.innerHTML = originalHtml;
+          button.disabled = false;
+        }
       }
     }
 
@@ -4396,14 +4780,19 @@
         });
         const data = await res.json();
         if (data.status === 'success') {
-          alert('配置保存成功！');
+          // 立即用服务端回读值同步本地数据，再关闭弹窗，避免看到旧状态
+          const row = xianyuConfigsData.find(c => c.account_key === accountKey);
+          if (row && data.publish_enabled !== undefined) {
+            row.publish_enabled = Number(data.publish_enabled);
+          }
+          showToast(t('xySaveSuccess'));
           closeModal('xianyuConfigModal');
           loadXianyuConfigs();
         } else {
-          alert('保存失败: ' + (data.message || ''));
+          showToast(t('xySaveFailed') + (data.message ? ' ' + data.message : ''), true, 5000);
         }
       } catch (e) {
-        alert('请求失败: ' + e.message);
+        showToast(t('xyRequestFailed') + e.message, true);
       }
     }
 
@@ -4417,26 +4806,30 @@
       if (!xianyuConfigsData.length) {
         await loadXianyuConfigs();
       }
-      // Load accounts into select
+      // Load accounts into select (仅列出已配置闲鱼账号的用户)
       const accSelect = document.getElementById('manualPublishAccountSelect');
-      accSelect.innerHTML = '<option value="">-- 选择用户 --</option>' +
-        (xianyuConfigsData.length ? xianyuConfigsData.filter(c => c.xy_account_id).map(c =>
-          `<option value="${escapeHtml(c.account_key)}" ${preselectedAccount === c.account_key ? 'selected' : ''}>${escapeHtml(c.account_key)}</option>`
-        ).join('') : '<option value="">请先加载配置</option>');
+      const configured = xianyuConfigsData.filter(c => c.xy_account_id);
+      accSelect.innerHTML = `<option value="">${escapeHtml(t('xySelectUserPlaceholder'))}</option>` +
+        (configured.length
+          ? configured.map(c =>
+            `<option value="${escapeHtml(c.account_key)}" ${preselectedAccount === c.account_key ? 'selected' : ''}>${escapeHtml(c.account_key)}</option>`
+          ).join('')
+          : `<option value="">${escapeHtml(t('xyNoConfiguredAccount'))}</option>`);
 
       // Load games for the preselected account
       if (preselectedAccount) {
         await loadManualPublishGames(preselectedAccount);
       } else {
-        document.getElementById('manualPublishGameSelect').innerHTML = '<option value="">请先选择用户</option>';
+        document.getElementById('manualPublishGameSelect').innerHTML = `<option value="">${escapeHtml(t('xySelectUserFirst'))}</option>`;
       }
       accSelect.onchange = () => loadManualPublishGames(accSelect.value);
       openModal('manualPublishModal');
     }
 
     async function loadManualPublishGames(accountKey) {
+      const gameSelect = document.getElementById('manualPublishGameSelect');
       if (!accountKey) {
-        document.getElementById('manualPublishGameSelect').innerHTML = '<option value="">请先选择用户</option>';
+        gameSelect.innerHTML = `<option value="">${escapeHtml(t('xySelectUserFirst'))}</option>`;
         return;
       }
       try {
@@ -4444,9 +4837,8 @@
         const data = await res.json();
         if (data.status === 'success') {
           const unpublished = (data.games || []).filter(g => !g.is_published);
-          const gameSelect = document.getElementById('manualPublishGameSelect');
           if (!unpublished.length) {
-            gameSelect.innerHTML = '<option value="">该用户无待发布商品</option>';
+            gameSelect.innerHTML = `<option value="">${escapeHtml(t('xyNoPendingGames'))}</option>`;
           } else {
             gameSelect.innerHTML = unpublished.map(g =>
               `<option value="${g.id}">${escapeHtml(g.game_name_cn)} ${g.game_name_en ? '(' + escapeHtml(g.game_name_en) + ')' : ''}</option>`
@@ -4454,7 +4846,7 @@
           }
         }
       } catch (e) {
-        alert('加载商品失败: ' + e.message);
+        showToast(t('xyLoadGamesFailed') + e.message, true);
       }
     }
 
@@ -4462,11 +4854,21 @@
       const accountKey = document.getElementById('manualPublishAccountSelect').value;
       const gameId = document.getElementById('manualPublishGameSelect').value;
       if (!accountKey || !gameId) {
-        alert('请选择用户和商品');
+        showToast(t('xySelectUserAndGame'), true);
         return;
       }
-      if (!confirm('确认立即发布该商品到闲鱼吗？')) return;
+      const ok = await showConfirm(t('xyConfirmPublishText'), {
+        title: t('xyConfirmPublishTitle'),
+        okText: t('xyPublishNowBtn'),
+      });
+      if (!ok) return;
 
+      const btn = document.querySelector('#manualPublishModal .btn-xianyu');
+      const originalHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t('xyPublishing'))}`;
+        btn.disabled = true;
+      }
       try {
         const res = await fetch(`${API_BASE}?action=manual_publish`, {
           method: 'POST',
@@ -4475,29 +4877,46 @@
         });
         const data = await res.json();
         if (data.status === 'success') {
-          alert('发布成功！\n' + (data.message || '') + (data.data?.item_url ? '\n商品链接: ' + data.data.item_url : ''));
+          const lines = [t('xyPublishSuccess'), data.message || ''];
+          if (data.data && data.data.item_url) lines.push(t('xyItemUrlLabel') + ': ' + data.data.item_url);
+          showToast(lines.filter(Boolean).join('\n'), false, 6000);
           closeModal('manualPublishModal');
+          loadXianyuConfigs();
         } else {
-          alert('发布失败: ' + (data.message || ''));
+          showToast(t('xyPublishFailed') + (data.message || ''), true, 6000);
         }
       } catch (e) {
-        alert('请求失败: ' + e.message);
+        showToast(t('xyRequestFailed') + e.message, true);
+      } finally {
+        if (btn) {
+          btn.innerHTML = originalHtml;
+          btn.disabled = false;
+        }
       }
     }
 
     async function manualTriggerPublish() {
-      if (!confirm('手动触发定时发布调度？这将检查所有启用定时发布的用户。')) return;
+      const ok = await showConfirm(t('xyConfirmTriggerText'), {
+        title: t('xyConfirmTriggerTitle'),
+        okText: t('xyBtnRunNow'),
+      });
+      if (!ok) return;
       try {
         const res = await fetch(`${API_BASE}?action=run_scheduled_publish`);
         const data = await res.json();
         if (data.status === 'success') {
-          alert(data.message + (data.results?.length ? '\n\n详情:\n' + data.results.map(r => `• ${r.account_key}: ${r.status} - ${r.message}`).join('\n') : ''));
+          const lines = [data.message || ''];
+          if (data.results && data.results.length) {
+            lines.push('');
+            data.results.forEach(r => lines.push(`• ${r.account_key}: ${r.status} - ${r.message}`));
+          }
+          showToast(lines.filter(Boolean).join('\n'), false, 6000);
           loadXianyuConfigs();
         } else {
-          alert('调度失败: ' + (data.message || ''));
+          showToast(t('xyTriggerFailed') + (data.message || ''), true, 6000);
         }
       } catch (e) {
-        alert('请求失败: ' + e.message);
+        showToast(t('xyRequestFailed') + e.message, true);
       }
     }
 
@@ -4508,10 +4927,13 @@
         const res = await fetch(`${API_BASE}?action=get_xianyu_publish_logs&page=1&page_size=50`);
         const data = await res.json();
         if (data.status === 'success') {
-          renderXianyuLogsTable(data.logs || []);
+          xianyuLogsData = data.logs || [];
+          renderXianyuLogsTable(xianyuLogsData);
+        } else {
+          showToast(data.message || t('xyLoadLogsFailed'), true);
         }
       } catch (e) {
-        alert('加载日志失败: ' + e.message);
+        showToast(t('xyLoadLogsFailed') + e.message, true);
       }
     }
 
@@ -4519,20 +4941,22 @@
       const tbody = document.getElementById('xianyuLogsTableBody');
       if (!tbody) return;
       if (!logs.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">暂无发布日志</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">${escapeHtml(t('xyNoLogs'))}</td></tr>`;
         return;
       }
       tbody.innerHTML = logs.map(log => {
         const statusBadge = log.status === 'success'
-          ? '<span style="color:var(--success-color);">✅成功</span>'
-          : '<span style="color:var(--danger-color);">❌失败</span>';
-        const trigger = log.trigger_type === 'manual' ? '手动' : '定时';
-        const link = log.item_url ? `<a href="${escapeHtml(log.item_url)}" target="_blank" style="color:var(--xianyu-yellow-hover);">查看</a>` : '—';
+          ? `<span class="status-pill ok">✔ ${escapeHtml(t('xyLogStatusSuccess'))}</span>`
+          : `<span class="status-pill err">✘ ${escapeHtml(t('xyLogStatusFailed'))}</span>`;
+        const trigger = log.trigger_type === 'manual' ? t('xyLogTriggerManual') : t('xyLogTriggerScheduled');
+        const link = safeExternalUrl(log.item_url)
+          ? `<a href="${escapeHtml(log.item_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--xianyu-yellow-hover); font-weight:800;">${escapeHtml(t('xyLogViewLink'))}</a>`
+          : '—';
         return `<tr>
           <td style="font-size:12px;">${escapeHtml(log.created_at || '')}</td>
           <td><strong>${escapeHtml(log.account_key)}</strong></td>
           <td>${escapeHtml(log.game_name_cn || '')}</td>
-          <td style="font-size:12px;">${trigger}</td>
+          <td style="font-size:12px;">${escapeHtml(trigger)}</td>
           <td>${statusBadge}</td>
           <td style="font-size:11px; max-width:200px; word-break:break-all;">${escapeHtml(log.message || '')}</td>
           <td>${link}</td>

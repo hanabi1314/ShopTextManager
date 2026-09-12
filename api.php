@@ -650,20 +650,35 @@ switch ($action) {
         ");
         $configs = $stmt->fetchAll();
 
-        // 补全未配置记录的默认值（account_key 来自 templates，保证不为空）
+        // 补全未配置记录的默认值，并统一字段类型。
+        // 类型统一很重要：不同 PHP 版本 / PDO 驱动下 TINYINT 可能返回 int、string 甚至 "\x01"，
+        // 前端 `== 1` 判断在个别环境下会失效，导致「已启用」被显示成「未启用」。
         foreach ($configs as &$cfg) {
-            $cfg['is_admin'] = ($cfg['account_key'] === 'admin' || !empty($cfg['is_admin']));
-            if ($cfg['publish_enabled'] === null) $cfg['publish_enabled'] = 0;
-            if ($cfg['publish_price'] === null) $cfg['publish_price'] = '9.90';
-            if ($cfg['publish_original_price'] === null) $cfg['publish_original_price'] = '0';
-            if ($cfg['publish_times'] === null) $cfg['publish_times'] = '09:00';
-            if ($cfg['publish_quantity'] === null) $cfg['publish_quantity'] = 1;
-            if ($cfg['xy_server_url'] === null) $cfg['xy_server_url'] = '';
-            if ($cfg['xy_secret_key'] === null) $cfg['xy_secret_key'] = '';
-            if ($cfg['xy_account_id'] === null) $cfg['xy_account_id'] = '';
-            if ($cfg['publish_address'] === null) $cfg['publish_address'] = '';
-            if ($cfg['image_source'] === null) $cfg['image_source'] = 'auto';
+            $hasRow = $cfg['xy_server_url'] !== null; // LEFT JOIN 命中了配置行
+            $cfg['xy_configured'] = $hasRow ? 1 : 0;
+            $cfg['is_admin'] = ($cfg['account_key'] === 'admin' || !empty($cfg['is_admin'])) ? 1 : 0;
+            $cfg['publish_enabled'] = (int)($cfg['publish_enabled'] ?? 0);
+            $cfg['publish_price'] = (string)($cfg['publish_price'] ?? '9.90');
+            $cfg['publish_original_price'] = (string)($cfg['publish_original_price'] ?? '0');
+            $cfg['publish_times'] = (string)($cfg['publish_times'] ?? '09:00');
+            $cfg['publish_quantity'] = (int)($cfg['publish_quantity'] ?? 1);
+            $cfg['xy_server_url'] = (string)($cfg['xy_server_url'] ?? '');
+            $cfg['xy_secret_key'] = (string)($cfg['xy_secret_key'] ?? '');
+            $cfg['xy_account_id'] = (string)($cfg['xy_account_id'] ?? '');
+            $cfg['xy_account_remark'] = (string)($cfg['xy_account_remark'] ?? '');
+            $cfg['publish_address'] = (string)($cfg['publish_address'] ?? '');
+            $cfg['publish_shipping_method'] = (string)($cfg['publish_shipping_method'] ?? 'free');
+            $cfg['publish_category_id'] = (string)($cfg['publish_category_id'] ?? '');
+            $cfg['publish_category_name'] = (string)($cfg['publish_category_name'] ?? '');
+            $cfg['publish_channel_cat_id'] = (string)($cfg['publish_channel_cat_id'] ?? '');
+            $cfg['publish_channel_cat_name'] = (string)($cfg['publish_channel_cat_name'] ?? '');
+            $cfg['publish_leaf_id'] = (string)($cfg['publish_leaf_id'] ?? '');
+            $cfg['publish_tb_cat_id'] = (string)($cfg['publish_tb_cat_id'] ?? '');
+            $cfg['image_source'] = (string)($cfg['image_source'] ?? 'auto');
+            $cfg['custom_image_url'] = (string)($cfg['custom_image_url'] ?? '');
+            $cfg['last_publish_status'] = (string)($cfg['last_publish_status'] ?? '');
         }
+        unset($cfg);
         jsonResponse(['status' => 'success', 'configs' => $configs]);
         break;
 
@@ -720,7 +735,44 @@ switch ($action) {
             $pdo->prepare($sql)->execute($params);
         }
 
-        jsonResponse(['status' => 'success', 'message' => '闲鱼定时发布配置已保存']);
+        // 回读确认：把落库后的 publish_enabled 一并返回，前端直接用它渲染，
+        // 彻底消除「保存成功但界面仍显示未启用」的观感问题。
+        $verify = $pdo->prepare("SELECT publish_enabled FROM xianyu_config WHERE account_key = ?");
+        $verify->execute([$ak]);
+        $savedEnabled = (int)$verify->fetchColumn();
+
+        jsonResponse([
+            'status' => 'success',
+            'message' => '闲鱼定时发布配置已保存',
+            'publish_enabled' => $savedEnabled,
+        ]);
+        break;
+
+    // ========================================================
+    // 17b. 快速启用/停用某用户的定时发布 (管理员，配置表格内联开关)
+    // ========================================================
+    case 'toggle_xianyu_publish':
+        $ak = trim($input['account_key'] ?? '');
+        $enabled = !empty($input['publish_enabled']) ? 1 : 0;
+        if (empty($ak)) jsonResponse(['status' => 'error', 'message' => '账号不能为空'], 400);
+
+        $check = $pdo->prepare("SELECT id FROM xianyu_config WHERE account_key = ?");
+        $check->execute([$ak]);
+        if ($check->fetch()) {
+            $pdo->prepare("UPDATE xianyu_config SET publish_enabled = ? WHERE account_key = ?")->execute([$enabled, $ak]);
+        } else {
+            $pdo->prepare("INSERT INTO xianyu_config (account_key, publish_enabled) VALUES (?, ?)")->execute([$ak, $enabled]);
+        }
+        // 回读确认：前端直接采用返回值渲染，杜绝「库里开了、界面显示未启用」的不一致
+        $verify = $pdo->prepare("SELECT publish_enabled FROM xianyu_config WHERE account_key = ?");
+        $verify->execute([$ak]);
+        $nowEnabled = (int)$verify->fetchColumn();
+
+        jsonResponse([
+            'status' => 'success',
+            'publish_enabled' => $nowEnabled,
+            'message' => $nowEnabled ? '已启用定时发布' : '已停用定时发布',
+        ]);
         break;
 
     // ========================================================
@@ -762,10 +814,28 @@ switch ($action) {
             jsonResponse(['status' => 'error', 'message' => '返回数据格式异常: ' . substr($resp, 0, 200)], 500);
         }
         if (!empty($data['success'])) {
+            $accounts = $data['data']['accounts'] ?? [];
+            $total = (int)($data['data']['total'] ?? count($accounts));
+            $enabledTotal = (int)($data['data']['enabled_total'] ?? 0);
+            if ($enabledTotal === 0) {
+                // 老版本服务端不返回 enabled_total，按 enabled 字段自行统计
+                foreach ($accounts as $a) {
+                    if (!empty($a['enabled'])) $enabledTotal++;
+                }
+            }
+            // 说明：该接口返回的是「该分销秘钥所属用户」名下的全部账号。
+            // 若账号数少于预期，通常是这些账号挂在 xianyu-auto-reply 的其它用户下。
+            $hint = '';
+            if ($total > 0 && $enabledTotal < $total) {
+                $hint = "（其中 {$enabledTotal} 个启用、" . ($total - $enabledTotal) . " 个已禁用；禁用账号同样可用于发布）";
+            }
             jsonResponse([
                 'status' => 'success',
-                'message' => '连接成功！共找到 ' . ($data['data']['total'] ?? 0) . ' 个闲鱼账号',
-                'accounts' => $data['data']['accounts'] ?? [],
+                'message' => '连接成功！该分销秘钥下共 ' . $total . ' 个闲鱼账号' . ($hint ? '，' . $hint : ''),
+                'accounts' => $accounts,
+                'total' => $total,
+                'enabled_total' => $enabledTotal,
+                'disabled_total' => $total - $enabledTotal,
             ]);
         } else {
             jsonResponse([
@@ -995,57 +1065,116 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
     // 注意: 使用 ?? '' 做空值保护，老部署的 games 表可能尚无 cover_url 字段，
     //      直接访问会触发未定义索引告警，而全局 set_error_handler 会将其转为 500 并中断整个定时循环。
     $gameCover = $game['cover_url'] ?? '';
-    $imageUrl = '';
     $imageSource = $cfg['image_source'] ?: 'auto';
+
+    // 组装"确定性候选"（封面 / 自定义 URL）。
+    // 联网搜索改为惰性触发：只有确定性候选全部失败后才发起，
+    // 避免每个商品都无条件打 3~4 次搜索引擎、把批量/定时发布整体拖到 PHP 超时。
+    $primaryCandidates = [];
     if ($imageSource === 'custom' && !empty($cfg['custom_image_url'])) {
-        $imageUrl = $cfg['custom_image_url'];
-    } elseif ($imageSource === 'cover_url' && !empty($gameCover)) {
-        $imageUrl = $gameCover;
-    } elseif ($imageSource === 'auto') {
-        // 优先使用 cover_url，没有则尝试联网搜图
+        $primaryCandidates[] = $cfg['custom_image_url'];
+    } else {
         if (!empty($gameCover)) {
-            $imageUrl = $gameCover;
-        } else {
-            $imageUrl = searchImageOnline($cn, $en);
+            $primaryCandidates[] = $gameCover;
+        }
+        // 选了"自定义图片"却没填 URL 时也保留封面，最终仍会回落到联网搜索兜底
+    }
+
+    // 5~6. 逐个候选下载并上传，直到成功为止
+    $serverUrl = rtrim($cfg['xy_server_url'], '/');
+    $mediaId = '';
+    $tmpFile = '';
+    $lastErr = '';
+    $triedCount = 0;
+    $candidateCount = 0;
+    $searched = false;
+    // 墙钟预算：图片解析 + 上传整体最多占用 N 秒，到点即停，保证定时任务能跑完剩余账号
+    $deadline = microtime(true) + 50;
+
+    try {
+        $queue = $primaryCandidates;
+        while (true) {
+            if (empty($queue)) {
+                if ($searched) {
+                    break;
+                }
+                $searched = true;
+                if (microtime(true) > $deadline) {
+                    if ($lastErr === '') {
+                        $lastErr = '图片处理已超时，请为该商品设置封面图 URL 以减少联网搜索耗时';
+                    }
+                    break;
+                }
+                $queue = searchImagesOnline($cn, $en, 8);
+                continue;
+            }
+            if (microtime(true) > $deadline) {
+                if ($lastErr === '') {
+                    $lastErr = '图片处理已超时，请为该商品设置封面图 URL 以减少联网搜索耗时';
+                }
+                break;
+            }
+
+            $candidateUrl = array_shift($queue);
+            if (!is_string($candidateUrl) || trim($candidateUrl) === '') {
+                continue;
+            }
+            $candidateUrl = trim($candidateUrl);
+            $candidateCount++;
+
+            $img = downloadImageToTemp($candidateUrl);
+            if (!$img) {
+                $lastErr = '图片下载失败或内容不是有效图片: ' . safeTruncate($candidateUrl, 120);
+                continue;
+            }
+
+            $tmpFile = $img['path'];
+            $triedCount++;
+            try {
+                $mediaResp = uploadMediaToXianyu(
+                    $serverUrl,
+                    $cfg['xy_secret_key'],
+                    $cfg['xy_account_id'],
+                    'image',
+                    $img['path'],
+                    $img['mime'],
+                    'image' . $img['ext']
+                );
+            } finally {
+                @unlink($tmpFile);
+                $tmpFile = '';
+            }
+
+            if (!empty($mediaResp['success']) && !empty($mediaResp['data']['media_id'])) {
+                $mediaId = $mediaResp['data']['media_id'];
+                $lastErr = '';
+                break;
+            }
+            $lastErr = ($mediaResp['message'] ?? '媒体上传失败') . ' (来源: ' . safeTruncate($candidateUrl, 80) . ')';
+        }
+    } finally {
+        // 任何路径（含异常 / 提前 break / 超时）都不留临时文件
+        if ($tmpFile !== '' && @file_exists($tmpFile)) {
+            @unlink($tmpFile);
         }
     }
 
-    if (empty($imageUrl)) {
-        // 无法获取任何图片：直接返回明确错误，而不是用可能不可达的占位图硬撑，
-        // 避免每次定时都上传一张无关占位图、产生大量垃圾商品。
-        logXianyuPublish($pdo, $account_key, $game_id, $cn, 'failed', $triggerType,
-            '未能获取商品图片，请先为该商品设置封面图 URL，或在配置中指定自定义图片 URL', '', '', []);
-        updateConfigStatus($pdo, $account_key, 'failed');
-        return ['success' => false, 'message' => '未能获取商品图片，请先在「单个商品管理」为该商品设置封面图 URL'];
-    }
-
-    // 5. 下载图片到临时文件
-    $tmpFile = downloadImageToTemp($imageUrl);
-    if (!$tmpFile) {
-        return ['success' => false, 'message' => '图片下载失败: ' . $imageUrl];
-    }
-
-    // 6. 上传图片到 xianyu-auto-reply
-    $serverUrl = rtrim($cfg['xy_server_url'], '/');
-    $mediaResp = uploadMediaToXianyu(
-        $serverUrl,
-        $cfg['xy_secret_key'],
-        $cfg['xy_account_id'],
-        'image',
-        $tmpFile
-    );
-
-    // 清理临时文件
-    @unlink($tmpFile);
-
-    if (empty($mediaResp['success']) || empty($mediaResp['data']['media_id'])) {
-        $errMsg = $mediaResp['message'] ?? '媒体上传失败';
-        logXianyuPublish($pdo, $account_key, $game_id, $cn, 'failed', $triggerType, $errMsg, '', '', $mediaResp);
+    if ($mediaId === '') {
+        if ($candidateCount === 0) {
+            // 无法获取任何图片：直接返回明确错误，而不是用可能不可达的占位图硬撑，
+            // 避免每次定时都上传一张无关占位图、产生大量垃圾商品。
+            $errMsg = '未能获取商品图片，请先为该商品设置封面图 URL，或在配置中指定自定义图片 URL';
+            logXianyuPublish($pdo, $account_key, $game_id, $cn, 'failed', $triggerType, $errMsg, '', '', []);
+            updateConfigStatus($pdo, $account_key, 'failed');
+            return ['success' => false, 'message' => '未能获取商品图片，请先在「单个商品管理」为该商品设置封面图 URL'];
+        }
+        $errMsg = $triedCount === 0
+            ? '所有候选图片均无法下载（可能不是有效图片或链接失效），请为该商品设置封面图 URL'
+            : $lastErr;
+        logXianyuPublish($pdo, $account_key, $game_id, $cn, 'failed', $triggerType, $errMsg, '', '', []);
         updateConfigStatus($pdo, $account_key, 'failed');
         return ['success' => false, 'message' => '图片上传到闲鱼服务器失败: ' . $errMsg];
     }
-
-    $mediaId = $mediaResp['data']['media_id'];
 
     // 7. (可选) 获取分类推荐 - 如果未预设分类
     $categoryId = $cfg['publish_category_id'];
@@ -1129,40 +1258,144 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
 
 // --- 辅助函数 ---
 
-function searchImageOnline(string $cn, string $en): string {
-    // 使用 Bing 图片搜索获取商品图片
-    $query = urlencode($en ?: $cn);
-    $searchUrl = "https://www.bing.com/images/search?q={$query}&form=HDRSC2&first=1";
-
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => $searchUrl,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    ]);
-    $html = curl_exec($ch);
-    curl_close($ch);
-
-    if (!$html) return '';
-
-    // 从 Bing 搜索结果中提取图片 URL
-    if (preg_match('/murl&quot;:&quot;(https?:\/\/[^&]+)&quot;/', $html, $matches)) {
-        return html_entity_decode($matches[1]);
-    }
-    if (preg_match_all('/class="mimg"([^>]+)src="([^"]+)"/', $html, $matches) && !empty($matches[2][0])) {
-        return $matches[2][0];
-    }
-    return '';
+/**
+ * 按魔术字节判断图片真实格式。
+ *
+ * 关键：绝不能信任远端返回的 Content-Type 或 URL 后缀。xianyu-auto-reply 上传接口
+ * 会校验 content_type 必须以 image/ 开头，而我们提交 multipart 时也要显式给出 MIME，
+ * 因此这里必须按内容判断，否则会把 HTML 错误页当图片上传，导致「只支持上传图片文件」报错。
+ *
+ * @return array{ext:string,mime:string}|null 无法识别时返回 null
+ */
+function sniffImageType(string $data): ?array {
+    if (strlen($data) < 12) return null;
+    if (strncmp($data, "\xFF\xD8\xFF", 3) === 0)            return ['ext' => '.jpg',  'mime' => 'image/jpeg'];
+    if (strncmp($data, "\x89PNG\r\n\x1A\n", 8) === 0)       return ['ext' => '.png',  'mime' => 'image/png'];
+    if (strncmp($data, 'GIF87a', 6) === 0)                  return ['ext' => '.gif',  'mime' => 'image/gif'];
+    if (strncmp($data, 'GIF89a', 6) === 0)                  return ['ext' => '.gif',  'mime' => 'image/gif'];
+    if (strncmp($data, 'RIFF', 4) === 0 && substr($data, 8, 4) === 'WEBP') return ['ext' => '.webp', 'mime' => 'image/webp'];
+    if (strncmp($data, 'BM', 2) === 0)                      return ['ext' => '.bmp',  'mime' => 'image/bmp'];
+    return null;
 }
 
 /**
- * 校验 URL 是否允许下载 (SSRF 防护)。
+ * 逐跳跟随重定向的安全 GET。
+ *
+ * 每一跳都重新做 SSRF 校验，防止公网 URL 通过 302 跳到 169.254.169.254 等内网/云元数据地址；
+ * 同时保留正常 CDN 跳转能力（早期版本直接关闭 FOLLOWLOCATION，导致大量 CDN 图片下载失败）。
+ *
+ * @return array{body:string,code:int,content_type:string}|null
+ */
+function safeHttpGet(string $url, int $timeout = 20, int $maxRedirects = 5): ?array {
+    if (!function_exists('curl_init')) return null;
+    $current = $url;
+    for ($hop = 0; $hop <= $maxRedirects; $hop++) {
+        if (!isSafePublicUrl($current)) return null;
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $current,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => false, // 手动跟随，逐跳校验
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+        ]);
+        $body = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $ct = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        $next = (string)curl_getinfo($ch, CURLINFO_REDIRECT_URL);
+        curl_close($ch);
+
+        if ($body === false) return null;
+        if (in_array($code, [301, 302, 303, 307, 308], true) && $next !== '') {
+            $current = $next;
+            continue;
+        }
+        if ($code < 200 || $code >= 300) return null;
+        return ['body' => $body, 'code' => $code, 'content_type' => $ct];
+    }
+    return null;
+}
+
+/**
+ * 联网搜索商品图片，返回候选 URL 列表（按可信度排序，去重后返回）。
+ *
+ * 与旧版只返回单个 URL 不同：搜索引擎结果里常有缩略图、占位图、失效链接，
+ * 单个 URL 一旦不可用整个发布就会失败。这里返回多个候选，由调用方逐个下载校验，
+ * 直到拿到真实可用的图片为止。
+ *
+ * @return string[] 候选图片 URL 列表
+ */
+function searchImagesOnline(string $cn, string $en, int $limit = 10): array {
+    $keyword = trim($en ?: $cn);
+    if ($keyword === '') return [];
+    $query = urlencode($keyword);
+
+    $candidates = [];
+
+    // 1) Bing 图片异步接口：返回片段中含原始图 murl，比主页面结构更稳定
+    $resp = safeHttpGet("https://www.bing.com/images/async?q={$query}&first=0&count=35&mmasync=1", 12);
+    if ($resp && !empty($resp['body'])) {
+        if (preg_match_all('/murl&quot;:&quot;(https?:\/\/.+?)&quot;/', $resp['body'], $m)) {
+            foreach ($m[1] as $u) $candidates[] = html_entity_decode($u);
+        }
+    }
+
+    // 2) Bing 图片主页面（异步接口无结果时的回退）
+    if (count($candidates) < $limit) {
+        $resp2 = safeHttpGet("https://www.bing.com/images/search?q={$query}&form=HDRSC2&first=1", 12);
+        if ($resp2 && !empty($resp2['body'])) {
+            if (preg_match_all('/murl&quot;:&quot;(https?:\/\/.+?)&quot;/', $resp2['body'], $m2)) {
+                foreach ($m2[1] as $u) $candidates[] = html_entity_decode($u);
+            }
+            if (preg_match_all('/class="mimg"[^>]+src="(https?:\/\/[^"]+)"/', $resp2['body'], $m3)) {
+                foreach ($m3[1] as $u) $candidates[] = html_entity_decode($u);
+            }
+        }
+    }
+
+    // 3) 英文关键词再搜一轮（中文结果质量差时经常能救回来）
+    if (count($candidates) < 3 && $en !== '' && $cn !== '' && $en !== $cn) {
+        $q2 = urlencode($cn);
+        $resp3 = safeHttpGet("https://www.bing.com/images/async?q={$q2}&first=0&count=35&mmasync=1", 12);
+        if ($resp3 && !empty($resp3['body'])) {
+            if (preg_match_all('/murl&quot;:&quot;(https?:\/\/.+?)&quot;/', $resp3['body'], $m4)) {
+                foreach ($m4[1] as $u) $candidates[] = html_entity_decode($u);
+            }
+        }
+    }
+
+    // 去重并过滤明显不可用的地址（data:URI、SVG 等非受支持格式）
+    $seen = [];
+    $out = [];
+    foreach ($candidates as $u) {
+        $u = trim($u);
+        if ($u === '' || stripos($u, 'http') !== 0) continue;
+        if (stripos($u, '.svg') !== false) continue; // xianyu 不支持 svg
+        if (isset($seen[$u])) continue;
+        $seen[$u] = true;
+        $out[] = $u;
+        if (count($out) >= $limit) break;
+    }
+    return $out;
+}
+
+/**
+ * 兼容旧调用：取第一个候选（保留函数签名，避免其它地方调用报错）。
+ */
+function searchImageOnline(string $cn, string $en): string {
+    $list = searchImagesOnline($cn, $en, 1);
+    return $list[0] ?? '';
+}
+
+/**
+ * 校验 URL 是否允许访问 (SSRF 防护)。
  * 图片 URL 来自管理员配置或搜索引擎结果，必须阻止访问内网/本机/云元数据等地址。
  */
-function isSafeImageUrl(string $url): bool {
+function isSafePublicUrl(string $url): bool {
     $parts = parse_url($url);
     if (!$parts || empty($parts['host'])) return false;
     $scheme = strtolower($parts['scheme'] ?? '');
@@ -1173,93 +1406,94 @@ function isSafeImageUrl(string $url): bool {
     // 阻止 localhost / 本机环回
     if (in_array($host, ['localhost', '127.0.0.1', '::1', '0.0.0.0'], true)) return false;
 
-    // 解析 IP，拦截私有、保留、链路本地地址
-    $ip = $host;
-    if (!filter_var($ip, FILTER_VALIDATE_IP)) {
-        $resolved = @gethostbyname($host);
-        if ($resolved === $host) return false; // 域名解析失败
-        $ip = $resolved;
+    // 已经是 IP 字面量：直接校验
+    if (filter_var($host, FILTER_VALIDATE_IP)) {
+        return isPublicIp($host);
     }
-    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-        return false; // 私有地址(10/8,172.16/12,192.168/16)、保留地址、链路本地(169.254/16)一律拒绝
+
+    // 域名：必须同时解析 A(IPv4) 与 AAAA(IPv6) 并逐个校验。
+    // 只用 gethostbyname() 只能拿到 A 记录 —— 攻击者让域名 A=公网IP、AAAA=::1，
+    // 校验会误判通过，而 curl 可能走 IPv6 连上内网。
+    $records = @dns_get_record($host, DNS_A | DNS_AAAA);
+    if (empty($records)) return false; // 解析失败直接拒绝
+
+    $checked = 0;
+    foreach ($records as $r) {
+        if (!empty($r['ipv4']) && !isPublicIp($r['ipv4'])) return false;
+        if (!empty($r['ipv6']) && !isPublicIp($r['ipv6'])) return false;
+        if (!empty($r['ipv4']) || !empty($r['ipv6'])) $checked++;
     }
-    return true;
+    // 一条有效地址都没拿到就拒绝，避免漏判
+    return $checked > 0;
 }
 
 /**
- * 下载图片到临时文件。
- *
- * 安全与可用性兼顾：
- * - 不启用 CURLOPT_FOLLOWLOCATION（否则可能被公网 URL 302 跳转到 169.254.169.254 等内网地址）；
- * - 改为手动逐跳跟随，每一跳都重新做 isSafeImageUrl 校验，既防 SSRF 又不破坏正常 CDN 跳转。
+ * 单个 IP 是否为可安全访问的公网地址。
+ * 私有网段(10/8、172.16/12、192.168/16)、保留地址、链路本地(169.254/16)一律拒绝。
  */
-function downloadImageToTemp(string $url): ?string {
-    $maxRedirects = 5;
-    $current = $url;
-    $contentType = '';
-
-    for ($hop = 0; $hop <= $maxRedirects; $hop++) {
-        // 每一跳都重新校验，防止通过重定向跳进内网
-        if (!isSafeImageUrl($current)) {
-            return null;
-        }
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $current,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => false, // 手动跟随，逐跳校验
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-        ]);
-        $data = curl_exec($ch);
-        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $ct = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-        $next = curl_getinfo($ch, CURLINFO_REDIRECT_URL);
-        curl_close($ch);
-
-        if ($data === false) return null;
-
-        // 命中重定向：换地址后继续下一轮（下一轮开头会重新校验安全性）
-        if (in_array($httpCode, [301, 302, 303, 307, 308], true) && !empty($next)) {
-            $current = $next;
-            continue;
-        }
-        if ($httpCode < 200 || $httpCode >= 300) return null;
-        if (strlen($data) < 100) return null;
-
-        $contentType = $ct;
-        break;
-    }
-
-    if ($contentType === '' || $data === false || strlen($data) < 100) {
-        return null;
-    }
-
-    // 确定文件扩展名
-    $ext = '.jpg';
-    if (strpos($contentType, 'png') !== false) $ext = '.png';
-    elseif (strpos($contentType, 'webp') !== false) $ext = '.webp';
-    elseif (strpos($contentType, 'gif') !== false) $ext = '.gif';
-
-    $tmpFile = sys_get_temp_dir() . '/xianyu_publish_' . uniqid() . $ext;
-    if (file_put_contents($tmpFile, $data) === false) {
-        return null;
-    }
-    return $tmpFile;
+function isPublicIp(string $ip): bool {
+    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
 }
 
-function uploadMediaToXianyu(string $serverUrl, string $secretKey, string $accountId, string $mediaType, string $filePath): array {
+/**
+ * 下载图片到临时文件，并按魔术字节校验它确实是图片。
+ *
+ * 返回结构里带上真实 mime 与扩展名，供上传时显式声明 multipart 的 Content-Type。
+ * 这一步是发布成功率的关键：搜索引擎返回的链接可能是 HTML 错误页 / 占位图，
+ * 若不校验就上传，xianyu-auto-reply 会直接返回「只支持上传图片文件」。
+ *
+ * @return array{path:string,mime:string,ext:string,size:int}|null
+ */
+function downloadImageToTemp(string $url): ?array {
+    $resp = safeHttpGet($url, 30);
+    if (!$resp) return null;
+
+    $data = $resp['body'];
+    if (strlen($data) < 100) return null;
+
+    // xianyu-auto-reply 上传上限 5MB，超限直接放弃换下一个候选
+    if (strlen($data) > 5 * 1024 * 1024) return null;
+
+    $info = sniffImageType($data);
+    if (!$info) return null;
+
+    $tmpFile = sys_get_temp_dir() . '/xianyu_publish_' . uniqid('', true) . $info['ext'];
+    if (@file_put_contents($tmpFile, $data) === false) {
+        return null;
+    }
+    return [
+        'path' => $tmpFile,
+        'mime' => $info['mime'],
+        'ext'  => $info['ext'],
+        'size' => strlen($data),
+    ];
+}
+
+/**
+ * 上传图片到 xianyu-auto-reply，获取 media_id。
+ *
+ * 必须显式传入 MIME 与文件名：PHP 的 new CURLFile($path) 默认会带
+ * Content-Type: application/octet-stream，而服务端强制要求 image/* 开头，
+ * 不显式声明会 100% 报「只支持上传图片文件」。
+ */
+function uploadMediaToXianyu(string $serverUrl, string $secretKey, string $accountId, string $mediaType, string $filePath, string $mime = '', string $fileName = ''): array {
     if (!file_exists($filePath)) return ['success' => false, 'message' => '图片文件不存在'];
+
+    if ($mime === '' || stripos($mime, 'image/') !== 0) {
+        // 兜底：按文件内容再嗅探一次，保证一定是 image/*
+        $raw = @file_get_contents($filePath);
+        $info = $raw !== false ? sniffImageType($raw) : null;
+        $mime = $info ? $info['mime'] : 'image/jpeg';
+    }
+    if ($fileName === '') {
+        $fileName = 'image' . (strtolower(pathinfo($filePath, PATHINFO_EXTENSION)) === '' ? '.jpg' : '.' . pathinfo($filePath, PATHINFO_EXTENSION));
+    }
 
     $postFields = [
         'secret_key' => $secretKey,
         'account_id' => $accountId,
         'media_type' => $mediaType,
-        'file' => new CURLFile($filePath),
+        'file' => new CURLFile($filePath, $mime, $fileName),
     ];
 
     $ch = curl_init();

@@ -7,6 +7,7 @@ interface Game {
   game_name_cn: string;
   game_name_en: string;
   game_name?: string;
+  cover_url?: string;
   is_active: number;
   is_published?: boolean;
 }
@@ -43,6 +44,27 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // dev 模式下闲鱼配置的进程内存储（仅内存，重启即丢）
+  const devXianyuConfigs: Record<string, any> = {};
+  const devXianyuDefault = (accountKey: string) => ({
+    account_key: accountKey,
+    xy_server_url: "",
+    xy_secret_key: "",
+    xy_account_id: "",
+    xy_account_remark: "",
+    publish_enabled: 0,
+    publish_times: "09:00",
+    publish_price: "9.90",
+    publish_original_price: "0",
+    publish_address: "",
+    publish_quantity: 1,
+    publish_shipping_method: "free",
+    image_source: "auto",
+    custom_image_url: "",
+    last_publish_at: null,
+    last_publish_status: "",
+  });
+
   // 内存数据服务 (与 MySQL 保持一致)
   let games: Game[] = [
     { id: 1, game_name_cn: "黑神话：悟空", game_name_en: "Black Myth: Wukong", cover_url: "", is_active: 1 },
@@ -77,7 +99,7 @@ async function startServer() {
   // API Routes (适配 api.php)
   // ==========================================
 
-  app.all("/api.php", (req, res) => {
+  app.all("/api.php", async (req, res) => {
     try {
       const body = req.body || {};
       const query = req.query || {};
@@ -417,35 +439,37 @@ async function startServer() {
         return res.json({ status: "success", message: "封面图片已更新" });
       }
 
-      // 16. 获取闲鱼定时发布配置
+      // 16. 获取闲鱼定时发布配置 (dev 模式: 内存态，便于联调前端开关)
       if (action === "get_xianyu_configs") {
         return res.json({
           status: "success",
           configs: accounts.map(a => ({
             account_key: a.account_key,
             is_admin: !!(a.is_admin || a.account_key === "admin"),
-            xy_server_url: "",
-            xy_secret_key: "",
-            xy_account_id: "",
-            xy_account_remark: "",
-            publish_enabled: 0,
-            publish_times: "09:00",
-            publish_price: "9.90",
-            publish_original_price: "0",
-            publish_address: "",
-            publish_quantity: 1,
-            publish_shipping_method: "free",
-            image_source: "auto",
-            custom_image_url: "",
-            last_publish_at: null,
-            last_publish_status: "",
+            ...devXianyuDefault(a.account_key),
+            ...(devXianyuConfigs[a.account_key] || {}),
           }))
         });
       }
 
-      // 17. 保存闲鱼配置 (dev 模式仅返回成功)
+      // 17. 保存闲鱼配置 (dev 模式: 写入内存，回读 publish_enabled 供前端即时刷新)
       if (action === "save_xianyu_config") {
-        return res.json({ status: "success", message: "闲鱼定时发布配置已保存 (dev 模式不会持久化)" });
+        const key = String(body.account_key || "");
+        if (!key) return res.json({ status: "error", message: "账号不能为空" });
+        const prev = devXianyuConfigs[key] || devXianyuDefault(key);
+        devXianyuConfigs[key] = {
+          ...prev,
+          ...body,
+          account_key: key,
+          publish_enabled: body.publish_enabled ? 1 : 0,
+          publish_times: String(body.publish_times || "09:00"),
+          publish_price: String(body.publish_price ?? "9.90"),
+        };
+        return res.json({
+          status: "success",
+          message: "闲鱼定时发布配置已保存 (dev 模式仅保存在内存中)",
+          publish_enabled: devXianyuConfigs[key].publish_enabled,
+        });
       }
 
       // 18. 测试闲鱼连接 (dev 模式模拟)
@@ -462,12 +486,33 @@ async function startServer() {
           });
           const data = await resp.json();
           if (data.success) {
-            return res.json({ status: "success", message: `连接成功！共找到 ${data.data?.total || 0} 个闲鱼账号`, accounts: data.data?.accounts || [] });
+            const accounts = data.data?.accounts || [];
+            const total = data.data?.total ?? accounts.length;
+            const enabledTotal = data.data?.enabled_total ?? accounts.filter((a: any) => a.enabled).length;
+            const hint = enabledTotal < total ? `（其中 ${enabledTotal} 个启用、${total - enabledTotal} 个已禁用；禁用账号同样可用于发布）` : "";
+            return res.json({
+              status: "success",
+              message: `连接成功！该分销秘钥下共 ${total} 个闲鱼账号${hint ? "，" + hint : ""}`,
+              accounts,
+              total,
+              enabled_total: enabledTotal,
+              disabled_total: total - enabledTotal,
+            });
           }
           return res.json({ status: "error", message: data.message || "连接失败" });
         } catch (e: any) {
           return res.json({ status: "error", message: "连接失败: " + e.message });
         }
+      }
+
+      // 17b. 快速启用/停用某用户的定时发布 (dev 模式模拟)
+      if (action === "toggle_xianyu_publish") {
+        const { account_key, publish_enabled } = body;
+        if (!account_key) return res.json({ status: "error", message: "账号不能为空" });
+        const enabled = publish_enabled ? 1 : 0;
+        const prev = devXianyuConfigs[account_key] || devXianyuDefault(account_key);
+        devXianyuConfigs[account_key] = { ...prev, publish_enabled: enabled };
+        return res.json({ status: "success", publish_enabled: enabled, message: enabled ? "已启用定时发布" : "已停用定时发布" });
       }
 
       // 19. 手动发布 (dev 模式模拟)
