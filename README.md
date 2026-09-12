@@ -111,7 +111,7 @@ ShopTextManager 支持对接 [xianyu-auto-reply](https://github.com/hanabi1314/x
 1. 管理员在 ShopTextManager 后台为每个用户配置 xianyu-auto-reply 服务地址、分销秘钥(secret_key)、闲鱼账号 ID、发布时间、价格等参数
 2. 服务器配置 Cron 定时任务，每分钟调用 ShopTextManager 的 `run_scheduled_publish` 接口
 3. 到达设定时间时，系统自动从用户待发布列表中选取下一个商品
-4. 获取商品图片（优先使用封面图 URL，无封面则自动通过搜索引擎搜图）
+4. 获取商品图片：**优先使用封面图 URL；无封面图时自动联网搜索图片**（依次尝试 Bing → DuckDuckGo → Wikimedia，每个图源再用中英文关键词重试，结果按关键词缓存 6 小时。因此绝大多数商品无需手动设置封面图）
 5. 将图片上传至 xianyu-auto-reply 服务器获取 media_id
 6. 调用 xianyu-auto-reply 的公开单品发布 API 发布商品到闲鱼
 7. 发布成功后自动将该商品标记为已发布（隐藏），并记录发布日志
@@ -204,7 +204,9 @@ ShopTextManager 定时发布时会依次调用以下 xianyu-auto-reply 公开接
 
 | 问题 | 原因 | 解决方案 |
 | :--- | :--- | :--- |
-| 图片下载失败 | 商品无封面图且搜索引擎未能获取图片 | 在「单个商品管理」中为商品手动设置封面图 URL |
+| 图片下载失败 / 未能获取商品图片 | 商品无封面图且联网搜图未返回结果 | 先用「手动发布」弹窗里的 **测试联网搜图** 按钮自查；它会逐个图源给出成败，据此判断是外网不通还是图源被限 |
+| 所有图源都失败 | 服务器出网被防火墙拦截，或 PHP curl 未启用 | 在服务器上执行 `curl -I https://www.bing.com` 验证出网；确认 php.ini 已启用 `curl` 扩展 |
+| 只有部分图源成功 | 搜索引擎对服务器 IP 限流 | 属正常现象，系统会自动降级到下一个可用图源，无需处理 |
 | 媒体上传失败 | xianyu-auto-reply 服务不可达或 secret_key/account_id 不匹配 | 检查服务地址和密钥配置，确保闲鱼账号已登录 |
 | 发布失败 (code=40009) | 闲鱼接口发布异常 | 查看 xianyu-auto-reply 日志，可能是账号 Cookie 过期需重新登录 |
 | 定时任务不触发 | Cron 未配置或 URL 不正确 | 检查 crontab 是否正常运行，手动 curl 测试接口是否可访问 |
@@ -313,7 +315,7 @@ ShopTextManager supports integration with [xianyu-auto-reply](https://github.com
 1. Admin configures xianyu-auto-reply server URL, secret_key, Xianyu account ID, publish times, price, etc. for each user
 2. A Cron job calls ShopTextManager's `run_scheduled_publish` API endpoint every minute
 3. At the configured time, the system picks the next unpublished product for that user
-4. Fetches a product image (prioritizes cover_url, auto-searches if unavailable)
+4. Fetches a product image: cover_url first; when absent, it **searches online automatically** (Bing → DuckDuckGo → Wikimedia, each retried with CN/EN keywords; results cached for 6 hours). Manual cover URLs are therefore unnecessary for most products
 5. Uploads the image to xianyu-auto-reply server to get a media_id
 6. Calls xianyu-auto-reply's public single-publish API to publish the product
 7. Marks the product as published and logs the result

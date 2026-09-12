@@ -2282,8 +2282,15 @@
           <label class="form-label" style="font-size: 12px;" data-i18n="xyManualGameLabel">选择待发布商品</label>
           <select id="manualPublishGameSelect" class="form-input"></select>
         </div>
+        <div style="margin-top: 4px; padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.6; background: var(--chip-bg); border: 1px solid var(--chip-border); color: var(--text-muted);">
+          <i class="fa-solid fa-circle-info" style="color: var(--info-color);"></i>
+          <span data-i18n="xyAutoImageHint">发布前会自动联网搜索该商品图片并上传到闲鱼，无需逐个手动设置封面图（依次尝试 Bing / DuckDuckGo / Wikimedia 图源）。</span>
+        </div>
       </div>
       <div class="modal-footer">
+        <button class="btn btn-outline" id="btnTestImageSearch" onclick="testImageSearch()" style="margin-right:auto;">
+          <i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="xyTestImageSearch">测试联网搜图</span>
+        </button>
         <button class="btn btn-secondary" onclick="closeModal('manualPublishModal')" data-i18n="cancelBtn">取消</button>
         <button class="btn btn-xianyu" onclick="confirmManualPublish()"><i class="fa-solid fa-bolt"></i> <span data-i18n="xyPublishNowBtn">立即发布</span></button>
       </div>
@@ -2543,6 +2550,15 @@
         xyManualPublishDesc: "选择用户和待发布商品，立即调用 xianyu-auto-reply API 发布到闲鱼。",
         xyManualUserLabel: "选择用户",
         xyManualGameLabel: "选择待发布商品",
+        xyAutoImageHint: "发布前会自动联网搜索该商品图片并上传到闲鱼，无需逐个手动设置封面图（依次尝试 Bing / DuckDuckGo / Wikimedia 图源）。",
+        xyTestImageSearch: "测试联网搜图",
+        xySearchingImage: "正在联网搜图…",
+        xySelectGameForSearch: "请先选择一个商品再测试联网搜图",
+        xySearchProviderOk: "成功 {n} 个候选",
+        xySearchProviderFail: "失败",
+        xySearchKeywords: "关键词",
+        xySearchDownloaded: "已校验下载",
+        xySearchElapsed: "耗时",
         xySaveConfigBtn: "保存配置"
       },
       en: {
@@ -2773,6 +2789,15 @@
         xyManualPublishDesc: "Pick a user and a pending item, then publish it to Xianyu via the xianyu-auto-reply API right away.",
         xyManualUserLabel: "Select user",
         xyManualGameLabel: "Select pending item",
+        xyAutoImageHint: "Before publishing, the item image is searched online and uploaded to Xianyu automatically — no need to set a cover URL one by one (Bing / DuckDuckGo / Wikimedia, tried in order).",
+        xyTestImageSearch: "Test image search",
+        xySearchingImage: "Searching for images…",
+        xySelectGameForSearch: "Please select an item before testing image search",
+        xySearchProviderOk: "{n} candidates found",
+        xySearchProviderFail: "failed",
+        xySearchKeywords: "Keywords",
+        xySearchDownloaded: "Verified download",
+        xySearchElapsed: "Elapsed",
         xySaveConfigBtn: "Save Configuration"
       }
     };
@@ -4501,6 +4526,12 @@
       if (msg.includes('闲鱼发布失败:')) {
         return msg.replace('闲鱼发布失败:', 'Xianyu publish failed:');
       }
+      if (msg.includes('未能获取商品图片：联网搜索未返回结果')) {
+        return msg
+          .replace('未能获取商品图片：联网搜索未返回结果', 'Could not fetch a product image: online image search returned no results')
+          .replace('请检查服务器能否访问外网，或在「单个商品管理」为该商品设置封面图 URL',
+                   'check that the server can reach the internet, or set a cover image URL in "Single Item Management"');
+      }
       if (msg.includes('未能获取商品图片')) {
         return msg.replace('未能获取商品图片', 'Could not fetch a product image');
       }
@@ -4530,6 +4561,47 @@
       }
       if (msg.includes('账号不能为空')) {
         return msg.replace('账号不能为空', 'Account cannot be empty');
+      }
+
+      // ---- 联网搜图自检（test_image_search）----
+      // 整句分支必须排在子串分支之前：失败提示里会内嵌「无结果或请求失败」这类子串，
+      // 若先命中子串分支就会提前 return，导致整句没被翻译。
+      if (msg.includes('联网搜图正常:')) {
+        return msg
+          .replace('联网搜图正常:', 'Image search OK:')
+          .replace(' 个候选', ' candidates')
+          .replace('首个可下载', 'First downloadable')
+          .replace('图源:', 'Sources:')
+          .replace('命中缓存', 'cache hit');
+      }
+      if (msg.includes('联网搜图失败:')) {
+        return msg
+          .replace('联网搜图失败:', 'Image search failed:')
+          .replace('无结果或请求失败', 'no results or request failed')
+          .replace('有结果但下载失败', 'results found but download failed')
+          .replace('未产生任何候选', 'no candidates at all')
+          .replace('请检查服务器能否访问外网 (curl 是否被防火墙拦截)，或在「单个商品管理」为商品设置封面图 URL',
+                   'check server outbound network access (is curl blocked by a firewall?), or set a cover image URL in "Single Item Management"');
+      }
+      // 单个图源的状态短语（测试列表逐条展示时会用到）
+      if (msg.includes('无结果或请求失败')) {
+        return msg.replace('无结果或请求失败', 'no results or request failed');
+      }
+      if (msg.includes('时间预算耗尽')) {
+        return msg.replace('时间预算耗尽', 'time budget exhausted');
+      }
+      if (msg.includes('有结果但下载失败')) {
+        return msg.replace('有结果但下载失败', 'results found but download failed');
+      }
+      if (msg.includes('未产生任何候选')) {
+        return msg.replace('未产生任何候选', 'no candidates at all');
+      }
+      if (msg.includes('服务器未启用 PHP curl 扩展，无法联网搜图')) {
+        return msg.replace('服务器未启用 PHP curl 扩展，无法联网搜图',
+                           'The PHP curl extension is not enabled on the server, so online image search is unavailable');
+      }
+      if (msg.includes('请先选择商品或输入关键词')) {
+        return msg.replace('请先选择商品或输入关键词', 'Please select an item or enter a keyword first');
       }
 
       return msg;
@@ -4908,6 +4980,58 @@
         }
       } catch (e) {
         showToast(t('xyLoadGamesFailed') + e.message, true);
+      }
+    }
+
+    /**
+     * 自检联网搜图链路：搜到 URL 只是第一步，还必须能真正下载到图片字节才算通。
+     * 用于排查「发布失败: 未能获取商品图片」——逐图源给出成败，一眼看出是外网不通还是图源被限。
+     */
+    async function testImageSearch() {
+      const gameId = document.getElementById('manualPublishGameSelect').value;
+      if (!gameId) {
+        showToast(t('xySelectGameForSearch'), true);
+        return;
+      }
+      const btn = document.getElementById('btnTestImageSearch');
+      const originalHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t('xySearchingImage'))}`;
+        btn.disabled = true;
+      }
+      try {
+        const res = await fetch(`${API_BASE}?action=test_image_search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ game_id: parseInt(gameId, 10) })
+        });
+        const data = await res.json();
+        const d = data.data || {};
+        const lines = [data.message || ''];
+
+        if (Array.isArray(d.providers) && d.providers.length) {
+          lines.push('');
+          d.providers.forEach(p => {
+            lines.push(`• ${p.name}: ${p.ok ? t('xySearchProviderOk').replace('{n}', p.count) : formatServerMsg(p.error || t('xySearchProviderFail'))}`);
+          });
+        }
+        if (Array.isArray(d.keywords) && d.keywords.length) {
+          lines.push(`${t('xySearchKeywords')}: ${d.keywords.slice(0, 2).join(' / ')}`);
+        }
+        if (d.downloaded && d.downloaded.url) {
+          lines.push(`${t('xySearchDownloaded')}: ${d.downloaded.mime}, ${Math.round((d.downloaded.size || 0) / 1024)} KB`);
+        }
+        if (typeof d.elapsed === 'number') {
+          lines.push(`${t('xySearchElapsed')}: ${d.elapsed}s`);
+        }
+        showToast(lines.filter(Boolean).join('\n'), data.status !== 'success', 9000);
+      } catch (e) {
+        showToast(t('xyRequestFailed') + e.message, true);
+      } finally {
+        if (btn) {
+          btn.innerHTML = originalHtml;
+          btn.disabled = false;
+        }
       }
     }
 

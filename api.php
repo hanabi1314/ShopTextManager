@@ -920,6 +920,98 @@ switch ($action) {
         break;
 
     // ========================================================
+    // 19.1 自检：测试联网搜图（管理员排查「未能获取商品图片」用）
+    //
+    // 后台一键验证「搜索引擎是否可达 → 能否解析出候选 → 能否下载到真实图片」整条链路，
+    // 并返回每个图源各自的成败，不需要登录服务器敲命令。
+    // ========================================================
+    case 'test_image_search': {
+        $game_id = (int)($input['game_id'] ?? 0);
+        $keyword = trim((string)($input['keyword'] ?? ''));
+        $cn = '';
+        $en = '';
+
+        if ($game_id > 0) {
+            $stmt = $pdo->prepare("SELECT game_name_cn, game_name_en FROM games WHERE id = ?");
+            $stmt->execute([$game_id]);
+            $g = $stmt->fetch();
+            if (!$g) {
+                jsonResponse(['status' => 'error', 'message' => '商品不存在'], 404);
+            }
+            $cn = (string)($g['game_name_cn'] ?? '');
+            $en = (string)($g['game_name_en'] ?? '');
+        } else {
+            $cn = $keyword;
+            $en = $keyword;
+        }
+
+        if ($cn === '' && $en === '') {
+            jsonResponse(['status' => 'error', 'message' => '请先选择商品或输入关键词'], 400);
+        }
+        if (!function_exists('curl_init')) {
+            jsonResponse(['status' => 'error', 'message' => '服务器未启用 PHP curl 扩展，无法联网搜图'], 500);
+        }
+
+        $started = microtime(true);
+        $detail = searchImagesOnlineDetailed($cn, $en, 6, 10);
+
+        // 逐个下载校验：搜到 URL 不等于能用，必须确认能拿到真实图片字节
+        $firstOk = null;
+        foreach ($detail['urls'] as $u) {
+            $img = downloadImageToTemp($u, 15);
+            if ($img) {
+                $firstOk = ['url' => $u, 'mime' => $img['mime'], 'size' => (int)$img['size']];
+                @unlink($img['path']);
+                break;
+            }
+        }
+
+        $data = [
+            'keywords' => $detail['keywords'],
+            'providers' => $detail['providers'],
+            'cached' => $detail['cached'],
+            'candidate_count' => count($detail['urls']),
+            'candidates' => array_slice($detail['urls'], 0, 6),
+            'downloaded' => $firstOk,
+            'elapsed' => round(microtime(true) - $started, 2),
+        ];
+
+        if ($firstOk !== null) {
+            $provNames = [];
+            foreach ($detail['providers'] as $p) {
+                $provNames[] = $p['name'] . ($p['ok'] ? ('✓' . (int)$p['count']) : '✗');
+            }
+            jsonResponse([
+                'status' => 'success',
+                // 用 ASCII 分隔符，切到英文界面时不需要再处理全角标点
+                'message' => sprintf(
+                    '联网搜图正常: %d 个候选 | 首个可下载 (%s, %d KB) | 图源: %s%s',
+                    count($detail['urls']),
+                    $firstOk['mime'],
+                    (int)round($firstOk['size'] / 1024),
+                    implode(' ', $provNames),
+                    $detail['cached'] ? ' | 命中缓存' : ''
+                ),
+                'data' => $data,
+            ]);
+        }
+
+        $failedParts = [];
+        foreach ($detail['providers'] as $p) {
+            $failedParts[] = $p['name'] . ($p['ok'] ? ('有结果但下载失败') : ($p['error'] ?: '失败'));
+        }
+        jsonResponse([
+            'status' => 'error',
+            'message' => sprintf(
+                '联网搜图失败: %s | 请检查服务器能否访问外网 (curl 是否被防火墙拦截)，或在「单个商品管理」为商品设置封面图 URL',
+                empty($failedParts) ? '未产生任何候选' : implode('; ', $failedParts)
+            ),
+            'data' => $data,
+        ], 500);
+        break;
+    }
+
+    // ========================================================
     // 20. 获取闲鱼发布日志
     // ========================================================
     case 'get_xianyu_publish_logs':
@@ -1143,6 +1235,7 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
     $triedCount = 0;
     $candidateCount = 0;
     $searched = false;
+    $searchDiag = null; // 联网搜图诊断（失败时用于生成可定位的报错）
     // 墙钟预算：图片解析 + 上传整体最多占用 N 秒，到点即停，保证定时任务能跑完剩余账号
     $deadline = microtime(true) + 50;
 
@@ -1162,7 +1255,9 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
                     break;
                 }
                 // 把剩余预算下发给搜索，且只给它一小半，给后面的下载/上传留足时间
-                $queue = searchImagesOnline($cn, $en, 8, (int)max(4, $left * 0.4));
+                $detail = searchImagesOnlineDetailed($cn, $en, 8, (int)max(4, $left * 0.4));
+                $searchDiag = $detail;
+                $queue = $detail['urls'];
                 continue;
             }
             $left = (int)($deadline - microtime(true));
@@ -1224,10 +1319,24 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
         if ($candidateCount === 0) {
             // 无法获取任何图片：直接返回明确错误，而不是用可能不可达的占位图硬撑，
             // 避免每次定时都上传一张无关占位图、产生大量垃圾商品。
-            $errMsg = '未能获取商品图片，请先为该商品设置封面图 URL，或在配置中指定自定义图片 URL';
+            // 报错里带上「试过哪些图源、各自结果如何」，方便在服务器上自查外网连通性。
+            // 诊断段尽量用中英文通用的符号/数字，避免切到英文界面后整串中文
+            $provPart = '';
+            if (is_array($searchDiag) && !empty($searchDiag['providers'])) {
+                $parts = [];
+                foreach ($searchDiag['providers'] as $p) {
+                    $parts[] = $p['name'] . ':' . ($p['ok'] ? ((int)$p['count'] . ' ok') : 'fail');
+                }
+                $provPart = ' | ' . implode(', ', $parts);
+            }
+            $kwPart = (is_array($searchDiag) && !empty($searchDiag['keywords']))
+                ? ' | ' . implode(' / ', array_slice($searchDiag['keywords'], 0, 2))
+                : '';
+            $errMsg = '未能获取商品图片：联网搜索未返回结果' . $provPart . $kwPart
+                . ' | 请检查服务器能否访问外网，或在「单个商品管理」为该商品设置封面图 URL';
             logXianyuPublish($pdo, $account_key, $game_id, $cn, 'failed', $triggerType, $errMsg, '', '', []);
             updateConfigStatus($pdo, $account_key, 'failed');
-            return ['success' => false, 'message' => '未能获取商品图片，请先在「单个商品管理」为该商品设置封面图 URL'];
+            return ['success' => false, 'message' => $errMsg];
         }
         $errMsg = $triedCount === 0
             ? '所有候选图片均无法下载（可能不是有效图片或链接失效），请为该商品设置封面图 URL'
@@ -1347,9 +1456,14 @@ function sniffImageType(string $data): ?array {
  *
  * @return array{body:string,code:int,content_type:string}|null
  */
-function safeHttpGet(string $url, int $timeout = 20, int $maxRedirects = 5): ?array {
+function safeHttpGet(string $url, int $timeout = 20, int $maxRedirects = 5, array $headers = []): ?array {
     if (!function_exists('curl_init')) return null;
     $current = $url;
+    // 默认请求头：部分图床/搜索引擎会拒绝没有 Accept / Accept-Language 的请求
+    $defaultHeaders = [
+        'Accept: */*',
+        'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8',
+    ];
     for ($hop = 0; $hop <= $maxRedirects; $hop++) {
         if (!isSafePublicUrl($current)) return null;
         $ch = curl_init();
@@ -1363,6 +1477,12 @@ function safeHttpGet(string $url, int $timeout = 20, int $maxRedirects = 5): ?ar
             CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
             CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            // 强制 IPv4：国内服务器普遍没有可用的 IPv6 出口，
+            // 而 curl 在存在 AAAA 记录时会优先尝试 IPv6，失败后往往要等满超时才回落，
+            // 表现为「联网搜图偶尔/经常超时返回 0 个候选」。
+            CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+            CURLOPT_ENCODING => '', // 自动解压 gzip/br，减少传输耗时
+            CURLOPT_HTTPHEADER => array_merge($defaultHeaders, $headers),
         ]);
         $body = curl_exec($ch);
         $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -1382,59 +1502,16 @@ function safeHttpGet(string $url, int $timeout = 20, int $maxRedirects = 5): ?ar
 }
 
 /**
- * 联网搜索商品图片，返回候选 URL 列表（按可信度排序，去重后返回）。
+ * 归一化候选图片 URL：去重、去空、剔除 xianyu 不支持的格式（SVG）。
  *
- * 与旧版只返回单个 URL 不同：搜索引擎结果里常有缩略图、占位图、失效链接，
- * 单个 URL 一旦不可用整个发布就会失败。这里返回多个候选，由调用方逐个下载校验，
- * 直到拿到真实可用的图片为止。
- *
- * @return string[] 候选图片 URL 列表
+ * @param string[] $list
+ * @return string[]
  */
-function searchImagesOnline(string $cn, string $en, int $limit = 10, int $timeout = 12): array {
-    $keyword = trim($en ?: $cn);
-    if ($keyword === '') return [];
-    $query = urlencode($keyword);
-    // 单次请求的超时上限：由调用方按剩余预算传入，避免 3 次搜索就吃满整个时间预算
-    $timeout = max(3, min(20, $timeout));
-
-    $candidates = [];
-
-    // 1) Bing 图片异步接口：返回片段中含原始图 murl，比主页面结构更稳定
-    $resp = safeHttpGet("https://www.bing.com/images/async?q={$query}&first=0&count=35&mmasync=1", $timeout);
-    if ($resp && !empty($resp['body'])) {
-        if (preg_match_all('/murl&quot;:&quot;(https?:\/\/.+?)&quot;/', $resp['body'], $m)) {
-            foreach ($m[1] as $u) $candidates[] = html_entity_decode($u);
-        }
-    }
-
-    // 2) Bing 图片主页面（异步接口无结果时的回退）
-    if (count($candidates) < $limit) {
-        $resp2 = safeHttpGet("https://www.bing.com/images/search?q={$query}&form=HDRSC2&first=1", $timeout);
-        if ($resp2 && !empty($resp2['body'])) {
-            if (preg_match_all('/murl&quot;:&quot;(https?:\/\/.+?)&quot;/', $resp2['body'], $m2)) {
-                foreach ($m2[1] as $u) $candidates[] = html_entity_decode($u);
-            }
-            if (preg_match_all('/class="mimg"[^>]+src="(https?:\/\/[^"]+)"/', $resp2['body'], $m3)) {
-                foreach ($m3[1] as $u) $candidates[] = html_entity_decode($u);
-            }
-        }
-    }
-
-    // 3) 英文关键词再搜一轮（中文结果质量差时经常能救回来）
-    if (count($candidates) < 3 && $en !== '' && $cn !== '' && $en !== $cn) {
-        $q2 = urlencode($cn);
-        $resp3 = safeHttpGet("https://www.bing.com/images/async?q={$q2}&first=0&count=35&mmasync=1", $timeout);
-        if ($resp3 && !empty($resp3['body'])) {
-            if (preg_match_all('/murl&quot;:&quot;(https?:\/\/.+?)&quot;/', $resp3['body'], $m4)) {
-                foreach ($m4[1] as $u) $candidates[] = html_entity_decode($u);
-            }
-        }
-    }
-
-    // 去重并过滤明显不可用的地址（data:URI、SVG 等非受支持格式）
+function normalizeImageUrls(array $list, int $limit = 10): array {
     $seen = [];
     $out = [];
-    foreach ($candidates as $u) {
+    foreach ($list as $u) {
+        if (!is_string($u)) continue;
         $u = trim($u);
         if ($u === '' || stripos($u, 'http') !== 0) continue;
         if (stripos($u, '.svg') !== false) continue; // xianyu 不支持 svg
@@ -1444,6 +1521,243 @@ function searchImagesOnline(string $cn, string $en, int $limit = 10, int $timeou
         if (count($out) >= $limit) break;
     }
     return $out;
+}
+
+/**
+ * 构造联网搜图用的关键词序列（按优先级）。
+ * 中英文各来一轮：中文结果质量差时英文常常能救回来，反之亦然。
+ *
+ * @return string[]
+ */
+function buildImageSearchKeywords(string $cn, string $en): array {
+    $cn = trim($cn);
+    $en = trim($en);
+    $list = [];
+    $add = static function ($k) use (&$list) {
+        $k = trim((string)$k);
+        if ($k !== '' && !in_array($k, $list, true)) $list[] = $k;
+    };
+    $add($en !== '' ? $en : $cn);
+    if ($cn !== '' && $cn !== $en) $add($cn);
+    if ($en !== '') $add($en . ' cover art');
+    if ($cn !== '') $add($cn . ' 封面');
+    return $list;
+}
+
+/**
+ * 图源 1：Bing 图片（异步接口 + 主页面回退）。
+ * @return string[]
+ */
+function searchProviderBing(string $keyword, int $timeout): array {
+    $out = [];
+    $timeout = max(3, min(20, $timeout));
+    $q = urlencode($keyword);
+    $html = ['Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'];
+
+    $resp = safeHttpGet("https://www.bing.com/images/async?q={$q}&first=0&count=35&mmasync=1", $timeout, 5, $html);
+    if ($resp && !empty($resp['body'])) {
+        if (preg_match_all('/murl&quot;:&quot;(https?:\/\/.+?)&quot;/', $resp['body'], $m)) {
+            foreach ($m[1] as $u) $out[] = html_entity_decode($u);
+        }
+        if (preg_match_all('/"murl":"(https?:\\\\?\/\\\\?\/[^"]+)"/', $resp['body'], $m1b)) {
+            foreach ($m1b[1] as $u) $out[] = html_entity_decode(stripslashes($u));
+        }
+    }
+
+    if (count($out) < 5) {
+        $resp2 = safeHttpGet("https://www.bing.com/images/search?q={$q}&form=HDRSC2&first=1", $timeout, 5, $html);
+        if ($resp2 && !empty($resp2['body'])) {
+            if (preg_match_all('/murl&quot;:&quot;(https?:\/\/.+?)&quot;/', $resp2['body'], $m2)) {
+                foreach ($m2[1] as $u) $out[] = html_entity_decode($u);
+            }
+            if (preg_match_all('/class="mimg"[^>]+src="(https?:\/\/[^"]+)"/', $resp2['body'], $m3)) {
+                foreach ($m3[1] as $u) $out[] = html_entity_decode($u);
+            }
+        }
+    }
+    return $out;
+}
+
+/**
+ * 图源 2：DuckDuckGo 图片。Bing 在被墙/被限流的服务器上经常不可用，这是主要退路。
+ * 接口需要先用搜索页换取一次性 vqd token，再调用 i.js。
+ * @return string[]
+ */
+function searchProviderDuckDuckGo(string $keyword, int $timeout): array {
+    $out = [];
+    $timeout = max(3, min(20, $timeout));
+    $q = urlencode($keyword);
+
+    $page = safeHttpGet("https://duckduckgo.com/?q={$q}&iax=images&ia=images", $timeout, 5,
+        ['Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8']);
+    if (!$page || empty($page['body'])) return $out;
+
+    $vqd = '';
+    if (preg_match('/vqd=["\']([0-9a-zA-Z\-_]{10,})["\']/', $page['body'], $m)) {
+        $vqd = $m[1];
+    } elseif (preg_match('/vqd\s*[:=]\s*["\']?([0-9a-zA-Z\-_]{10,})/', $page['body'], $m2)) {
+        $vqd = $m2[1];
+    }
+    if ($vqd === '') return $out;
+
+    $json = safeHttpGet("https://duckduckgo.com/i.js?l=us-en&o=json&q={$q}&vqd={$vqd}&f=,,,&p=1", $timeout, 5, [
+        'Referer: https://duckduckgo.com/',
+        'Accept: application/json, text/javascript, */*; q=0.01',
+    ]);
+    if (!$json || empty($json['body'])) return $out;
+
+    $data = json_decode($json['body'], true);
+    if (!is_array($data) || empty($data['results']) || !is_array($data['results'])) return $out;
+    foreach ($data['results'] as $r) {
+        if (!empty($r['image']) && is_string($r['image'])) $out[] = $r['image'];
+    }
+    return $out;
+}
+
+/**
+ * 图源 3：Wikimedia Commons 开放图库（免鉴权、无反爬，作为最后兜底）。
+ * @return string[]
+ */
+function searchProviderWikimedia(string $keyword, int $timeout): array {
+    $out = [];
+    $timeout = max(3, min(20, $timeout));
+    $url = 'https://commons.wikimedia.org/w/api.php?action=query&generator=search'
+        . '&gsrsearch=' . urlencode($keyword)
+        . '&gsrnamespace=6&gsrlimit=15&prop=imageinfo&iiprop=url|mime&iiurlwidth=1024&format=json';
+    $resp = safeHttpGet($url, $timeout, 5, ['Accept: application/json']);
+    if (!$resp || empty($resp['body'])) return $out;
+
+    $data = json_decode($resp['body'], true);
+    if (!is_array($data) || empty($data['query']['pages']) || !is_array($data['query']['pages'])) return $out;
+    foreach ($data['query']['pages'] as $p) {
+        $info = $p['imageinfo'][0] ?? null;
+        if (!is_array($info)) continue;
+        $u = (string)($info['thumburl'] ?: ($info['url'] ?? ''));
+        $mime = strtolower((string)($info['mime'] ?? ''));
+        if ($u !== '' && ($mime === '' || strpos($mime, 'image/') === 0)) $out[] = $u;
+    }
+    return $out;
+}
+
+/**
+ * 搜图结果文件缓存（默认 6 小时）。
+ *
+ * 同一个商品会被多个账号/多次定时重复发布，若每次都重新联网搜索，
+ * 既慢又容易被搜索引擎限流导致偶发失败。这里按关键词做一层轻量磁盘缓存，
+ * 缓存目录不可写时静默降级，不影响主流程。
+ */
+function imageSearchCacheDir(): string {
+    return rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'stm_imgsearch';
+}
+
+function imageSearchCacheGet(string $key, int $ttl = 21600): ?array {
+    try {
+        $file = imageSearchCacheDir() . DIRECTORY_SEPARATOR . md5($key) . '.json';
+        if (!@file_exists($file)) return null;
+        if ((time() - (int)@filemtime($file)) > $ttl) return null;
+        $raw = @file_get_contents($file);
+        if (!is_string($raw) || $raw === '') return null;
+        $data = json_decode($raw, true);
+        return is_array($data) ? $data : null;
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
+function imageSearchCacheSet(string $key, array $urls): void {
+    try {
+        $dir = imageSearchCacheDir();
+        if (!@is_dir($dir) && !@mkdir($dir, 0777, true)) return;
+        $file = $dir . DIRECTORY_SEPARATOR . md5($key) . '.json';
+        @file_put_contents($file, json_encode($urls, JSON_UNESCAPED_UNICODE), LOCK_EX);
+    } catch (Throwable $e) {
+        /* 缓存失败不影响主流程 */
+    }
+}
+
+/**
+ * 多图源联网搜图（带诊断信息）。
+ *
+ * 依次尝试 Bing → DuckDuckGo → Wikimedia，每个图源再用多组关键词重试，
+ * 直到凑够 $limit 个候选或耗尽时间预算。返回每个图源的成败情况，
+ * 便于管理员在「测试联网搜图」里一眼看出是哪一步被卡住。
+ *
+ * @return array{urls:string[],providers:array<int,array{name:string,ok:bool,count:int,error:string}>,keywords:string[],cached:bool}
+ */
+function searchImagesOnlineDetailed(string $cn, string $en, int $limit = 10, int $timeout = 12): array {
+    $keywords = buildImageSearchKeywords($cn, $en);
+    if (empty($keywords)) {
+        return ['urls' => [], 'providers' => [], 'keywords' => [], 'cached' => false];
+    }
+
+    $cacheKey = implode('|', $keywords);
+    $cached = imageSearchCacheGet($cacheKey);
+    if (is_array($cached) && !empty($cached)) {
+        return [
+            'urls' => array_slice($cached, 0, $limit),
+            'providers' => [['name' => 'cache', 'ok' => true, 'count' => count($cached), 'error' => '']],
+            'keywords' => $keywords,
+            'cached' => true,
+        ];
+    }
+
+    $providers = [
+        ['name' => 'bing', 'fn' => 'searchProviderBing'],
+        ['name' => 'duckduckgo', 'fn' => 'searchProviderDuckDuckGo'],
+        ['name' => 'wikimedia', 'fn' => 'searchProviderWikimedia'],
+    ];
+
+    // 整体预算：三个图源 × 每源最多 2 个关键词，因此给到 $timeout 的 3 倍
+    $deadline = microtime(true) + max(8, $timeout * 3);
+    $tried = [];
+    $collected = [];
+
+    foreach ($providers as $p) {
+        if (count($collected) >= $limit) break;
+        $left = (int)($deadline - microtime(true));
+        if ($left <= 1) {
+            $tried[] = ['name' => $p['name'], 'ok' => false, 'count' => 0, 'error' => '时间预算耗尽，未尝试'];
+            continue;
+        }
+        $found = [];
+        // 每个图源最多试 2 个关键词，避免无谓地把时间耗在冷门词上
+        foreach (array_slice($keywords, 0, 2) as $kw) {
+            if (count($found) >= $limit) break;
+            $left2 = (int)($deadline - microtime(true));
+            if ($left2 <= 1) break;
+            try {
+                $r = call_user_func($p['fn'], $kw, (int)max(3, min($timeout, $left2)));
+                if (is_array($r)) $found = array_merge($found, $r);
+            } catch (Throwable $e) {
+                /* 单个图源异常不影响其它图源 */
+            }
+        }
+        $tried[] = [
+            'name' => $p['name'],
+            'ok' => count($found) > 0,
+            'count' => count($found),
+            'error' => count($found) > 0 ? '' : '无结果或请求失败',
+        ];
+        $collected = array_merge($collected, $found);
+    }
+
+    $urls = normalizeImageUrls($collected, $limit);
+    if (!empty($urls)) {
+        imageSearchCacheSet($cacheKey, $urls);
+    }
+    return ['urls' => $urls, 'providers' => $tried, 'keywords' => $keywords, 'cached' => false];
+}
+
+/**
+ * 联网搜索商品图片，返回候选 URL 列表（去重后返回）。
+ *
+ * 搜索引擎结果里常有缩略图、占位图、失效链接，单个 URL 一旦不可用整个发布就会失败，
+ * 因此返回多个候选，由调用方逐个下载校验，直到拿到真实可用的图片为止。
+ *
+ * @return string[] 候选图片 URL 列表
+ */
+function searchImagesOnline(string $cn, string $en, int $limit = 10, int $timeout = 12): array {
+    return searchImagesOnlineDetailed($cn, $en, $limit, $timeout)['urls'];
 }
 
 /**
@@ -1474,20 +1788,65 @@ function isSafePublicUrl(string $url): bool {
         return isPublicIp($host);
     }
 
-    // 域名：必须同时解析 A(IPv4) 与 AAAA(IPv6) 并逐个校验。
-    // 只用 gethostbyname() 只能拿到 A 记录 —— 攻击者让域名 A=公网IP、AAAA=::1，
-    // 校验会误判通过，而 curl 可能走 IPv6 连上内网。
-    $records = @dns_get_record($host, DNS_A | DNS_AAAA);
-    if (empty($records)) return false; // 解析失败直接拒绝
-
-    $checked = 0;
-    foreach ($records as $r) {
-        if (!empty($r['ipv4']) && !isPublicIp($r['ipv4'])) return false;
-        if (!empty($r['ipv6']) && !isPublicIp($r['ipv6'])) return false;
-        if (!empty($r['ipv4']) || !empty($r['ipv6'])) $checked++;
+    // 域名：必须同时校验 A(IPv4) 与 AAAA(IPv6) 的全部地址。
+    // 攻击者可以让域名 A=内网IP、AAAA=公网IP，只校验其中一类就会被绕过。
+    $ips = resolveHostIps($host);
+    if (empty($ips)) return false; // 解析失败直接拒绝
+    foreach ($ips as $ip) {
+        if (!isPublicIp($ip)) return false;
     }
-    // 一条有效地址都没拿到就拒绝，避免漏判
-    return $checked > 0;
+    return true;
+}
+
+/**
+ * 解析域名对应的全部 IP（IPv4 + IPv6），失败返回空数组。
+ *
+ * ⚠️ 这里修复了一个长期存在的严重 bug：
+ * PHP 的 dns_get_record() 对 **A 记录返回的键名是 `ip`**，只有 AAAA 记录才用 `ipv6`，
+ * 代码里写的 `ipv4` 在 PHP 各版本中都不存在。后果有两个：
+ *   1. 安全：IPv4 地址从未被校验 —— 若域名 A=169.254.169.254、AAAA=公网地址，
+ *      旧逻辑会因为 AAAA 合法而整体放行，SSRF 防护失效；
+ *   2. 功能：只有 A 记录的域名（国内服务器普遍不解析 AAAA）$checked 恒为 0，
+ *      被整体判定为"不安全"而拒绝访问。这正是「联网搜图永远返回 0 个候选」→
+ *      最终报错「未能获取商品图片」的根因。
+ *
+ * 另外 dns_get_record 在部分面板环境会被列入 disable_functions，
+ * 因此额外提供 gethostbynamel() 作为回落；两个都不可用则解析失败（拒绝访问，安全优先）。
+ *
+ * @return string[]
+ */
+function resolveHostIps(string $host): array {
+    $ips = [];
+
+    if (function_exists('dns_get_record')) {
+        $records = @dns_get_record($host, DNS_A | DNS_AAAA);
+        if (is_array($records)) {
+            foreach ($records as $r) {
+                $type = strtoupper((string)($r['type'] ?? ''));
+                if ($type === 'A') {
+                    $ip = (string)($r['ip'] ?? ($r['ipv4'] ?? '')); // A 记录的键是 ip
+                    if ($ip !== '') $ips[] = $ip;
+                } elseif ($type === 'AAAA') {
+                    $ip = (string)($r['ipv6'] ?? '');
+                    if ($ip !== '') $ips[] = $ip;
+                }
+            }
+        }
+    }
+
+    if (empty($ips) && function_exists('gethostbynamel')) {
+        $list = @gethostbynamel($host);
+        if (is_array($list)) {
+            foreach ($list as $ip) {
+                if (is_string($ip) && $ip !== '') $ips[] = $ip;
+            }
+        }
+    }
+
+    $ips = array_values(array_unique(array_filter($ips, static function ($v) {
+        return is_string($v) && $v !== '';
+    })));
+    return $ips;
 }
 
 /**

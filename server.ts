@@ -520,6 +520,17 @@ async function startServer() {
         return res.json({ status: "success", message: "dev 模式不支持实际发布，请在生产环境 (PHP) 中使用", data: {} });
       }
 
+      // 19.1 自检：测试联网搜图 (dev 模式模拟)
+      // 联网搜图依赖 PHP 的 curl + 搜索引擎解析，dev 的 Node 后端并未实现，
+      // 这里返回明确说明，避免前端因为拿不到该 action 而报「未知的 action 参数」。
+      if (action === "test_image_search") {
+        return res.json({
+          status: "error",
+          message: "dev 模式未实现联网搜图，请在生产环境 (PHP + curl) 中使用该功能",
+          data: { keywords: [], providers: [], candidate_count: 0, candidates: [], downloaded: null },
+        });
+      }
+
       // 20. 获取闲鱼发布日志
       if (action === "get_xianyu_publish_logs") {
         return res.json({ status: "success", logs: [], total: 0, page: 1, page_size: 20, total_pages: 1 });
