@@ -45,7 +45,7 @@ ShopTextManager 面向卖家、跨境电商、二手商家与虚拟商品/游戏
 - **🎯 场景预设**：4 套行业套件，切换后表格列名、输入提示、文案变量、搜图建议词实时联动。
 - **📋 一键复制 / 批量导出**：单条复制或整页批量复制生成的商品描述。
 - **🖼️ 自动联网搜图**：无需逐个手动配图，依次尝试 Bing → DuckDuckGo → Wikimedia，每个图源再用中英文关键词重试，结果按关键词缓存 6 小时。
-- **⏰ 定时自动发布**：对接 [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply)，到点自动发商品到闲鱼。
+- **⏰ 定时自动发布**：对接 [xianyu-auto-reply](https://github.com/zhinianboke/xianyu-auto-reply)，到点自动发商品到闲鱼。
 
 ### 存储分层
 
@@ -172,7 +172,7 @@ location ^~ /node_modules/            { deny all; }
 
 ## 6. 定时自动发布到闲鱼
 
-对接 [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply)：一个 ShopTextManager 账号对应一个闲鱼账号，管理员为每个账号配置对接信息与发布时间，Cron 每分钟触发一次调度。
+对接 [xianyu-auto-reply](https://github.com/zhinianboke/xianyu-auto-reply)：一个 ShopTextManager 账号对应一个闲鱼账号，管理员为每个账号配置对接信息与发布时间，Cron 每分钟触发一次调度。
 
 ### 6.1 工作机制（重要）
 
@@ -204,7 +204,7 @@ location ^~ /node_modules/            { deny all; }
 
 ### 6.2 前置条件
 
-- 已部署并运行 [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply)
+- 已部署并运行 [xianyu-auto-reply](https://github.com/zhinianboke/xianyu-auto-reply)
 - 在其「个人设置 → 分销管理」取得**分销秘钥 secret_key**
 - 已在其中添加并登录对应的闲鱼账号
 - PHP 已启用 `curl` 与 `mbstring`
@@ -332,7 +332,7 @@ It follows a **Preset-First Architecture**: the **"🎮 Steam Game Package / Vir
 - **🎯 Scene presets**: 4 industry profiles; switching updates column labels, input hints, copy variables, and image-search keywords.
 - **📋 One-click copy** and **batch page export** of generated descriptions.
 - **🖼️ Automatic online image search** — no manual cover URLs needed: Bing → DuckDuckGo → Wikimedia, each retried with CN/EN keywords, cached per keyword for 6 hours.
-- **⏰ Scheduled auto-publish** to Xianyu via [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply).
+- **⏰ Scheduled auto-publish** to Xianyu via [xianyu-auto-reply](https://github.com/zhinianboke/xianyu-auto-reply).
 
 ### Storage layers
 
@@ -458,7 +458,7 @@ location ^~ /node_modules/            { deny all; }
 
 ## 6. Scheduled Auto-Publish to Xianyu
 
-Integrates [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply). One ShopTextManager account maps to one Xianyu account; admins configure credentials and publish times per account, and a cron job triggers the scheduler every minute.
+Integrates [xianyu-auto-reply](https://github.com/zhinianboke/xianyu-auto-reply). One ShopTextManager account maps to one Xianyu account; admins configure credentials and publish times per account, and a cron job triggers the scheduler every minute.
 
 ### 6.1 How It Works (important)
 
@@ -490,7 +490,7 @@ Integrates [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply).
 
 ### 6.2 Prerequisites
 
-- A running [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply) instance
+- A running [xianyu-auto-reply](https://github.com/zhinianboke/xianyu-auto-reply) instance
 - A **secret_key** from its "Personal Settings → Distribution Management"
 - At least one Xianyu account added and logged in there
 - PHP `curl` and `mbstring` enabled
