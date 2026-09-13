@@ -1,370 +1,597 @@
-# ShopTextManager - 多平台商品文案快速发布与管理系统 🚀
-## Multi-Platform Product Listing & Copywriting Management System
+# ShopTextManager 🚀
 
-[中文文档](#-中文文档) | [English Documentation](#-english-documentation)
+**多平台商品文案管理与一键发布系统** / Multi-Platform Product Listing & Copywriting Manager
 
----
+[🇨🇳 中文文档](#cn) | [🇺🇸 English Documentation](#en)
 
-> 🚀 **赞助推荐 / Sponsor**:
-> **NodeHK VPN** — 专为跨境电商、外贸加速、海外平台运营及游戏节点打造的高速稳定 VPN / 节点服务。
-> 官方网站：👉 [**www.nodehk.shop**](https://www.nodehk.shop/#/auth?invite=uu1fzn9t)
-
----
-
-<a id="-中文文档"></a>
-## 🇨🇳 中文文档
-
-**ShopTextManager** 是一个专为卖家、跨境电商、二手商家、虚拟商品/游戏安装包卖家及多账号团队打造的高效商品快速发布、动态文案模板套用、多语言切换与一键搜图管理系统。
-
-核心采用 **“开箱即用预设 + 渐进式扩展” (Preset-First Architecture)** 架构：默认开启 **“🎮 Steam游戏安装包/虚拟商品”** 预设，打开即用、0配置点击；同时支持一秒切换为 **“📱 数码二手/3C”**、**“👗 服饰潮牌/中古”** 或 **“⚙️ 通用电商/自定义”** 模式，全面适配各类商品发布需求！
+> 🚀 **赞助推荐 / Sponsor**
+> **NodeHK VPN** — 面向跨境电商、外贸加速、海外平台运营与游戏节点的高速稳定 VPN 服务：
+> 👉 [**www.nodehk.shop**](https://www.nodehk.shop/#/auth?invite=uu1fzn9t)
 
 ---
 
-### 🌟 核心设计理念与新功能特性
+## 📑 目录 / Table of Contents
 
-#### 1. 🌙 灰暗/明亮模式 (Dark Mode) & 🌐 中英文双语一键切换
-- **主题切换**：支持点击顶部导航栏【暗黑模式 / 明亮模式】按钮，全局极速响应深色或浅色主题，自动持久化存储用户的视觉偏好。
-- **中英文国际化 (i18n)**：全系统界面及动态表格原生支持中英文（Chinese / English）一键无缝切换，方便跨境外贸团队及国际化商家使用。
+**中文**：[项目简介](#1-项目简介) · [核心特性](#2-核心特性) · [快速开始](#3-快速开始5-分钟) · [项目结构](#4-项目结构) · [生产部署](#5-生产部署php--mysql) · [定时发布到闲鱼](#6-定时自动发布到闲鱼) · [安全建议](#7-安全建议) · [常见问题](#8-常见问题速查)
 
-#### 2. 🛡️ 完善的管理员权限管理与安全防封禁
-- **设置/取消管理员 (Admin Management)**：超级管理员可在后台直接设定或取消任意子账号的管理员权限，且系统具备**最少保留一个管理员 (Safety Guard)** 逻辑，防止因误操作导致全站失控。
-- **重名防护与账号清理**：后台支持创建新账号（可选是否设为管理员）、重命名账号或彻底删除离职账号。
-- **🔐 修改默认管理员 Username 提醒（重要）**：系统初始管理员账号为 `admin`。系统部署成功后，请务必立即在 **【管理员控制台】 -> 【用户名与模板管理】** 中修改 `admin` 账号 Key（用户名），或重新添加您的专属管理员账号。更名后，系统将拒绝使用原 `admin` 登录，保障系统权限安全。
-
-#### 3. 🎯 默认开箱即用 (Preset-First 架构)
-- 系统默认开启 **“🎮 Steam游戏安装包/虚拟商品模式”**。
-- 打开即可直接使用，默认变量统一归一化为 `{{VAR_1}}` (主名称/中文), `{{VAR_2}}` (副名称/英文), `{{VAR}}` (完整组合名)。
-- 支持在 Admin 管理员控制台中一键切换 4 大预设套件 (游戏/虚拟, 数码/3C, 服饰/中古, 通用/自定义)。
-
-#### 4. 🚀 一键批量复制文案与多引擎一键搜图
-- **一键复制**：点击“复制文案”直接将生成的对应商品描述复制到剪贴板，并带有高亮反馈提示。
-- **批量复制**：支持点击“批量复制本页文案”，一次性导出当前页面全部展示商品的描述。
-- **多引擎搜图**：内置 Bing、百度图片、Google 搜图引擎快捷入口，自动匹配最佳搜图词。
-
-#### 5. 💾 数据存储架构与隔离机制 (Storage Isolation & Configuration)
-系统采用职责清晰的分层存储架构，**彻底避免存储混淆或数据误用**：
-
-| 存储层级 | 存储介质 | 存储内容 | 隔离与配置说明 |
-| :--- | :--- | :--- | :--- |
-| **核心业务库** | MySQL 数据库 (生产模式) | 商品数据、自定义文案模板、归档发布日志、管理员账号信息 | 核心数据**统一保存在数据库**中，不依赖浏览器。通过 `.env` 或 `api.php` 设置数据库连接。 |
-| **内存体验库** | Node.js 内存 (开发/预览模式) | 快速体验测试数据 | 用于零配置本地开发或 Node.js 环境体验，重启服务即恢复初始预设。 |
-| **前端偏好层** | 浏览器 LocalStorage | 深色/浅色主题状态、当前登录账号 KEY、界面语言偏好 (i18n) | **仅用于保存 UI 界面偏好**，绝不混入核心商品数据。即使清除浏览器缓存也不影响数据库数据。 |
-
-##### ⚙️ 数据库设置方式：
-- **方式 A (环境变量配置，推荐)**：拷贝 `.env.example` 为 `.env`，修改 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` 参数。
-- **方式 B (直接修改配置)**：直接编辑 `api.php` 第 18~22 行的数据库连接变量。
+**English**: [Overview](#1-overview) · [Key Features](#2-key-features) · [Quick Start](#3-quick-start-5-minutes) · [Project Structure](#4-project-structure) · [Production Deployment](#5-production-deployment-php--mysql) · [Scheduled Publishing](#6-scheduled-auto-publish-to-xianyu) · [Security Notes](#7-security-notes) · [FAQ](#8-faq--troubleshooting)
 
 ---
 
-### 🛠️ 项目文件架构
+<a id="cn"></a>
+# 🇨🇳 中文文档
 
-```
-├── index.html        # 前端单页应用 (支持 Dark Mode & 中英文 i18n 切换 & 赞助展示 & 定时发布配置)
-├── server.ts         # Node.js Express 内存后端服务 (支持本地开发与 Live Preview)
-├── api.php           # 生产环境 PHP RESTful API 后端 (支持 MySQL 交互 & 闲鱼定时发布)
-├── schema.sql        # MySQL 数据库建表与初始化结构脚本 (含定时发布相关表)
-├── BAOTA_TUTORIAL.md # 宝塔面板零基础一键部署教程 (中英文)
-├── package.json      # Node.js 项目依赖与运行脚本
-├── tsconfig.json     # TypeScript 配置文件
-└── .env.example      # 环境变量声明示例
-```
+## 1. 项目简介
+
+ShopTextManager 面向卖家、跨境电商、二手商家与虚拟商品/游戏安装包卖家，解决一件事：**把商品批量变成可发布的文案，并自动发到闲鱼。**
+
+核心是 **Preset-First（开箱即用预设 + 渐进式扩展）** 架构：默认启用「🎮 Steam 游戏安装包 / 虚拟商品」预设，登录即用、零配置；需要时可在管理员控制台一键切换为「📱 数码二手 / 3C」「👗 服饰潮牌 / 中古」或「⚙️ 通用电商 / 自定义」。
+
+两种后端模式：
+
+| 模式 | 用途 | 数据落点 |
+| :--- | :--- | :--- |
+| **PHP + MySQL**（`api.php`） | **生产环境，唯一推荐** | MySQL，持久化 |
+| **Node.js**（`server.ts`） | 本地改前端时免装 PHP | 进程内存，**重启即丢失，不能真正发布** |
+
+> ⚠️ Node.js 模式没有接数据库，也无法调用闲鱼发布接口。生产请务必用 PHP + MySQL。
 
 ---
 
-### 🚀 部署与数据库安装指南
+## 2. 核心特性
 
-> 💡 **宝塔 Linux 面板 (aaPanel) 用户？**
-> 我们为你准备了零基础图文安装指南：👉 [**点击查看宝塔面板一键安装与部署教程 (BAOTA_TUTORIAL.md)**](./BAOTA_TUTORIAL.md)
+- **🌙 明暗主题 / 🌐 中英双语**：全界面一键切换，偏好存 localStorage。
+- **🛡️ 管理员权限管理**：可授予/撤销管理员，内置「最少保留一个管理员」保护；支持新建、改名、删除账号（改名/删除会级联同步闲鱼配置与发布记录）。
+- **🎯 场景预设**：4 套行业套件，切换后表格列名、输入提示、文案变量、搜图建议词实时联动。
+- **📋 一键复制 / 批量导出**：单条复制或整页批量复制生成的商品描述。
+- **🖼️ 自动联网搜图**：无需逐个手动配图，依次尝试 Bing → DuckDuckGo → Wikimedia，每个图源再用中英文关键词重试，结果按关键词缓存 6 小时。
+- **⏰ 定时自动发布**：对接 [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply)，到点自动发商品到闲鱼。
 
-#### 1. 导入数据库（生产环境 PHP + MySQL）
-在服务器 MySQL 数据库中执行 `schema.sql` 脚本：
+### 存储分层
+
+| 层级 | 介质 | 内容 |
+| :--- | :--- | :--- |
+| 核心业务库 | MySQL | 商品、文案模板、发布归档、账号权限 |
+| 内存体验库 | Node.js 内存 | 本地开发测试数据，重启归零 |
+| 前端偏好层 | localStorage | 主题、语言、当前账号 Key（**不存业务数据**） |
+
+---
+
+## 3. 快速开始（5 分钟）
+
 ```bash
-mysql -u root -p < schema.sql
+# 1) 导入数据库结构
+mysql -u root -p 你的库名 < schema.sql
+
+# 2) 配置数据库连接（推荐 .env）
+cp .env.example .env
+
+# 3) 把 index.html / api.php / schema.sql 等文件放到站点根目录
+#    浏览器打开站点即可
 ```
 
-#### 2. 配置 PHP 数据库连接
-打开 `api.php` 文件，修改顶部数据库配置：
+首次登录可用默认账号：
+
+| 账号 | 角色 |
+| :--- | :--- |
+| `admin` | 超级管理员 |
+| `account_a` / `account_b` | 普通子账号 |
+
+> 🔐 **部署后第一件事**：进入 **管理员控制台 → 用户名与模板管理**，把 `admin` 改名或新增你自己的管理员账号。改名后原 `admin` 将无法登录。
+
+---
+
+## 4. 项目结构
+
+```
+├── index.html        # 前端单页应用（明暗主题 + 中英 i18n + 管理员控制台）
+├── api.php           # 生产后端：PHP + MySQL，含闲鱼定时发布全部逻辑
+├── schema.sql        # MySQL 建表与种子数据（5 张表）
+├── server.ts         # 本地开发用的 Node.js 内存后端（不接数据库）
+├── .htaccess         # Apache 访问控制：拦截 .env / .git / .sql / .md
+├── .env.example      # 环境变量示例
+├── BAOTA_TUTORIAL.md # 宝塔面板部署教程（中英双语）
+├── package.json      # Node.js 依赖与脚本
+├── tsconfig.json     # TypeScript 配置
+└── vite.config.ts    # 前端构建配置
+```
+
+**npm 脚本**：`npm run dev`（本地开发）· `npm run lint`（类型检查）· `npm run build`（构建到 `dist/`）· `npm start`（运行构建产物）
+
+---
+
+## 5. 生产部署（PHP + MySQL）
+
+### 5.1 环境要求
+
+| 项目 | 要求 |
+| :--- | :--- |
+| PHP | 7.4 或 8.0/8.1/8.2 |
+| 扩展（必需） | `pdo_mysql`、`curl` |
+| 扩展（建议） | `mbstring`（中文按字符截断，缺失时有降级处理） |
+| MySQL | 5.7 或 8.0 |
+| Web 服务器 | Nginx 或 Apache |
+
+自检：`php -m | grep -E 'pdo_mysql|curl|mbstring'`
+
+### 5.2 导入数据库
+
+```bash
+mysql -u 用户名 -p 你的库名 < schema.sql
+```
+
+> `schema.sql` **不会**自动建库，请先手动创建数据库再导入。
+
+导入后得到 5 张表：`games`、`templates`、`published_logs`、`xianyu_config`、`xianyu_publish_logs`。
+旧版本升级无需手工改表——`api.php` 首次访问会自动补齐缺失的表与列。
+
+### 5.3 配置数据库连接
+
+**方式 A（推荐）**：复制 `.env.example` 为 `.env` 并填写：
+
+```env
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=xianyu_db
+DB_USER=你的数据库用户
+DB_PASS=你的数据库密码
+```
+
+`api.php` 内置零依赖 `.env` 解析，自动优先读取。
+
+**方式 B**：直接编辑 `api.php` **第 90–94 行**的默认值：
+
 ```php
-$db_host = '127.0.0.1';
-$db_port = '3306';
-$db_user = 'root';
-$db_pass = 'your_password';
-$db_name = 'xianyu_db';
+$db_host = getenv('DB_HOST') ?: '127.0.0.1';
+$db_port = getenv('DB_PORT') ?: '3306';
+$db_name = getenv('DB_NAME') ?: 'xianyu_db';
+$db_user = getenv('DB_USER') ?: 'root';
+$db_pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : 'root';
 ```
 
-#### 3. 本地开发与测试运行 (Node.js 环境)
-安装依赖并启动开发服务器：
-```bash
-npm install
-npm run dev
+> ⚠️ 上一版文档标注的行号有误，实际位置是 **90–94 行**。
+
+### 5.4 校验部署
+
+| 检查项 | 预期 |
+| :--- | :--- |
+| 打开站点根路径 | 正常显示前端页面 |
+| 访问 `api.php?action=get_games` | 返回 JSON |
+| 访问 `/.env` | 404（被 `.htaccess` 拦截） |
+
+若你在 Nginx 上，`.htaccess` 不生效，请手动在 `server{}` 中加入：
+
+```nginx
+autoindex off;
+location ~ /\.                        { deny all; }
+location ~* \.(sql|md|log|ts|example)$ { deny all; }
+location ^~ /node_modules/            { deny all; }
 ```
-访问 `http://localhost:3000`，输入 `admin` 体验超级管理员控制台！
 
 ---
 
-### ⏰ 定时自动发布商品到闲鱼 (v2.0 新功能)
+## 6. 定时自动发布到闲鱼
 
-ShopTextManager 支持对接 [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply) 项目，实现**定时自动发布商品到闲鱼**。每个 ShopTextManager 用户对应一个闲鱼账号，管理员可在后台为每个用户配置 xianyu-auto-reply 对接信息、每日发布时间等参数。
+对接 [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply)：一个 ShopTextManager 账号对应一个闲鱼账号，管理员为每个账号配置对接信息与发布时间，Cron 每分钟触发一次调度。
 
-#### 工作原理
+### 6.1 工作机制（重要）
 
-1. 管理员在 ShopTextManager 后台为每个用户配置 xianyu-auto-reply 服务地址、分销秘钥(secret_key)、闲鱼账号 ID、发布时间、价格等参数
-2. 服务器配置 Cron 定时任务，每分钟调用 ShopTextManager 的 `run_scheduled_publish` 接口
-3. 到达设定时间时，系统自动从用户待发布列表中选取下一个商品
-4. 获取商品图片：**优先使用封面图 URL；无封面图时自动联网搜索图片**（依次尝试 Bing → DuckDuckGo → Wikimedia，每个图源再用中英文关键词重试，结果按关键词缓存 6 小时。因此绝大多数商品无需手动设置封面图）
-5. 将图片上传至 xianyu-auto-reply 服务器获取 media_id
-6. 调用 xianyu-auto-reply 的公开单品发布 API 发布商品到闲鱼
-7. 发布成功后自动将该商品标记为已发布（隐藏），并记录发布日志
+**触发链路**：Cron 每分钟请求 `run_scheduled_publish` → 找出所有 `publish_enabled = 1` 的账号 → 当前北京时间（精确到分钟）命中该账号配置的发布时间点 → 选商品 → 发布。
 
-#### 前置条件
+**商品如何选取、会不会重复发**：
 
-- 已部署运行中的 [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply) 服务
-- 在 xianyu-auto-reply 的「个人设置 → 分销管理」中获取了**分销秘钥 (secret_key)**
-- 已在 xianyu-auto-reply 中添加了对应的闲鱼账号并登录
-- **PHP 扩展要求**：`curl`（调用 xianyu-auto-reply 接口）与 `mbstring`（中文截断）
-  - 缺失时接口会返回明确中文提示而非报错堆栈，可用 `php -m | grep -E 'curl|mbstring'` 检查
-  - 宝塔面板可在「软件商店 → PHP 设置 → 安装扩展」中一键安装这两个扩展
+| 问题 | 实际行为 |
+| :--- | :--- |
+| 选题顺序 | 按 `games.id` **升序**取第一个未发布的，即「先入库先发」 |
+| 是否随机 | **否**，严格顺序，发一个剔除一个 |
+| 已发布过的商品 | **跳过**。依据 `published_logs` 表的 `(账号, 商品)` 记录，发布成功后写入 |
+| 同一商品、不同账号 | 可以各自发布（去重是按账号维度） |
+| 全部发完 | 状态转 `idle`，**不会循环重发** |
+| 想重新发一遍 | 在「单个商品管理」的「已归档隐藏的商品」区**取消隐藏**（回到待发布列表），或用 `reset_account_games` 清空该账号归档 |
 
-#### 配置步骤
+**两层去重，缺一不可**：
 
-##### 第一步：在 ShopTextManager 后台配置用户闲鱼设置
+1. **同分钟去重** —— 比较 `last_publish_at` 是否为「今天 + 这一分钟」，防止 Cron 意外重复触发。
+2. **商品去重** —— `published_logs` 持久化记录，跨天、跨重启都有效。
 
-1. 登录管理员账号，打开**管理员控制台**，切换到 **「定时发布」** 选项卡
-2. 点击「刷新配置列表」加载所有用户
-3. 点击用户行的 **「配置」** 按钮，在弹出模态框中填写：
-   - **服务地址**：xianyu-auto-reply 的访问地址（含端口，不含 `/api/v1`），如 `http://127.0.0.1:8080`
-   - **分销秘钥**：在 xianyu-auto-reply 个人设置-分销管理中获取
-   - 点击 **「测试连接」** 按钮，系统会调用 xianyu-auto-reply 获取可用闲鱼账号列表
-   - 在下拉框中选择对应的闲鱼账号
-4. 设置定时发布参数：
-   - 勾选 **「启用定时自动发布」**
-   - 填写 **每日发布时间**，多个时间点用英文逗号分隔，如 `09:00,12:00,18:00`
-5. 设置商品发布参数：售价、原价、库存、宝贝所在地、运费方式
-6. 选择图片来源：自动搜图 / 使用商品封面图 URL / 自定义图片 URL
-7. 设置平台分类信息（**推荐点「智能获取分类」**）：
-   - 闲鱼发布要求 **频道分类 ID + 频道分类名称 + 淘宝分类 ID** 三者同时存在，
-     缺任意一个都会被拒绝，报「请先根据商品描述重新选择完整的平台商品分类」。
-   - 点 **「智能获取分类」** 会从 xianyu-auto-reply 拉取候选，选中后六个字段自动填好。
-   - 勾选 **「每单按商品描述自动匹配分类」** 后，即使这里留空，发布时也会按商品描述
-     自动获取分类并回写到配置；取消勾选则固定使用手工填写的分类。
-8. 点击 **「保存配置」**
+**其他保障**：
 
-##### 第二步：为商品设置封面图（可选但推荐）
+- **账号级并发锁**：发布前取 MySQL 咨询锁 `GET_LOCK`，上一次没跑完则本次跳过，避免重叠调用重复发同一商品。
+- **墙钟预算 50 秒**：单个慢账号不会饿死后面的账号，超时的账号下一分钟继续。
+- **异常隔离**：单个账号抛异常不影响其他账号（`catch (Throwable)`）。
 
-在管理员控制台的「单个商品管理」选项卡中，可以为每个商品设置封面图 URL。设置后定时发布时将优先使用该封面图，避免搜图不确定性。
+> 💡 **种子数据的小陷阱**：`schema.sql` 预置了 `account_a` 已发布 1、2 号商品。所以 `account_a` 的首次定时发布会从 **3 号商品**开始。想从 1 号开始，先清空该账号的归档记录。
 
-> 💡 也可通过 `api.php?action=update_game_cover` 接口批量设置。
+### 6.2 前置条件
 
-##### 第三步：配置服务器 Cron 定时任务
+- 已部署并运行 [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply)
+- 在其「个人设置 → 分销管理」取得**分销秘钥 secret_key**
+- 已在其中添加并登录对应的闲鱼账号
+- PHP 已启用 `curl` 与 `mbstring`
 
-在服务器上配置 Cron，每分钟调用 ShopTextManager 的定时调度接口：
+### 6.3 配置步骤
+
+1. 登录管理员 → **管理员控制台 → 定时发布** 页签
+2. 点「刷新配置列表」，在目标账号行点「配置」
+3. 填写对接信息：
+   - **服务地址**：xianyu-auto-reply 的访问地址，**含端口、不含 `/api/v1`**，如 `http://127.0.0.1:8080`
+   - **分销秘钥**：上一步取得的 secret_key
+   - 点「测试连接」，系统会拉取可用闲鱼账号列表，从下拉框选择
+4. 定时设置：勾选「启用定时自动发布」，填**发布时间**（多个用英文逗号分隔，如 `09:00,12:00,18:00`）
+5. 商品参数：售价、原价、库存、宝贝所在地、运费方式
+6. 图片来源：自动搜图 / 使用商品封面图 URL / 自定义图片 URL
+7. **平台分类**（推荐点「智能获取分类」）：
+   - 闲鱼要求 **频道分类 ID + 频道分类名称 + 淘宝分类 ID** 三者同时存在，缺任一都会被拒绝并报「请先根据商品描述重新选择完整的平台商品分类」。
+   - 点「智能获取分类」从 xianyu-auto-reply 拉取候选，选中后字段自动填好。
+   - 勾选「每单按商品描述自动匹配分类」后，即使此处留空，发布时也会按描述自动获取并回写；不勾选则固定用手工填写的分类。
+8. 点「保存配置」
+
+> 页签名称是「**定时发布**」，配置弹窗标题是「闲鱼定时发布配置」。
+
+### 6.4 配置 Cron
 
 ```bash
 # 编辑 crontab
 crontab -e
 
-# 添加以下行（将 URL 替换为你的 ShopTextManager 实际访问地址）
-* * * * * curl -s "http://127.0.0.1/ShopTextManager/api.php?action=run_scheduled_publish" > /dev/null 2>&1
+# 每分钟触发一次（把域名换成你的实际地址）
+* * * * * curl -s "https://你的域名/api.php?action=run_scheduled_publish" > /dev/null 2>&1
 ```
 
-> ⚠️ **宝塔面板用户**：可在宝塔「计划任务」中添加「URL 定时任务」，设置为每分钟执行一次，URL 填 `http://127.0.0.1/ShopTextManager/api.php?action=run_scheduled_publish`
+> **宝塔面板**：在「计划任务」里添加「访问 URL」类型任务，周期选「每 1 分钟」，URL 填上面的地址。每分钟访问是安全的——系统内部按时间点精确匹配，并自带去重与并发锁。
+>
+> **子目录部署**时 URL 需带上子目录，例如 `https://你的域名/ShopTextManager/api.php?action=run_scheduled_publish`。
 
-#### 手动发布（测试用）
+### 6.5 手动发布与日志
 
-在「定时发布」选项卡中：
-- 点击 **「手动发布指定商品」**：选择用户和待发布商品，立即发布
-- 点击 **「手动触发定时调度」**：立即执行一次定时检查（仅在设定时间点匹配时才发布）
+在「定时发布」页签：
 
-#### 查看发布日志
+- **手动发布指定商品**：选账号和商品立即发布，适合先跑通再挂定时
+- **手动触发定时调度**：立即执行一次调度检查（**只有当前时间命中配置的时间点才会真的发布**，不命中则静默跳过）
 
-切换到 **「发布日志」** 选项卡，可查看每次定时/手动发布的详细日志，包括：
-- 发布时间、用户名、商品名称
-- 触发方式（定时/手动）
-- 发布状态（成功/失败）
-- 结果消息和闲鱼商品链接
+「发布日志」页签可查看：发布时间、账号、商品名、触发方式（定时/手动）、状态、结果消息与闲鱼商品链接。
 
-#### 数据库表说明
+### 6.6 对外接口调用顺序
 
-定时发布功能新增了两张数据库表（已包含在 `schema.sql` 中，旧版部署会自动创建）：
-
-| 表名 | 说明 |
-| :--- | :--- |
-| `xianyu_config` | 每个用户的 xianyu-auto-reply 对接配置（服务地址、秘钥、账号、发布时间、价格等） |
-| `xianyu_publish_logs` | 闲鱼发布执行日志（每次发布的状态、消息、商品链接等） |
-
-#### xianyu-auto-reply 公开 API 调用流程
-
-ShopTextManager 定时发布时会依次调用以下 xianyu-auto-reply 公开接口：
-
-| 步骤 | API | 说明 |
+| 步骤 | 接口 | 说明 |
 | :--- | :--- | :--- |
 | 1 | `POST /api/v1/external/enabled-accounts` | 测试连接时获取闲鱼账号列表 |
-| 2 | `POST /api/v1/external/category/recommend` | 获取平台分类推荐（分类不完整或开启自动匹配时调用） |
-| 3 | `POST /api/v1/external/publish/media` | 上传商品图片，获取 media_id |
+| 2 | `POST /api/v1/external/category/recommend` | 分类不完整或开启自动匹配时，获取分类推荐 |
+| 3 | `POST /api/v1/external/publish/media` | 上传商品图片，换取 media_id |
 | 4 | `POST /api/v1/external/publish/single` | 发布单品到闲鱼 |
 
-> 📖 详细 API 文档请参考 [xianyu-auto-reply README](https://github.com/hanabi1314/xianyu-auto-reply) 的「公开商品发布相关接口」章节。
+### 6.7 相关数据表
 
-#### 联网搜图自检
+| 表 | 说明 |
+| :--- | :--- |
+| `xianyu_config` | 每账号的对接配置（服务地址、秘钥、账号、发布时间、价格、分类等） |
+| `xianyu_publish_logs` | 每次发布的执行日志（状态、消息、商品链接、接口响应） |
+| `published_logs` | 已发布归档 `(账号, 商品)`，**定时发布的去重依据** |
 
-发布依赖"自动联网搜图"（依次尝试 **Bing → DuckDuckGo → Wikimedia**，结果按关键词缓存 6 小时）。
-若发布报「未能获取商品图片」，可在后台 **【手动发布商品到闲鱼】** 弹窗中点 **【测试联网搜图】**，
-或直接调用接口排查：
+### 6.8 常见问题
 
-```bash
-curl -X POST "http://your-domain/api.php?action=test_image_search" \
-  -H "Content-Type: application/json" -d '{"game_id": 1}'
-```
-
-返回里 `providers` 会逐个图源给出成败，`downloaded` 表示是否真的下载到了可用图片字节
-（搜到 URL 不等于能用，所以这一步会实际下载校验）。
-
-> 部署后请先确认 PHP 已启用 `curl` 扩展，且服务器能出网：`curl -I https://www.bing.com`
-
-#### 常见问题
-
-| 问题 | 原因 | 解决方案 |
+| 症状 | 原因 | 处理 |
 | :--- | :--- | :--- |
-| 图片下载失败 / 未能获取商品图片 | 商品无封面图且联网搜图未返回结果 | 先用「手动发布」弹窗里的 **测试联网搜图** 按钮自查；它会逐个图源给出成败，据此判断是外网不通还是图源被限 |
-| 所有图源都失败 | 服务器出网被防火墙拦截，或 PHP curl 未启用 | 在服务器上执行 `curl -I https://www.bing.com` 验证出网；确认 php.ini 已启用 `curl` 扩展 |
-| 只有部分图源成功 | 搜索引擎对服务器 IP 限流 | 属正常现象，系统会自动降级到下一个可用图源，无需处理 |
-| 媒体上传失败 | xianyu-auto-reply 服务不可达或 secret_key/account_id 不匹配 | 检查服务地址和密钥配置，确保闲鱼账号已登录 |
-| 发布失败 (code=40009) | 闲鱼接口发布异常 | 查看 xianyu-auto-reply 日志，可能是账号 Cookie 过期需重新登录 |
-| 定时任务不触发 | Cron 未配置或 URL 不正确 | 检查 crontab 是否正常运行，手动 curl 测试接口是否可访问 |
-| 重复发布 | published_logs 记录被清除 | 系统通过 published_logs 避免重复发布，请勿随意清除该表 |
+| 「请先根据商品描述重新选择完整的平台商品分类」 | 分类三件套缺项 | 点「智能获取分类」选择，或勾选自动匹配 |
+| 「未能获取商品图片」 | 无封面图且联网搜图失败 | 用「手动发布」弹窗里的「测试联网搜图」自查 |
+| 所有图源都失败 | 服务器无法出网或 `curl` 未启用 | `curl -I https://www.bing.com` 验证；检查 PHP 扩展 |
+| 只有部分图源成功 | 搜索引擎对服务器 IP 限流 | 正常，系统自动降级到下一个可用图源 |
+| 媒体上传失败 | xianyu-auto-reply 不可达、秘钥/账号不匹配或账号掉线 | 核对服务地址与秘钥，确认闲鱼账号已登录 |
+| 发布失败 code=40009 | 闲鱼侧异常 | 查 xianyu-auto-reply 日志，多为 Cookie 过期需重新登录 |
+| 定时任务不触发 | Cron 未配置或 URL 不对 | 手动 `curl` 一次接口看是否可访问、是否返回 JSON |
+| 「该账号上一次发布仍在执行中」 | 并发锁生效，上次未跑完 | 正常保护行为，无需处理 |
+| 重复发布 | `published_logs` 被手工清除 | 该表是去重依据，请勿随意清空 |
 
 ---
 
-<a id="-english-documentation"></a>
-## 🇺🇸 English Documentation
+## 7. 安全建议
 
-**ShopTextManager** is an efficient multi-account product listing, dynamic copy template generator, i18n localization, and image search management system designed for cross-border e-commerce, eBay/Xianyu merchants, digital resellers, and multi-account operation teams.
-
-It is powered by a **Preset-First Architecture**: enabled by default with the **"🎮 Steam Game Package / Virtual Goods"** scene preset for instant out-of-the-box usage. It also allows 1-second scene switching to **"📱 Digital & 3C"**, **"👗 Fashion & Vintage"**, or **"⚙️ General E-Commerce / Custom"** modes, fully adapting to any product listing workflow!
-
----
-
-### 🌟 Key Features & Architecture
-
-#### 1. 🌙 Dark Mode & 🌐 Chinese/English i18n Toggle
-- **Theme Switcher**: Click the dark/light mode toggle in the top header for instant theme switching with automatic localStorage persistence.
-- **Bilingual i18n**: Native support for seamless 1-click Chinese / English switching across all UI elements, dynamic modals, and tables—ideal for cross-border e-commerce teams.
-
-#### 2. 🛡️ Robust Admin Role Management & Safety Guard
-- **Grant / Revoke Admin**: Super admins can directly promote or demote any account in the full-featured Admin Console.
-- **Safety Guard**: Built-in protection logic ensures that at least one admin account must remain active at all times, preventing accidental lockouts.
-- **Account Operations**: Full management including creating accounts (with optional admin privileges), renaming account keys, and deleting inactive user accounts.
-- **🔐 Change Default Admin Username Notice (Important)**: The system initial administrator account is `admin`. After successful deployment, please log in immediately and navigate to **"Admin Console" -> "User & Template Manager"** to change the `admin` username key or add your custom admin account. Once updated, logins with the old `admin` username will be rejected to protect your system security.
-
-#### 3. 🎯 Preset-First Architecture (Zero Configuration Required)
-- Ships with **"🎮 Steam Game Package / Virtual Goods Mode"** enabled by default.
-- Standardized placeholder variables: `{{VAR_1}}` (Primary Name / Chinese), `{{VAR_2}}` (Secondary Name / English), and `{{VAR}}` (Combined Title).
-- Easily switch between 4 industry scene profiles in the Admin Console (Game/Virtual, Digital/3C, Fashion/Vintage, General/Custom).
-
-#### 4. 🚀 Single-Click Copy, Page Batch Export & Multi-Engine Image Search
-- **Single-Click Copy**: Instant copy of rendered product descriptions to the clipboard with visual confirmation.
-- **Batch Export**: Export copy templates for all items on the current page with a single click ("Batch Copy Page").
-- **Multi-Engine Image Search**: Direct shortcuts to Google Images, Bing Images, and Baidu Images with automatically formatted search queries.
-
-#### 5. 💾 Storage Architecture & Configuration
-The system uses a strict tiered storage architecture to **prevent data confusion or accidental misuse**:
-
-| Layer | Storage Medium | Stored Data | Isolation & Configuration |
-| :--- | :--- | :--- | :--- |
-| **Business DB** | MySQL Database (Production) | Products, copy templates, archive logs, user roles | Core business data is **stored centrally in MySQL**. Configured via `.env` or `api.php`. |
-| **In-Memory** | Node.js Memory (Dev/Preview) | Test & demonstration data | Zero-config instant usage for local Node.js testing. Resets on server restart. |
-| **UI Preferences** | Browser LocalStorage | Dark/Light theme state, active account KEY, i18n language | **Stores visual UI preferences only**. Never mixes with product business data. |
-
-##### ⚙️ Database Configuration:
-- **Option A (Environment Variables, Recommended)**: Copy `.env.example` to `.env` and set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`.
-- **Option B (Direct Config)**: Edit database connection parameters directly in `api.php` (lines 84–88).
+- **改掉默认 `admin`**：部署后立刻改名或新增专属管理员。
+- **`.env` 必须不可外网访问**：仓库自带 `.htaccess`（Apache 自动生效），Nginx 需按 5.4 手动配置。
+- **`api.php` 没有服务端鉴权**（设计如此），请：
+  - 用防火墙/反向代理限制 `run_scheduled_publish` 只能本机 Cron 调用；
+  - 全站启用 HTTPS（宝塔可免费申请 Let's Encrypt）。
+- **定期备份数据库**，尤其是 `published_logs`（丢了会导致重复发布）。
 
 ---
 
-### 🛠️ Project File Structure
+## 8. 常见问题速查
+
+| 问题 | 处理 |
+| :--- | :--- |
+| 数据库连接失败 `SQLSTATE[HY000] [2002]` | 检查 MySQL 是否运行，核对 `.env` / `api.php` 的账号密码 |
+| 操作报「接口异常」 | 确认 `pdo_mysql` 已启用，`api.php` 权限 644 |
+| 页面打不开、500 | 检查 `.htaccess` 是否被主机支持；不支持时删掉它并在 Nginx 层配置 |
+| 中文乱码/截断异常 | 安装 `mbstring` 扩展 |
+| 改前端不生效 | 清除浏览器缓存；确认访问的是 PHP 站点而不是旧的 Node 端口 |
+
+---
+
+<a id="en"></a>
+# 🇺🇸 English Documentation
+
+## 1. Overview
+
+ShopTextManager turns a product list into publish-ready copy — and can publish it to Xianyu automatically on a schedule. Built for cross-border sellers, second-hand merchants, and digital/game-package resellers.
+
+It follows a **Preset-First Architecture**: the **"🎮 Steam Game Package / Virtual Goods"** preset ships enabled, so it works out of the box. Switch to **"📱 Digital & 3C"**, **"👗 Fashion & Vintage"**, or **"⚙️ General / Custom"** in one click from the Admin Console.
+
+| Mode | Purpose | Persistence |
+| :--- | :--- | :--- |
+| **PHP + MySQL** (`api.php`) | **Production — the only supported mode** | MySQL, durable |
+| **Node.js** (`server.ts`) | Local frontend dev without PHP | In-memory, **lost on restart, cannot publish** |
+
+> ⚠️ The Node.js backend has no database and cannot call Xianyu. Use PHP + MySQL in production.
+
+---
+
+## 2. Key Features
+
+- **🌙 Dark / Light theme** and **🌐 Chinese / English** toggle, persisted in localStorage.
+- **🛡️ Admin role management** with a "keep at least one admin" safety guard; create / rename / delete accounts (rename & delete cascade to Xianyu config and logs).
+- **🎯 Scene presets**: 4 industry profiles; switching updates column labels, input hints, copy variables, and image-search keywords.
+- **📋 One-click copy** and **batch page export** of generated descriptions.
+- **🖼️ Automatic online image search** — no manual cover URLs needed: Bing → DuckDuckGo → Wikimedia, each retried with CN/EN keywords, cached per keyword for 6 hours.
+- **⏰ Scheduled auto-publish** to Xianyu via [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply).
+
+### Storage layers
+
+| Layer | Medium | Contents |
+| :--- | :--- | :--- |
+| Business DB | MySQL | Products, templates, publish archive, roles |
+| In-memory | Node.js process | Local dev fixtures, reset on restart |
+| UI preferences | localStorage | Theme, language, active account Key (**no business data**) |
+
+---
+
+## 3. Quick Start (5 minutes)
+
+```bash
+# 1) Import the schema
+mysql -u root -p YOUR_DB < schema.sql
+
+# 2) Configure the DB connection (recommended)
+cp .env.example .env
+
+# 3) Place index.html / api.php / schema.sql in your site root, then open it
+```
+
+Default accounts:
+
+| Account | Role |
+| :--- | :--- |
+| `admin` | Super admin |
+| `account_a` / `account_b` | Regular users |
+
+> 🔐 **First thing after deployment**: go to **Admin Console → User & Template Manager** and rename `admin` or add your own admin account. Once renamed, the old `admin` login is rejected.
+
+---
+
+## 4. Project Structure
 
 ```
-├── index.html        # Single-page app frontend (Dark Mode, i18n, & sponsor banner)
-├── server.ts         # Express server for Node.js dev environment & Live Preview
-├── api.php           # Production PHP RESTful API backend (MySQL PDO integration)
-├── schema.sql        # MySQL database schema & initial data bootstrap script
-├── BAOTA_TUTORIAL.md # Complete aaPanel / Baota Panel deployment guide (CN & EN)
+├── index.html        # SPA frontend (dark mode, i18n, admin console)
+├── api.php           # Production backend: PHP + MySQL, all Xianyu logic
+├── schema.sql        # MySQL schema + seed data (5 tables)
+├── server.ts         # Node.js in-memory backend for local dev (no DB)
+├── .htaccess         # Apache access control: blocks .env / .git / .sql / .md
+├── .env.example      # Environment variable template
+├── BAOTA_TUTORIAL.md # aaPanel / Baota deployment guide (CN & EN)
 ├── package.json      # Node.js dependencies & scripts
-├── tsconfig.json     # TypeScript configuration
-└── .env.example      # Environment variable declarations
+├── tsconfig.json     # TypeScript config
+└── vite.config.ts    # Frontend build config
 ```
+
+**npm scripts**: `npm run dev` (dev server) · `npm run lint` (type check) · `npm run build` (build to `dist/`) · `npm start` (run build output)
 
 ---
 
-### 🚀 Deployment & Database Guide
+## 5. Production Deployment (PHP + MySQL)
 
-> 💡 **Using aaPanel / Baota Linux Panel?**
-> Check out the step-by-step visual tutorial: 👉 [**aaPanel Deployment Guide (BAOTA_TUTORIAL.md)**](./BAOTA_TUTORIAL.md)
+### 5.1 Requirements
 
-#### 1. Database Import (Production PHP + MySQL)
-Execute `schema.sql` on your MySQL server:
+| Item | Requirement |
+| :--- | :--- |
+| PHP | 7.4 or 8.0 / 8.1 / 8.2 |
+| Extensions (required) | `pdo_mysql`, `curl` |
+| Extensions (recommended) | `mbstring` (char-safe Chinese truncation; degrades gracefully) |
+| MySQL | 5.7 or 8.0 |
+| Web server | Nginx or Apache |
+
+Verify with: `php -m | grep -E 'pdo_mysql|curl|mbstring'`
+
+### 5.2 Import the database
+
 ```bash
-mysql -u root -p < schema.sql
+mysql -u USER -p YOUR_DB < schema.sql
 ```
 
-#### 2. Configure PHP Database Connection
-Open `api.php` and update the database settings at the top:
+> `schema.sql` does **not** create the database. Create it first, then import.
+
+This creates 5 tables: `games`, `templates`, `published_logs`, `xianyu_config`, `xianyu_publish_logs`.
+Upgrading from an older version needs no manual migration — `api.php` self-heals missing tables and columns on first request.
+
+### 5.3 Configure the DB connection
+
+**Option A (recommended)**: copy `.env.example` to `.env`:
+
+```env
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=xianyu_db
+DB_USER=YOUR_DB_USER
+DB_PASS=YOUR_DB_PASSWORD
+```
+
+`api.php` ships a zero-dependency `.env` parser and reads it automatically.
+
+**Option B**: edit the defaults at **lines 90–94** of `api.php`:
+
 ```php
-$db_host = '127.0.0.1';
-$db_port = '3306';
-$db_user = 'root';
-$db_pass = 'your_password';
-$db_name = 'xianyu_db';
+$db_host = getenv('DB_HOST') ?: '127.0.0.1';
+$db_port = getenv('DB_PORT') ?: '3306';
+$db_name = getenv('DB_NAME') ?: 'xianyu_db';
+$db_user = getenv('DB_USER') ?: 'root';
+$db_pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : 'root';
 ```
 
-#### 3. Local Development & Testing (Node.js Environment)
-Install dependencies and launch the dev server:
-```bash
-npm install
-npm run dev
+> ⚠️ Earlier versions of this document cited the wrong line numbers. The real location is **lines 90–94**.
+
+### 5.4 Verify the deployment
+
+| Check | Expected |
+| :--- | :--- |
+| Open site root | Frontend renders |
+| `api.php?action=get_games` | Returns JSON |
+| `/.env` | 404 (blocked by `.htaccess`) |
+
+On Nginx, `.htaccess` is ignored — add this to your `server{}` block:
+
+```nginx
+autoindex off;
+location ~ /\.                        { deny all; }
+location ~* \.(sql|md|log|ts|example)$ { deny all; }
+location ^~ /node_modules/            { deny all; }
 ```
-Open `http://localhost:3000` and enter `admin` to access the Super Admin Console!
 
 ---
 
-### ⏰ Scheduled Auto-Publish to Xianyu (v2.0 New Feature)
+## 6. Scheduled Auto-Publish to Xianyu
 
-ShopTextManager supports integration with [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply) for **scheduled automatic product publishing to Xianyu**. Each ShopTextManager user maps to one Xianyu account, with admins configuring xianyu-auto-reply connection details and daily publish times per user.
+Integrates [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply). One ShopTextManager account maps to one Xianyu account; admins configure credentials and publish times per account, and a cron job triggers the scheduler every minute.
 
-#### How It Works
+### 6.1 How It Works (important)
 
-1. Admin configures xianyu-auto-reply server URL, secret_key, Xianyu account ID, publish times, price, etc. for each user
-2. A Cron job calls ShopTextManager's `run_scheduled_publish` API endpoint every minute
-3. At the configured time, the system picks the next unpublished product for that user
-4. Fetches a product image: cover_url first; when absent, it **searches online automatically** (Bing → DuckDuckGo → Wikimedia, each retried with CN/EN keywords; results cached for 6 hours). Manual cover URLs are therefore unnecessary for most products
-5. Uploads the image to xianyu-auto-reply server to get a media_id
-6. Calls xianyu-auto-reply's public single-publish API to publish the product
-7. Marks the product as published and logs the result
+**Trigger chain**: cron calls `run_scheduled_publish` every minute → finds every account with `publish_enabled = 1` → checks whether the current Beijing time (minute precision) matches one of that account's configured times → picks a product → publishes.
 
-#### Prerequisites
+**Product selection & duplicate handling**:
 
-- A running [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply) service
-- A **secret_key** obtained from xianyu-auto-reply's "Personal Settings → Distribution Management"
-- At least one Xianyu account logged in on xianyu-auto-reply
+| Question | Actual behavior |
+| :--- | :--- |
+| Selection order | First unpublished product by `games.id` **ascending** — oldest first |
+| Random? | **No.** Strictly sequential; each published item leaves the queue |
+| Already published? | **Skipped.** Based on `published_logs` `(account, product)` rows written after each success |
+| Same product, different account | Allowed — dedup is per account |
+| All products published? | Status becomes `idle`; **no loop, no republish** |
+| Want to republish? | **Un-hide** it in Product Manager's "Archived / Hidden" area, or clear that account's archive via `reset_account_games` |
 
-#### Setup Steps
+**Two layers of dedup, both required**:
 
-1. **Configure user Xianyu settings**: In Admin Console → "Scheduled Publish" tab, click "Configure" for each user
-2. **Test connection**: Enter server URL and secret_key, click "Test Connection" to fetch available Xianyu accounts
-3. **Set publish schedule**: Enable scheduled publishing, set daily publish times (e.g., `09:00,12:00,18:00`)
-4. **Configure product parameters**: Price, address, shipping method, image source
-5. **Set up Cron**: Add a crontab entry to call `api.php?action=run_scheduled_publish` every minute
+1. **Same-minute guard** — compares `last_publish_at` against "today + this minute", protecting against accidental duplicate cron runs.
+2. **Product dedup** — `published_logs` persists across days and restarts.
+
+**Other safeguards**:
+
+- **Per-account advisory lock** (`GET_LOCK`) — if the previous run is still going, this one is skipped.
+- **50-second wall-clock budget** — a slow account can't starve the ones behind it; skipped accounts resume next minute.
+- **Exception isolation** — one account's failure never breaks the loop (`catch (Throwable)`).
+
+> 💡 **Seed-data gotcha**: `schema.sql` pre-marks products 1 and 2 as published for `account_a`, so its first scheduled publish starts at **product 3**. Clear that account's archive if you want to start from 1.
+
+### 6.2 Prerequisites
+
+- A running [xianyu-auto-reply](https://github.com/hanabi1314/xianyu-auto-reply) instance
+- A **secret_key** from its "Personal Settings → Distribution Management"
+- At least one Xianyu account added and logged in there
+- PHP `curl` and `mbstring` enabled
+
+### 6.3 Setup Steps
+
+1. Log in as admin → **Admin Console → Scheduled Publish** tab
+2. Click "Refresh" to load accounts, then "Configure" on the target row
+3. Fill in the connection details:
+   - **Server URL**: xianyu-auto-reply address, **with port, without `/api/v1`** — e.g. `http://127.0.0.1:8080`
+   - **Secret key**: the secret_key from step 6.2
+   - Click **Test Connection**; the account list loads, then pick the Xianyu account
+4. Schedule: enable scheduled publishing and set **publish times** (comma-separated, e.g. `09:00,12:00,18:00`)
+5. Product parameters: price, original price, stock, item location, shipping method
+6. Image source: auto search / product cover URL / custom image URL
+7. **Platform category** (use "Fetch Category"):
+   - Xianyu requires **channel category ID + channel category name + Taobao category ID** together. Missing any one is rejected with "请先根据商品描述重新选择完整的平台商品分类".
+   - "Fetch Category" pulls candidates from xianyu-auto-reply and fills the fields for you.
+   - With "Auto-match category per item" enabled, publishing auto-resolves the category from the description and writes it back; otherwise the manual values are used as-is.
+8. Click **Save**
+
+> The tab is named **"定时发布 / Scheduled Publish"**; the modal title is "闲鱼定时发布配置 / Xianyu Scheduled Publish Config".
+
+### 6.4 Set Up Cron
 
 ```bash
-* * * * * curl -s "http://your-domain/api.php?action=run_scheduled_publish" > /dev/null 2>&1
+crontab -e
+
+# Every minute (replace with your real URL)
+* * * * * curl -s "https://your-domain/api.php?action=run_scheduled_publish" > /dev/null 2>&1
 ```
 
-#### Manual Publishing & Logs
+> **aaPanel users**: add a scheduled task of type "Visit URL", period "every 1 minute", URL as above. Hitting it every minute is safe — the scheduler matches configured times precisely and deduplicates internally.
+>
+> If deployed in a **subdirectory**, include it: `https://your-domain/ShopTextManager/api.php?action=run_scheduled_publish`.
 
-- Use "Manual Publish" to publish a specific product immediately for testing
-- View publish history in the "Publish Logs" tab
+### 6.5 Manual Publishing & Logs
+
+In the "Scheduled Publish" tab:
+
+- **Manual Publish** — pick an account and product to publish immediately; use it to validate the pipeline before enabling the schedule
+- **Trigger Scheduler Now** — runs one scheduler pass (it **only publishes if the current minute matches a configured time**, otherwise it silently skips)
+
+The "Publish Logs" tab shows time, account, product, trigger type (scheduled/manual), status, message, and the resulting Xianyu item URL.
+
+### 6.6 Outbound API Call Sequence
+
+| Step | Endpoint | Purpose |
+| :--- | :--- | :--- |
+| 1 | `POST /api/v1/external/enabled-accounts` | Fetch Xianyu accounts (Test Connection) |
+| 2 | `POST /api/v1/external/category/recommend` | Category recommendation (when incomplete or auto-match on) |
+| 3 | `POST /api/v1/external/publish/media` | Upload image, get media_id |
+| 4 | `POST /api/v1/external/publish/single` | Publish the item |
+
+### 6.7 Relevant Tables
+
+| Table | Purpose |
+| :--- | :--- |
+| `xianyu_config` | Per-account connection config (URL, secret, account, times, price, category, …) |
+| `xianyu_publish_logs` | Execution log per publish (status, message, item URL, raw response) |
+| `published_logs` | Publish archive `(account, product)` — **the dedup source of truth** |
+
+### 6.8 Troubleshooting
+
+| Symptom | Cause | Fix |
+| :--- | :--- | :--- |
+| "请先根据商品描述重新选择完整的平台商品分类" | Category trio incomplete | Click "Fetch Category", or enable auto-match |
+| "未能获取商品图片" / no image | No cover URL and online search failed | Use "Test Image Search" in the manual-publish dialog |
+| All image providers fail | No outbound network or `curl` missing | `curl -I https://www.bing.com`; check PHP extensions |
+| Only some providers succeed | Search engines rate-limiting your IP | Normal — it falls through to the next provider |
+| Media upload fails | xianyu-auto-reply unreachable, bad secret/account, or account offline | Verify URL and secret; re-login the Xianyu account |
+| Publish fails with code=40009 | Xianyu-side error | Check xianyu-auto-reply logs; usually an expired cookie |
+| Schedule never fires | Cron missing or wrong URL | `curl` the endpoint manually and confirm it returns JSON |
+| "Previous publish still running" | Advisory lock is holding | Protective behavior, no action needed |
+| Duplicate publishing | `published_logs` was cleared manually | That table is the dedup source — don't wipe it |
+
+---
+
+## 7. Security Notes
+
+- **Rename the default `admin`** right after deployment.
+- **`.env` must not be publicly reachable** — `.htaccess` covers Apache; configure Nginx manually per 5.4.
+- **`api.php` has no server-side authentication** (by design), so:
+  - Restrict `run_scheduled_publish` to localhost cron via firewall / reverse proxy;
+  - Enable HTTPS site-wide (aaPanel offers free Let's Encrypt).
+- **Back up the database regularly**, especially `published_logs` — losing it causes republishing.
+
+---
+
+## 8. FAQ / Troubleshooting
+
+| Issue | Fix |
+| :--- | :--- |
+| `SQLSTATE[HY000] [2002]` | Check MySQL is running and credentials in `.env` / `api.php` |
+| "Operation failed / API exception" | Ensure `pdo_mysql` is enabled and `api.php` is `644` |
+| Site returns 500 | Check whether your host supports `.htaccess`; if not, remove it and configure at the Nginx level |
+| Broken/truncated Chinese text | Install the `mbstring` extension |
+| Frontend changes not showing | Clear browser cache; make sure you're hitting the PHP site, not a stale Node port |
 
 ---
 
 ## 📜 License
-MIT License. Open source and free for commercial and personal multi-account management use.
+
+MIT License. Free for personal and commercial use.
