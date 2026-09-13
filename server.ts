@@ -67,6 +67,7 @@ async function startServer() {
     publish_channel_cat_name: "",
     publish_leaf_id: "",
     publish_tb_cat_id: "",
+    publish_category_auto: 1,
     image_source: "auto",
     custom_image_url: "",
     last_publish_at: null,
@@ -568,6 +569,17 @@ async function startServer() {
           status: "error",
           message: "dev 模式未实现联网搜图，请在生产环境 (PHP + curl) 中使用该功能",
           data: { keywords: [], providers: [], candidate_count: 0, candidates: [], downloaded: null },
+        });
+      }
+
+      // 19.2 分类推荐 (dev 模式模拟)
+      // 真实实现在 PHP 侧调用 xianyu-auto-reply 的 /api/v1/external/category/recommend，
+      // dev 的 Node 后端不实现外联，这里返回明确说明，避免前端报「未知的 action 参数」。
+      if (action === "recommend_xianyu_category") {
+        return res.json({
+          status: "error",
+          message: "dev 模式未实现分类推荐，请在生产环境 (PHP + curl) 中使用该功能",
+          candidates: [],
         });
       }
 

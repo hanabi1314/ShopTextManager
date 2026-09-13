@@ -2279,7 +2279,25 @@
         </div>
 
         <div class="admin-card-box" style="margin-bottom: 12px;">
-          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">🏷️ <span data-i18n="xySectionCategory">分类设置 (可选，留空自动推荐)</span></div>
+          <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">🏷️ <span data-i18n="xySectionCategory">分类设置</span></div>
+
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+            <button class="btn btn-outline" id="btnFetchCategory" onclick="fetchXianyuCategory()" style="padding: 5px 12px; font-size: 12px;">
+              <i class="fa-solid fa-magnifying-glass-location"></i> <span data-i18n="xyBtnFetchCategory">智能获取分类</span>
+            </button>
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;">
+              <input type="checkbox" id="xyCategoryAutoInput" style="width: auto; margin: 0;" onchange="updateXianyuCategoryStatus()">
+              <span data-i18n="xyCategoryAutoLabel">每单按商品描述自动匹配分类</span>
+            </label>
+          </div>
+
+          <div id="xyCategoryStatus" class="tip-box-warning" style="font-size: 12px; margin-bottom: 10px; display: none;"></div>
+
+          <div class="form-group" id="xyCategoryPickBox" style="margin-bottom: 10px; display: none;">
+            <label class="form-label" style="font-size: 12px;" data-i18n="xyCategoryPickLabel">从推荐结果中选择（分类路径越贴合商品越好）</label>
+            <select id="xyCategoryPickSelect" class="form-input page-select" onchange="applyPickedCategory()"></select>
+          </div>
+
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 8px;">
               <label class="form-label" style="font-size: 12px;" data-i18n="xyCategoryIdLabel">平台末级分类 ID</label>
@@ -2289,6 +2307,25 @@
               <label class="form-label" style="font-size: 12px;" data-i18n="xyCategoryNameLabel">分类名称</label>
               <input type="text" id="xyCategoryNameInput" class="form-input" placeholder="留空自动推荐" data-i18n-placeholder="xyCategoryPlaceholder">
             </div>
+            <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 8px;">
+              <label class="form-label" style="font-size: 12px;" data-i18n="xyChannelCatIdLabel">频道分类 ID（必填）</label>
+              <input type="text" id="xyChannelCatIdInput" class="form-input" placeholder="必填" data-i18n-placeholder="xyCatRequiredPlaceholder" oninput="updateXianyuCategoryStatus()">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 8px;">
+              <label class="form-label" style="font-size: 12px;" data-i18n="xyChannelCatNameLabel">频道分类名称（必填）</label>
+              <input type="text" id="xyChannelCatNameInput" class="form-input" placeholder="必填" data-i18n-placeholder="xyCatRequiredPlaceholder" oninput="updateXianyuCategoryStatus()">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 8px;">
+              <label class="form-label" style="font-size: 12px;" data-i18n="xyTbCatIdLabel">淘宝分类 ID（必填）</label>
+              <input type="text" id="xyTbCatIdInput" class="form-input" placeholder="必填" data-i18n-placeholder="xyCatRequiredPlaceholder" oninput="updateXianyuCategoryStatus()">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 8px;">
+              <label class="form-label" style="font-size: 12px;" data-i18n="xyLeafIdLabel">叶子分类 ID</label>
+              <input type="text" id="xyLeafIdInput" class="form-input" placeholder="选填" data-i18n-placeholder="xyCatOptionalPlaceholder">
+            </div>
+          </div>
+          <div style="font-size: 11px; opacity: 0.75;" data-i18n="xyCategoryTip">
+            发布时闲鱼要求「频道分类 ID + 频道分类名称 + 淘宝分类 ID」三者同时存在，缺一会被拒绝发布。
           </div>
         </div>
       </div>
@@ -2586,7 +2623,28 @@
         xyImgCustom: "自定义图片 URL",
         xyCustomUrlLabel: "自定义图片 URL",
         xyCustomUrlPlaceholder: "https://example.com/image.jpg",
-        xySectionCategory: "分类设置 (可选，留空自动推荐)",
+        xySectionCategory: "分类设置",
+        xyBtnFetchCategory: "智能获取分类",
+        xyCategoryAutoLabel: "每单按商品描述自动匹配分类",
+        xyCategoryPickLabel: "从推荐结果中选择（分类路径越贴合商品越好）",
+        xyChannelCatIdLabel: "频道分类 ID（必填）",
+        xyChannelCatNameLabel: "频道分类名称（必填）",
+        xyTbCatIdLabel: "淘宝分类 ID（必填）",
+        xyLeafIdLabel: "叶子分类 ID",
+        xyCatRequiredPlaceholder: "必填",
+        xyCatOptionalPlaceholder: "选填",
+        xyCategoryTip: "发布时闲鱼要求「频道分类 ID + 频道分类名称 + 淘宝分类 ID」三者同时存在，缺一会被拒绝发布。",
+        xyCatFetching: "获取中...",
+        xyCatFetchFailed: "获取分类失败",
+        xyCatNoUsable: "未返回可用分类",
+        xyCatNoUsableMsg: "未返回完整分类，请换一个更具体的商品描述再试。",
+        xyCatFetched: "已获取 {n} 个候选分类",
+        xyCatComplete: "✅ 分类信息完整。若已勾选自动匹配，发布时仍会按商品描述重新匹配并回写；否则固定使用该分类。",
+        xyCatAutoWarn: "⚠️ 分类信息不完整。开启自动匹配时，每次发布会按商品描述自动获取分类（依赖 xianyu-auto-reply 的分类推荐接口）。",
+        xyCatIncompleteErr: "❌ 分类不完整且已关闭自动匹配，发布会被闲鱼拒绝。请点「智能获取分类」，或补齐频道分类ID、频道分类名称、淘宝分类ID。",
+        xyCatSelectAccount: "请先选择账号",
+        xyCfgNotLoaded: "配置数据尚未加载，请关闭后重新打开配置弹窗再保存（避免误清空已保存的连接信息）",
+        xyCfgWipeGuard: "检测到服务地址、分销秘钥、账号ID 同时为空，已阻止保存以防误清空。请重新打开配置弹窗确认信息已回填后再保存。",
         xyCategoryIdLabel: "平台末级分类 ID",
         xyCategoryNameLabel: "分类名称",
         xyCategoryPlaceholder: "留空自动推荐",
@@ -2831,7 +2889,28 @@
         xyImgCustom: "Custom image URL",
         xyCustomUrlLabel: "Custom image URL",
         xyCustomUrlPlaceholder: "https://example.com/image.jpg",
-        xySectionCategory: "Category (optional, auto-recommended when blank)",
+        xySectionCategory: "Category",
+        xyBtnFetchCategory: "Fetch category",
+        xyCategoryAutoLabel: "Match category from item description on each publish",
+        xyCategoryPickLabel: "Pick from recommendations (the closer the path, the better)",
+        xyChannelCatIdLabel: "Channel category ID (required)",
+        xyChannelCatNameLabel: "Channel category name (required)",
+        xyTbCatIdLabel: "Taobao category ID (required)",
+        xyLeafIdLabel: "Leaf category ID",
+        xyCatRequiredPlaceholder: "Required",
+        xyCatOptionalPlaceholder: "Optional",
+        xyCategoryTip: "Xianyu requires channel category ID + channel category name + Taobao category ID together; missing any one of them will get the publish rejected.",
+        xyCatFetching: "Fetching...",
+        xyCatFetchFailed: "Failed to fetch categories",
+        xyCatNoUsable: "No usable category returned",
+        xyCatNoUsableMsg: "No complete category returned. Please try again with a more specific item description.",
+        xyCatFetched: "Fetched {n} categories",
+        xyCatComplete: "✅ Category is complete. With auto-match on it is re-matched from the item description on each publish; otherwise this category is used as-is.",
+        xyCatAutoWarn: "⚠️ Category is incomplete. With auto-match on, it will be fetched from the item description on each publish (needs the xianyu-auto-reply category API).",
+        xyCatIncompleteErr: "❌ Category is incomplete and auto-match is off — publishing will be rejected. Click 「Fetch category」or fill in the three required fields.",
+        xyCatSelectAccount: "Please select an account first",
+        xyCfgNotLoaded: "Config not loaded yet. Please close and reopen the config dialog before saving (to avoid wiping your saved connection info).",
+        xyCfgWipeGuard: "Server URL, secret key and account ID are all empty — save blocked to prevent accidental wipe. Please reopen the dialog and confirm the fields are filled.",
         xyCategoryIdLabel: "Platform leaf category ID",
         xyCategoryNameLabel: "Category name",
         xyCategoryPlaceholder: "Blank = auto recommend",
@@ -4872,8 +4951,13 @@
       }).join('');
     }
 
-    function openXianyuConfigModal(accountKey) {
+    async function openXianyuConfigModal(accountKey) {
       xianyuConfigEditingKey = accountKey;
+      // 配置还没加载时直接打开弹窗会拿到空对象，此刻点保存会把服务地址/秘钥/账号ID
+      // 静默清空（$pick 会把空字符串当有效值写入）。先兜底拉一次再回填表单。
+      if (!Array.isArray(xianyuConfigsData) || xianyuConfigsData.length === 0) {
+        await loadXianyuConfigs();
+      }
       const cfg = xianyuConfigsData.find(c => c.account_key === accountKey) || {};
       document.getElementById('xianyuConfigTargetUser').textContent = accountKey;
       document.getElementById('xyServerUrlInput').value = cfg.xy_server_url || '';
@@ -4890,6 +4974,15 @@
       document.getElementById('xyCustomImageUrlInput').value = cfg.custom_image_url || '';
       document.getElementById('xyCategoryIdInput').value = cfg.publish_category_id || '';
       document.getElementById('xyCategoryNameInput').value = cfg.publish_category_name || '';
+      document.getElementById('xyChannelCatIdInput').value = cfg.publish_channel_cat_id || '';
+      document.getElementById('xyChannelCatNameInput').value = cfg.publish_channel_cat_name || '';
+      document.getElementById('xyTbCatIdInput').value = cfg.publish_tb_cat_id || '';
+      document.getElementById('xyLeafIdInput').value = cfg.publish_leaf_id || '';
+      document.getElementById('xyCategoryAutoInput').checked = cfg.publish_category_auto !== 0;
+      // 缓存候选，供下拉选择
+      window.xyCategoryCandidates = [];
+      document.getElementById('xyCategoryPickBox').style.display = 'none';
+      updateXianyuCategoryStatus();
       // 重置账号下拉：避免上一次"测试连接"残留的选项/备注被串写到另一个用户身上
       const accSelect = document.getElementById('xyAccountSelect');
       accSelect.innerHTML = `<option value="">${escapeHtml(t('xySelectAccountPlaceholder'))}</option>`;
@@ -4967,6 +5060,13 @@
     async function saveXianyuConfig() {
       const accountKey = xianyuConfigEditingKey;
       const select = document.getElementById('xyAccountSelect');
+      const prevCfg = xianyuConfigsData.find(c => c.account_key === accountKey) || null;
+
+      // 兜底一：配置未加载就打开弹窗，表单是空的，此时保存等于清空整条配置
+      if (accountKey && !prevCfg) {
+        showToast(t('xyCfgNotLoaded'), true, 5000);
+        return;
+      }
       const payload = {
         account_key: accountKey,
         xy_server_url: document.getElementById('xyServerUrlInput').value.trim(),
@@ -4982,9 +5082,23 @@
         publish_shipping_method: document.getElementById('xyPublishShippingInput').value,
         publish_category_id: document.getElementById('xyCategoryIdInput').value.trim(),
         publish_category_name: document.getElementById('xyCategoryNameInput').value.trim(),
+        publish_channel_cat_id: document.getElementById('xyChannelCatIdInput').value.trim(),
+        publish_channel_cat_name: document.getElementById('xyChannelCatNameInput').value.trim(),
+        publish_tb_cat_id: document.getElementById('xyTbCatIdInput').value.trim(),
+        publish_leaf_id: document.getElementById('xyLeafIdInput').value.trim(),
+        publish_category_auto: document.getElementById('xyCategoryAutoInput').checked ? 1 : 0,
         image_source: document.getElementById('xyImageSourceInput').value,
         custom_image_url: document.getElementById('xyCustomImageUrlInput').value.trim(),
       };
+
+      // 兜底二：连接三件套原来有值、提交时全空，几乎一定是表单没回填好的误操作。
+      // 直接落库会让该账号彻底失去发布能力且难以察觉，这里拦下来并给出明确提示。
+      if (prevCfg && prevCfg.xy_server_url && prevCfg.xy_account_id
+          && !payload.xy_server_url && !payload.xy_secret_key && !payload.xy_account_id) {
+        showToast(t('xyCfgWipeGuard'), true, 6000);
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE}?action=save_xianyu_config`, {
           method: 'POST',
@@ -5007,6 +5121,105 @@
       } catch (e) {
         showToast(t('xyRequestFailed') + e.message, true);
       }
+    }
+
+    /**
+     * 分类完整度提示。
+     * 闲鱼发布强制要求「频道分类ID + 频道分类名称 + 淘宝分类ID」三者齐全，
+     * 缺任意一个都会报「请先根据商品描述重新选择完整的平台商品分类」。
+     * 这里在配置阶段就明确提示，避免用户保存后才发现发布失败。
+     */
+    function isXianyuCategoryComplete() {
+      return !!document.getElementById('xyChannelCatIdInput').value.trim()
+        && !!document.getElementById('xyChannelCatNameInput').value.trim()
+        && !!document.getElementById('xyTbCatIdInput').value.trim();
+    }
+
+    function updateXianyuCategoryStatus() {
+      const box = document.getElementById('xyCategoryStatus');
+      if (!box) return;
+      const auto = document.getElementById('xyCategoryAutoInput').checked;
+      if (isXianyuCategoryComplete()) {
+        box.className = 'tip-box-info';
+        box.textContent = t('xyCatComplete');
+      } else if (auto) {
+        box.className = 'tip-box-warning';
+        box.textContent = t('xyCatAutoWarn');
+      } else {
+        box.className = 'tip-box-warning';
+        box.textContent = t('xyCatIncompleteErr');
+      }
+      box.style.display = 'block';
+    }
+
+    /** 拉取闲鱼平台分类候选，供用户点选 */
+    async function fetchXianyuCategory() {
+      const isEn = currentLang === 'en';
+      const accountKey = xianyuConfigEditingKey;
+      if (!accountKey) {
+        showToast(t('xyCatSelectAccount'), true);
+        return;
+      }
+      const btn = document.getElementById('btnFetchCategory');
+      const originalHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t('xyCatFetching'))}`;
+      }
+      try {
+        const keyword = (document.getElementById('xyCategoryNameInput').value || '').trim()
+          || (document.getElementById('gameSearchInput') ? document.getElementById('gameSearchInput').value.trim() : '');
+        const res = await fetch(`${API_BASE}?action=recommend_xianyu_category`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account_key: accountKey, keyword })
+        });
+        const data = await res.json();
+        if (data.status !== 'success') {
+          showToast(data.message || t('xyCatFetchFailed'), true, 5000);
+          return;
+        }
+        const list = (data.candidates || []).filter(c => c && c.usable);
+        window.xyCategoryCandidates = list;
+        const sel = document.getElementById('xyCategoryPickSelect');
+        if (!sel) return;
+        if (!list.length) {
+          sel.innerHTML = `<option value="">${escapeHtml(t('xyCatNoUsable'))}</option>`;
+          document.getElementById('xyCategoryPickBox').style.display = 'block';
+          showToast(t('xyCatNoUsableMsg'), true, 5000);
+          return;
+        }
+        sel.innerHTML = list.map((c, i) => {
+          const score = c.score ? ` (${(c.score * 100).toFixed(0)}%)` : '';
+          const path = c.path ? ` · ${escapeHtml(c.path)}` : '';
+          return `<option value="${i}">${escapeHtml(c.category_name || c.channel_cat_name)}${escapeHtml(score)}${path}</option>`;
+        }).join('');
+        sel.selectedIndex = 0;
+        document.getElementById('xyCategoryPickBox').style.display = 'block';
+        applyPickedCategory();
+        showToast(t('xyCatFetched').replace('{n}', list.length));
+      } catch (e) {
+        showToast((isEn ? 'Request failed: ' : '请求失败: ') + e.message, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
+      }
+    }
+
+    /** 把选中的候选填入六个分类输入框 */
+    function applyPickedCategory() {
+      const sel = document.getElementById('xyCategoryPickSelect');
+      const c = (window.xyCategoryCandidates || [])[parseInt(sel && sel.value, 10)];
+      if (!c) return;
+      document.getElementById('xyCategoryIdInput').value = c.category_id || '';
+      document.getElementById('xyCategoryNameInput').value = c.category_name || c.channel_cat_name || '';
+      document.getElementById('xyChannelCatIdInput').value = c.channel_cat_id || '';
+      document.getElementById('xyChannelCatNameInput').value = c.channel_cat_name || '';
+      document.getElementById('xyTbCatIdInput').value = c.tb_cat_id || '';
+      document.getElementById('xyLeafIdInput').value = c.leaf_id || '';
+      updateXianyuCategoryStatus();
     }
 
     function openManualPublishForUser(accountKey) {

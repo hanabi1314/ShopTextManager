@@ -141,7 +141,12 @@ ShopTextManager 支持对接 [xianyu-auto-reply](https://github.com/hanabi1314/x
    - 填写 **每日发布时间**，多个时间点用英文逗号分隔，如 `09:00,12:00,18:00`
 5. 设置商品发布参数：售价、原价、库存、宝贝所在地、运费方式
 6. 选择图片来源：自动搜图 / 使用商品封面图 URL / 自定义图片 URL
-7. （可选）设置平台分类信息，留空则系统自动通过 xianyu-auto-reply 获取分类推荐
+7. 设置平台分类信息（**推荐点「智能获取分类」**）：
+   - 闲鱼发布要求 **频道分类 ID + 频道分类名称 + 淘宝分类 ID** 三者同时存在，
+     缺任意一个都会被拒绝，报「请先根据商品描述重新选择完整的平台商品分类」。
+   - 点 **「智能获取分类」** 会从 xianyu-auto-reply 拉取候选，选中后六个字段自动填好。
+   - 勾选 **「每单按商品描述自动匹配分类」** 后，即使这里留空，发布时也会按商品描述
+     自动获取分类并回写到配置；取消勾选则固定使用手工填写的分类。
 8. 点击 **「保存配置」**
 
 ##### 第二步：为商品设置封面图（可选但推荐）
@@ -194,7 +199,7 @@ ShopTextManager 定时发布时会依次调用以下 xianyu-auto-reply 公开接
 | 步骤 | API | 说明 |
 | :--- | :--- | :--- |
 | 1 | `POST /api/v1/external/enabled-accounts` | 测试连接时获取闲鱼账号列表 |
-| 2 | `POST /api/v1/external/category/recommend` | 获取平台分类推荐（未预设分类时自动调用） |
+| 2 | `POST /api/v1/external/category/recommend` | 获取平台分类推荐（分类不完整或开启自动匹配时调用） |
 | 3 | `POST /api/v1/external/publish/media` | 上传商品图片，获取 media_id |
 | 4 | `POST /api/v1/external/publish/single` | 发布单品到闲鱼 |
 

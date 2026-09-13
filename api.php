@@ -213,6 +213,7 @@ ensureTable($pdo, 'xianyu_config', "CREATE TABLE IF NOT EXISTS `xianyu_config` (
         `publish_channel_cat_name` VARCHAR(100) DEFAULT '',
         `publish_leaf_id` VARCHAR(64) DEFAULT '',
         `publish_tb_cat_id` VARCHAR(64) DEFAULT '',
+        `publish_category_auto` TINYINT(1) NOT NULL DEFAULT 1,
         `image_source` VARCHAR(10) DEFAULT 'auto',
         `custom_image_url` TEXT,
         `last_publish_at` DATETIME DEFAULT NULL,
@@ -256,6 +257,9 @@ ensureColumns($pdo, 'xianyu_config', [
     'publish_channel_cat_name' => "VARCHAR(100) DEFAULT ''",
     'publish_leaf_id'          => "VARCHAR(64) DEFAULT ''",
     'publish_tb_cat_id'        => "VARCHAR(64) DEFAULT ''",
+    // 老库补列默认 0：存量配置里可能已有手工填好的分类，不能因为升级就被自动匹配覆盖。
+    // 新装走 CREATE TABLE / schema.sql 的默认 1（每单自动匹配）。三件套为空时无论如何都会自动补全。
+    'publish_category_auto'    => "TINYINT(1) NOT NULL DEFAULT 0",
     'image_source'             => "VARCHAR(10) DEFAULT 'auto'",
     'custom_image_url'         => "TEXT",
     'last_publish_at'          => "DATETIME DEFAULT NULL",
@@ -760,6 +764,7 @@ switch ($action) {
                 c.publish_address, c.publish_quantity, c.publish_shipping_method,
                 c.publish_category_id, c.publish_category_name, c.publish_channel_cat_id,
                 c.publish_channel_cat_name, c.publish_leaf_id, c.publish_tb_cat_id,
+                c.publish_category_auto,
                 c.image_source, c.custom_image_url,
                 c.last_publish_at, c.last_publish_status
             FROM templates t
@@ -795,6 +800,9 @@ switch ($action) {
             $cfg['publish_channel_cat_name'] = (string)($cfg['publish_channel_cat_name'] ?? '');
             $cfg['publish_leaf_id'] = (string)($cfg['publish_leaf_id'] ?? '');
             $cfg['publish_tb_cat_id'] = (string)($cfg['publish_tb_cat_id'] ?? '');
+            $cfg['publish_category_auto'] = (int)($cfg['publish_category_auto'] ?? 1);
+            // 便于前端直接判断「分类是否已完整」，不必在 JS 里重复这套规则
+            $cfg['publish_category_ready'] = xianyuCategoryComplete($cfg) ? 1 : 0;
             $cfg['image_source'] = (string)($cfg['image_source'] ?? 'auto');
             $cfg['custom_image_url'] = (string)($cfg['custom_image_url'] ?? '');
             $cfg['last_publish_status'] = (string)($cfg['last_publish_status'] ?? '');
@@ -875,6 +883,9 @@ switch ($action) {
             'publish_channel_cat_name' => (string)$pick('publish_channel_cat_name', ''),
             'publish_leaf_id'          => (string)$pick('publish_leaf_id', ''),
             'publish_tb_cat_id'        => (string)$pick('publish_tb_cat_id', ''),
+            'publish_category_auto'    => array_key_exists('publish_category_auto', $input)
+                                            ? (!empty($input['publish_category_auto']) ? 1 : 0)
+                                            : (int)($prevCfg['publish_category_auto'] ?? 1),
             'image_source'             => (string)$pick('image_source', 'auto'),
             'custom_image_url'         => (string)$pick('custom_image_url', ''),
         ];
@@ -1049,6 +1060,81 @@ switch ($action) {
     // 后台一键验证「搜索引擎是否可达 → 能否解析出候选 → 能否下载到真实图片」整条链路，
     // 并返回每个图源各自的成败，不需要登录服务器敲命令。
     // ========================================================
+    /**
+     * 拉取闲鱼平台分类候选，供后台「智能获取分类」下拉选择。
+     * 只做查询不落库，用户点选后再由 save_xianyu_config 保存。
+     */
+    case 'recommend_xianyu_category': {
+        $account_key = trim((string)($input['account_key'] ?? ''));
+        $game_id = (int)($input['game_id'] ?? 0);
+        $keyword = trim((string)($input['keyword'] ?? ''));
+
+        if ($account_key === '') {
+            jsonResponse(['status' => 'error', 'message' => '请先选择账号'], 400);
+        }
+        if (!function_exists('curl_init')) {
+            jsonResponse(['status' => 'error', 'message' => '服务器未启用 PHP curl 扩展，无法调用分类推荐接口'], 500);
+        }
+
+        $stmt = $pdo->prepare("SELECT * FROM xianyu_config WHERE account_key = ?");
+        $stmt->execute([$account_key]);
+        $cfg = $stmt->fetch();
+        if (!$cfg || empty($cfg['xy_server_url']) || empty($cfg['xy_secret_key']) || empty($cfg['xy_account_id'])) {
+            jsonResponse(['status' => 'error', 'message' => '该账号尚未配置闲鱼服务地址 / 分销秘钥 / 账号ID'], 400);
+        }
+
+        // 商品描述：优先用选中商品的真实文案，其次用户手输关键词，最后退回账号模板
+        $description = '';
+        if ($game_id > 0) {
+            $stmt = $pdo->prepare("SELECT game_name_cn, game_name_en FROM games WHERE id = ?");
+            $stmt->execute([$game_id]);
+            $g = $stmt->fetch();
+            if ($g) {
+                $description = trim((string)$g['game_name_cn'] . ' ' . (string)$g['game_name_en']);
+            }
+        }
+        if ($description === '') $description = $keyword;
+        if ($description === '') {
+            $stmt = $pdo->prepare("SELECT template_text FROM templates WHERE account_key = ?");
+            $stmt->execute([$account_key]);
+            $tpl = $stmt->fetch();
+            // 模板里可能有 {{VAR_1}} 之类的占位符，清掉后再交给推荐接口，避免干扰语义
+            $description = trim(preg_replace('/\{\{[A-Z_]+\}\}/', '', (string)($tpl['template_text'] ?? '')));
+        }
+        if ($description === '') {
+            jsonResponse(['status' => 'error', 'message' => '请先选择商品或输入商品描述关键词，分类推荐需要商品描述'], 400);
+        }
+
+        $resp = getXianyuCategoryRecommend(
+            (string)$cfg['xy_server_url'],
+            (string)$cfg['xy_secret_key'],
+            (string)$cfg['xy_account_id'],
+            $description
+        );
+
+        if (empty($resp['success'])) {
+            jsonResponse([
+                'status' => 'error',
+                'message' => '分类推荐失败: ' . (string)($resp['message'] ?? '接口无响应'),
+            ], 200);
+        }
+
+        $list = [];
+        foreach ((array)($resp['data']['candidates'] ?? []) as $raw) {
+            if (!is_array($raw)) continue;
+            $c = normalizeXianyuCategoryCandidate($raw);
+            $c['usable'] = xianyuCandidateUsable($c);
+            $list[] = $c;
+        }
+
+        jsonResponse([
+            'status' => 'success',
+            'message' => '分类推荐成功，共 ' . count($list) . ' 个候选',
+            'description' => safeTruncate($description, 120),
+            'candidates' => $list,
+        ]);
+    }
+
     case 'test_image_search': {
         $game_id = (int)($input['game_id'] ?? 0);
         $keyword = trim((string)($input['keyword'] ?? ''));
@@ -1493,23 +1579,23 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
         return ['success' => false, 'message' => '图片上传到闲鱼服务器失败: ' . $errMsg];
     }
 
-    // 7. (可选) 获取分类推荐 - 如果未预设分类
-    $categoryId = $cfg['publish_category_id'];
-    $categoryName = $cfg['publish_category_name'];
-    if (empty($categoryId)) {
-        $catResp = getXianyuCategoryRecommend(
-            $serverUrl,
-            $cfg['xy_secret_key'],
-            $cfg['xy_account_id'],
-            $description
-        );
-        if (!empty($catResp['success']) && !empty($catResp['data']['candidates'])) {
-            $candidates = $catResp['data']['candidates'];
-            $best = $candidates[0]; // 取第一个推荐
-            $categoryId = $best['cat_id'] ?? '';
-            $categoryName = $best['cat_name'] ?? '';
-        }
+    // 7. 解析平台分类。
+    // 注意：闲鱼发布接口要求 channel_cat_id / channel_cat_name / tb_cat_id 三者齐全，
+    // 只给 platform_category_id 会被判为「分类不完整」而拒绝发布。
+    $catDiag = [];
+    $catResult = resolveXianyuCategory($pdo, $cfg, $description, $catDiag);
+    if (!$catResult['ok']) {
+        $errMsg = $catResult['message'];
+        logXianyuPublish($pdo, $account_key, $game_id, $cn, 'failed', $triggerType, $errMsg, '', '', $catDiag);
+        updateConfigStatus($pdo, $account_key, 'failed');
+        return ['success' => false, 'message' => $errMsg];
     }
+    $categoryId         = $catResult['category']['category_id'];
+    $categoryName       = $catResult['category']['category_name'];
+    $channelCatId       = $catResult['category']['channel_cat_id'];
+    $channelCatName     = $catResult['category']['channel_cat_name'];
+    $leafId             = $catResult['category']['leaf_id'];
+    $tbCatId            = $catResult['category']['tb_cat_id'];
 
     // 8. 发布商品
     $publishPayload = [
@@ -1527,19 +1613,16 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
     if ($cfg['publish_original_price'] > 0) {
         $publishPayload['original_price'] = (float)$cfg['publish_original_price'];
     }
-    if (!empty($categoryId)) {
+    if ($categoryId !== '') {
         $publishPayload['platform_category_id'] = $categoryId;
         $publishPayload['platform_category_name'] = $categoryName;
     }
-    if (!empty($cfg['publish_channel_cat_id'])) {
-        $publishPayload['platform_channel_category_id'] = $cfg['publish_channel_cat_id'];
-        $publishPayload['platform_channel_category_name'] = $cfg['publish_channel_cat_name'];
-    }
-    if (!empty($cfg['publish_leaf_id'])) {
-        $publishPayload['platform_leaf_id'] = $cfg['publish_leaf_id'];
-    }
-    if (!empty($cfg['publish_tb_cat_id'])) {
-        $publishPayload['platform_tb_category_id'] = $cfg['publish_tb_cat_id'];
+    // 这三个是发布的硬校验项，必须同时存在
+    $publishPayload['platform_channel_category_id'] = $channelCatId;
+    $publishPayload['platform_channel_category_name'] = $channelCatName;
+    $publishPayload['platform_tb_category_id'] = $tbCatId;
+    if ($leafId !== '') {
+        $publishPayload['platform_leaf_id'] = $leafId;
     }
 
     $publishResp = publishSingleToXianyu($serverUrl, $publishPayload);
@@ -2126,6 +2209,168 @@ function uploadMediaToXianyu(string $serverUrl, string $secretKey, string $accou
 
     $data = json_decode($resp, true);
     return is_array($data) ? $data : ['success' => false, 'message' => '响应格式异常: ' . substr($resp, 0, 200)];
+}
+
+/**
+ * 判断一组分类字段是否满足 xianyu-auto-reply 发布校验。
+ *
+ * 对方 xianyu_item_payload_builder._build_category_label() 强制要求
+ * platform_channel_category_id / platform_channel_category_name / platform_tb_category_id
+ * 三个同时非空，缺任意一个就抛「请先根据商品描述重新选择完整的平台商品分类」。
+ * 只填 platform_category_id（末级分类 ID）是不够的——这正是原来发布必失败的原因。
+ */
+function xianyuCategoryComplete($cfg): bool {
+    return !empty($cfg['publish_channel_cat_id'])
+        && !empty($cfg['publish_channel_cat_name'])
+        && !empty($cfg['publish_tb_cat_id']);
+}
+
+/**
+ * 把分类推荐候选归一化成 6 个字段，并过滤掉不完整（无法通过发布校验）的候选。
+ * 推荐接口返回的字段名见 xianyu-auto-reply README：
+ * cat_id / cat_name / channel_cat_id / channel_cat_name / leaf_id / tb_cat_id / path / score / is_selected
+ */
+function normalizeXianyuCategoryCandidate(array $c): array {
+    $path = '';
+    if (!empty($c['path']) && is_array($c['path'])) {
+        $names = [];
+        foreach ($c['path'] as $seg) {
+            if (is_array($seg) && !empty($seg['name'])) $names[] = (string)$seg['name'];
+        }
+        $path = implode(' / ', $names);
+    }
+    return [
+        'category_id'       => (string)($c['cat_id'] ?? ''),
+        'category_name'     => (string)($c['cat_name'] ?? ''),
+        'channel_cat_id'    => (string)($c['channel_cat_id'] ?? ''),
+        'channel_cat_name'  => (string)($c['channel_cat_name'] ?? ''),
+        'leaf_id'           => (string)($c['leaf_id'] ?? ''),
+        'tb_cat_id'         => (string)($c['tb_cat_id'] ?? ''),
+        'path'              => $path,
+        'score'             => isset($c['score']) ? (float)$c['score'] : 0.0,
+        'is_selected'       => !empty($c['is_selected']),
+    ];
+}
+
+/** 候选是否满足发布所需的最小三件套 */
+function xianyuCandidateUsable(array $c): bool {
+    return $c['channel_cat_id'] !== '' && $c['channel_cat_name'] !== '' && $c['tb_cat_id'] !== '';
+}
+
+/** 在候选里挑最佳：优先平台已选中的，其次得分最高的，最后才是第一条 */
+function pickBestXianyuCategory(array $candidates): ?array {
+    $usable = array_values(array_filter($candidates, 'xianyuCandidateUsable'));
+    if (!$usable) return null;
+    $selected = array_values(array_filter($usable, static fn($c) => $c['is_selected']));
+    if ($selected) return $selected[0];
+    $best = $usable[0];
+    foreach ($usable as $c) {
+        if ($c['score'] > $best['score']) $best = $c;
+    }
+    return $best;
+}
+
+/**
+ * 解析本次发布要用的分类。
+ *
+ * - 配置里分类三件套齐全 且 未开启「按商品描述自动匹配」→ 直接用配置（不发网络请求）
+ * - 否则调用对方分类推荐接口，取最佳候选；推荐失败时若配置本身完整则回退到配置
+ * - 解析结果若与配置不同则回写数据库，让管理员在后台能看到实际生效的分类
+ *
+ * @param array $cfg   xianyu_config 行（含 xy_* 与 publish_*）
+ * @param array &$diag 输出诊断信息，便于把失败原因写进发布日志
+ * @return array{ok:bool, message:string, category:array}
+ */
+function resolveXianyuCategory(PDO $pdo, array $cfg, string $description, array &$diag): array {
+    $blank = ['category_id' => '', 'category_name' => '', 'channel_cat_id' => '',
+              'channel_cat_name' => '', 'leaf_id' => '', 'tb_cat_id' => ''];
+    $fromCfg = [
+        'category_id'      => (string)($cfg['publish_category_id'] ?? ''),
+        'category_name'    => (string)($cfg['publish_category_name'] ?? ''),
+        'channel_cat_id'   => (string)($cfg['publish_channel_cat_id'] ?? ''),
+        'channel_cat_name' => (string)($cfg['publish_channel_cat_name'] ?? ''),
+        'leaf_id'          => (string)($cfg['publish_leaf_id'] ?? ''),
+        'tb_cat_id'        => (string)($cfg['publish_tb_cat_id'] ?? ''),
+    ];
+    $cfgReady  = xianyuCategoryComplete($cfg);
+    $autoMatch = !array_key_exists('publish_category_auto', $cfg) || !empty($cfg['publish_category_auto']);
+
+    // 已手工固定了完整分类，且没开自动匹配：无需联网
+    if ($cfgReady && !$autoMatch) {
+        $diag['category_source'] = 'config';
+        return ['ok' => true, 'message' => '', 'category' => $fromCfg];
+    }
+
+    $resp = getXianyuCategoryRecommend(
+        (string)$cfg['xy_server_url'],
+        (string)$cfg['xy_secret_key'],
+        (string)$cfg['xy_account_id'],
+        $description
+    );
+    $diag['category_api_message'] = safeTruncate((string)($resp['message'] ?? ''), 200);
+    $diag['category_api_code'] = $resp['code'] ?? null;
+    $diag['category_auto'] = $autoMatch ? 1 : 0;
+    $diag['category_config_ready'] = $cfgReady ? 1 : 0;
+
+    $candidates = [];
+    if (!empty($resp['success']) && !empty($resp['data']['candidates']) && is_array($resp['data']['candidates'])) {
+        foreach ($resp['data']['candidates'] as $raw) {
+            if (is_array($raw)) $candidates[] = normalizeXianyuCategoryCandidate($raw);
+        }
+    }
+    $diag['category_candidates'] = count($candidates);
+
+    $best = pickBestXianyuCategory($candidates);
+    if ($best) {
+        $resolved = [
+            'category_id'      => $best['category_id'],
+            'category_name'    => $best['category_name'] ?: $best['channel_cat_name'],
+            'channel_cat_id'   => $best['channel_cat_id'],
+            'channel_cat_name' => $best['channel_cat_name'],
+            'leaf_id'          => $best['leaf_id'],
+            'tb_cat_id'        => $best['tb_cat_id'],
+        ];
+        $diag['category_source'] = 'recommend';
+        $diag['category_name']   = $resolved['category_name'];
+        // 回写配置，让后台能看到实际生效的分类；仅在变化时写，避免每次发布都产生一次 UPDATE
+        if ($resolved !== $fromCfg) {
+            try {
+                $stmt = $pdo->prepare("UPDATE xianyu_config SET publish_category_id=?, publish_category_name=?, "
+                    . "publish_channel_cat_id=?, publish_channel_cat_name=?, publish_leaf_id=?, publish_tb_cat_id=? "
+                    . "WHERE account_key=?");
+                $stmt->execute([
+                    $resolved['category_id'], $resolved['category_name'],
+                    $resolved['channel_cat_id'], $resolved['channel_cat_name'],
+                    $resolved['leaf_id'], $resolved['tb_cat_id'],
+                    (string)$cfg['account_key'],
+                ]);
+            } catch (Throwable $e) {
+                @error_log('ShopTextManager resolveXianyuCategory persist failed: ' . $e->getMessage());
+            }
+        }
+        return ['ok' => true, 'message' => '', 'category' => $resolved];
+    }
+
+    // 推荐拿不到可用候选：配置本身完整就退回配置，否则明确报错
+    if ($cfgReady) {
+        $diag['category_source'] = 'config_fallback';
+        return ['ok' => true, 'message' => '', 'category' => $fromCfg];
+    }
+
+    $apiMsg = safeTruncate((string)($resp['message'] ?? ''), 200);
+    $why = $apiMsg !== '' ? $apiMsg : '接口无响应或返回为空';
+    if (count($candidates) > 0) {
+        $why = '接口返回了 ' . count($candidates) . ' 个候选，但都缺少频道分类ID/名称或淘宝分类ID';
+    }
+    $diag['category_error'] = $why;
+    return [
+        'ok' => false,
+        'message' => '平台商品分类不完整，无法发布（闲鱼要求频道分类ID、频道分类名称、淘宝分类ID 三者齐全）。'
+            . '自动获取分类失败：' . $why
+            . '。请在「闲鱼定时发布配置」里点「智能获取分类」重新选择，'
+            . '或检查 xianyu-auto-reply 的分类推荐接口是否可用。',
+        'category' => $blank,
+    ];
 }
 
 function getXianyuCategoryRecommend(string $serverUrl, string $secretKey, string $accountId, string $description): array {

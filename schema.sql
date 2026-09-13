@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS `xianyu_config` (
   `publish_channel_cat_name` VARCHAR(100) DEFAULT '' COMMENT '频道分类名称',
   `publish_leaf_id` VARCHAR(64) DEFAULT '' COMMENT '叶子分类ID',
   `publish_tb_cat_id` VARCHAR(64) DEFAULT '' COMMENT '淘宝分类ID',
+  `publish_category_auto` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1=每单按商品描述自动匹配分类，0=固定使用上面手工填写的分类',
   `image_source` VARCHAR(10) DEFAULT 'auto' COMMENT '图片来源: auto(自动搜索)/cover_url(使用封面)/custom(自定义URL)',
   `custom_image_url` TEXT COMMENT '自定义图片URL (image_source=custom 时使用)',
   `last_publish_at` DATETIME DEFAULT NULL COMMENT '上次自动发布时间',
