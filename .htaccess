@@ -1,0 +1,41 @@
+# ========================================================
+# ShopTextManager - 静态资源访问控制（Apache）
+#
+# 目的：禁止外部直接下载 .env（内含数据库账号密码）、.git 目录、
+# schema.sql（暴露表结构）、说明文档与构建源码。
+#
+# 为什么只用 RedirectMatch / mod_alias：
+#   - mod_alias 是 Apache 基础模块（默认编译进核心），几乎不可能缺失；
+#     RedirectMatch 在 AllowOverride FileInfo 下就可用，是最宽松的覆盖级别。
+#   - 不用 <FilesMatch> + Require：Require 需要 AllowOverride AuthConfig/Limit，
+#     部分虚拟主机只开 FileInfo，写了反而让整个目录 500。
+#   - 不用 Options -Indexes：同理，Options 不在 FileInfo 覆盖范围内，会整站 500。
+#     关目录列表请在面板里操作，或用文件末尾的 Nginx 配置。
+#   - mod_alias 的 RedirectMatch 匹配的是 URL 路径（不是磁盘文件名），
+#     所以能真正拦住 /.git/config 这类子路径；<FilesMatch> 只匹配 basename，拦不住。
+#   - 若站点跑在 Nginx 上，本文件不会被读取，请用文件末尾的等价配置。
+# ========================================================
+
+# 1) 所有点文件/点目录（.env / .git/** / .htaccess ...），放行 .env.example 与 .well-known/
+RedirectMatch 404 ^/\.(?!env\.example$|well-known/)
+
+# 2) 数据库结构 / 说明文档 / 日志 / 构建源码
+RedirectMatch 404 (?i)\.(sql|md|log|ts|example)$
+
+# 3) 依赖目录
+RedirectMatch 404 ^/node_modules/
+
+# ========================================================
+# Nginx 等价配置（请手动加进站点配置的 server{} 块）：
+#
+#   autoindex off;                                   # 关闭目录列表
+#   location ~ /\.            { deny all; }          # .env / .git 等点文件
+#   location ~* \.(sql|md|log|ts|example)$ { deny all; }
+#   location ^~ /node_modules/ { deny all; }
+# ========================================================
+#
+# 上线后请自测三项：
+#   GET /index.html  -> 200
+#   GET /api.php     -> 200（能正常返回 JSON）
+#   GET /.env        -> 404
+# ========================================================

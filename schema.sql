@@ -2,10 +2,16 @@
 -- 卖家多账号商品快速发布与管理系统 - 数据库建表与初始数据 SQL
 -- 环境要求：MySQL 5.7 / 8.0+
 -- 编码规则：utf8mb4 / utf8mb4_unicode_ci
+--
+-- ⚠️ 导入方式（重要）
+-- 本脚本**不**创建数据库，请先选好要导入的目标库再执行：
+--   宝塔面板：数据库 → 选中你的库 → 导入 → 上传本文件
+--   命令行　：mysql -u 用户名 -p 你的库名 < schema.sql
+--
+-- 之所以去掉了 CREATE DATABASE / USE：宝塔用户的库名是自定义的，
+-- 而面板的数据库账号通常没有 CREATE DATABASE 权限，硬编码这两句会直接
+-- "Access denied" 导致一张表都建不出来（或建到了 xianyu_db，与 api.php 配置的库名不一致）。
 -- ========================================================
-
-CREATE DATABASE IF NOT EXISTS `xianyu_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `xianyu_db`;
 
 -- 1. 游戏数据表 (games) - 支持中英文双名称
 CREATE TABLE IF NOT EXISTS `games` (

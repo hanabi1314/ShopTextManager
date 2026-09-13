@@ -14,14 +14,18 @@ set_exception_handler(function ($e) {
     header('Content-Type: application/json; charset=utf-8');
     
     $msg = $e->getMessage();
-    // 识别最常见的“数据表不存在”错误
+    // 原始异常信息里可能含 SQL 语句、字段名乃至连接账号，只写日志不回显
+    @error_log('ShopTextManager uncaught: ' . $msg);
+
+    // 识别最常见的“数据表不存在”错误，给出可操作的提示（不附带原始 SQL）
+    $friendly = '服务器接口错误，详细原因已写入 PHP 错误日志';
     if (strpos($msg, '1146 Table') !== false || strpos($msg, '42S02') !== false) {
-        $msg = '数据库表不存在！请在宝塔面板的 MySQL 管理中导入项目的 schema.sql 脚本文件。(' . $msg . ')';
+        $friendly = '数据库表不存在！请在宝塔面板的 MySQL 管理中导入项目的 schema.sql 脚本文件。';
     }
-    
+
     echo json_encode([
         'status' => 'error',
-        'message' => '服务器接口错误: ' . $msg
+        'message' => $friendly
     ], JSON_UNESCAPED_UNICODE);
     exit;
 });
@@ -42,9 +46,11 @@ set_error_handler(function ($errno, $errstr, $errfile, $errline) {
     }
     http_response_code(500);
     header('Content-Type: application/json; charset=utf-8');
+    // 细节只写服务端日志：响应里带上绝对路径/源码片段等于给攻击者送地图
+    @error_log("ShopTextManager FATAL[{$errno}]: {$errstr} in {$errfile}:{$errline}");
     echo json_encode([
         'status' => 'error',
-        'message' => "PHP 系统错误: {$errstr} (位于 {$errfile} 第 {$errline} 行)"
+        'message' => '服务器内部错误，详细原因已写入 PHP 错误日志'
     ], JSON_UNESCAPED_UNICODE);
     exit;
 });
@@ -94,61 +100,100 @@ try {
     ]);
 } catch (PDOException $e) {
     http_response_code(500);
+    // 连接异常信息含主机/库名/账号，不能回显给匿名请求者；只写日志
+    @error_log('ShopTextManager DB connect failed: ' . $e->getMessage());
     echo json_encode([
         'status' => 'error',
-        'message' => '数据库连接失败: ' . $e->getMessage() . '。请检查宝塔中 .env 文件或 api.php 的数据库连接配置（主机、用户名、密码、数据库名）。'
+        'message' => '数据库连接失败，请检查宝塔中 .env 文件或 api.php 顶部的数据库配置（主机、端口、用户名、密码、数据库名）。详细原因已写入 PHP 错误日志。'
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// 自动建表与初始数据检测（避免未导入 schema.sql 导致 1146 错误）
+// ========================================================
+// 自动建表 / 补列（自愈）
+//
+// ⚠️ 顺序至关重要：必须先 CREATE TABLE IF NOT EXISTS，再 SHOW COLUMNS。
+// 旧实现把 `SHOW COLUMNS FROM xianyu_config` 放在建表语句之前，
+// 而老部署（有 templates/games，但没有 v2.0 的 xianyu_config）执行它必然抛 42S02，
+// 异常被同一个 try 吞掉 → 后面的建表语句永远不执行 →
+// 该库永久停留在「表不存在」状态：每次请求都 500，且永远无法自愈。
+// 这里改成：先建表、再补列，且每个步骤独立 try/catch 并记录日志，
+// 任何一步失败都不会拖垮其余步骤。
+// ========================================================
+
+/**
+ * 建表（IF NOT EXISTS，已存在则无操作）。
+ */
+function ensureTable(PDO $pdo, string $table, string $ddl): bool {
+    try {
+        $pdo->exec($ddl);
+        return true;
+    } catch (Throwable $e) {
+        @error_log("ShopTextManager ensureTable({$table}) failed: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * 补列：表不存在或单列 ALTER 失败都只记日志，不影响其它步骤。
+ *
+ * @param array<string,string> $columns 列名 => DDL 片段
+ */
+function ensureColumns(PDO $pdo, string $table, array $columns): void {
+    try {
+        $exists = [];
+        foreach ($pdo->query("SHOW COLUMNS FROM `{$table}`")->fetchAll() as $col) {
+            $exists[$col['Field']] = true;
+        }
+    } catch (Throwable $e) {
+        // 表本身还不存在（例如全新安装且 schema.sql 也没导入成功），交给建表步骤处理
+        @error_log("ShopTextManager ensureColumns({$table}) cannot read columns: " . $e->getMessage());
+        return;
+    }
+    foreach ($columns as $colName => $ddl) {
+        if (isset($exists[$colName])) continue;
+        try {
+            $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$colName}` {$ddl}");
+        } catch (Throwable $e) {
+            @error_log("ShopTextManager ADD COLUMN {$table}.{$colName} failed: " . $e->getMessage());
+        }
+    }
+}
+
+// 1) 全新安装：核心表基本都没建时，整体导入 schema.sql
 try {
-    $checkTable = $pdo->query("SHOW TABLES LIKE 'templates'")->fetch();
-    if (!$checkTable) {
+    $requiredTables = ['games', 'templates', 'published_logs', 'xianyu_config', 'xianyu_publish_logs'];
+    $existingTables = [];
+    foreach ($pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN) as $t) {
+        $existingTables[strtolower((string)$t)] = true;
+    }
+    $missing = [];
+    foreach ($requiredTables as $t) {
+        if (!isset($existingTables[strtolower($t)])) $missing[] = $t;
+    }
+    // 缺 3 张以上视为"基本没导入过"（老部署最多只缺 v2.0 的两张）
+    if (count($missing) >= 3) {
         $sqlFile = __DIR__ . '/schema.sql';
         if (file_exists($sqlFile)) {
-            $sqlContent = file_get_contents($sqlFile);
-            // 移除 CREATE DATABASE 和 USE 指令以直接导入当前 DB
-            $sqlContent = preg_replace('/CREATE DATABASE.*?;/is', '', $sqlContent);
-            $sqlContent = preg_replace('/USE `.*?`;/is', '', $sqlContent);
-            $pdo->exec($sqlContent);
+            $sqlContent = (string)file_get_contents($sqlFile);
+            // 移除 CREATE DATABASE 和 USE 指令，直接导入当前连接的 DB
+            $sqlContent = (string)preg_replace('/CREATE\s+DATABASE.*?;/is', '', $sqlContent);
+            $sqlContent = (string)preg_replace('/^\s*USE\s+`?[\w]+`?\s*;/im', '', $sqlContent);
+            try {
+                $pdo->exec($sqlContent);
+            } catch (Throwable $e) {
+                @error_log("ShopTextManager schema.sql import failed: " . $e->getMessage());
+            }
         }
+    } elseif (count($missing) > 0) {
+        @error_log("ShopTextManager: missing tables " . implode(',', $missing) . " — 将由建表步骤补齐");
     }
-    // v2.0: 兼容旧版部署 —— 若 games 表缺少 cover_url 字段则自动补充
-    // (schema.sql 只在 templates 表不存在时才会整体导入，老部署不会自动获得新字段)
-    $checkCover = $pdo->query("SHOW COLUMNS FROM games LIKE 'cover_url'")->fetch();
-    if (!$checkCover) {
-        $pdo->exec("ALTER TABLE games ADD COLUMN cover_url VARCHAR(255) DEFAULT '' COMMENT '游戏封面图片链接'");
-    }
+} catch (Throwable $e) {
+    @error_log("ShopTextManager table check failed: " . $e->getMessage());
+}
 
-    // 兼容中间版本部署：若 xianyu_config 表缺少后续新增的列则自动补齐，
-    // 否则 SELECT 引用不存在的列会直接抛异常，管理员控制台整块打不开。
-    $xianyuColumns = [
-        'xy_account_remark'        => "VARCHAR(100) DEFAULT ''",
-        'publish_original_price'   => "DECIMAL(10,2) DEFAULT 0",
-        'publish_category_id'      => "VARCHAR(64) DEFAULT ''",
-        'publish_category_name'    => "VARCHAR(100) DEFAULT ''",
-        'publish_channel_cat_id'   => "VARCHAR(64) DEFAULT ''",
-        'publish_channel_cat_name' => "VARCHAR(100) DEFAULT ''",
-        'publish_leaf_id'          => "VARCHAR(64) DEFAULT ''",
-        'publish_tb_cat_id'        => "VARCHAR(64) DEFAULT ''",
-        'image_source'             => "VARCHAR(10) DEFAULT 'auto'",
-        'custom_image_url'         => "TEXT",
-        'last_publish_at'          => "DATETIME DEFAULT NULL",
-        'last_publish_status'      => "VARCHAR(20) DEFAULT ''",
-    ];
-    $existingXyCols = [];
-    foreach ($pdo->query("SHOW COLUMNS FROM xianyu_config")->fetchAll() as $col) {
-        $existingXyCols[$col['Field']] = true;
-    }
-    foreach ($xianyuColumns as $colName => $ddl) {
-        if (!isset($existingXyCols[$colName])) {
-            $pdo->exec("ALTER TABLE xianyu_config ADD COLUMN `{$colName}` {$ddl}");
-        }
-    }
-
-    // v2.0: 自动创建定时发布相关新表 (兼容旧版部署，不会影响已有数据)
-    $pdo->exec("CREATE TABLE IF NOT EXISTS `xianyu_config` (
+// 2) 先建 v2.0 新表（老库一定没有，必须先于任何 SHOW COLUMNS）
+ensureTable($pdo, 'xianyu_config', "CREATE TABLE IF NOT EXISTS `xianyu_config` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `account_key` VARCHAR(50) NOT NULL UNIQUE,
         `xy_server_url` VARCHAR(500) NOT NULL DEFAULT '',
@@ -177,7 +222,7 @@ try {
         INDEX `idx_publish_enabled` (`publish_enabled`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-    $pdo->exec("CREATE TABLE IF NOT EXISTS `xianyu_publish_logs` (
+ensureTable($pdo, 'xianyu_publish_logs', "CREATE TABLE IF NOT EXISTS `xianyu_publish_logs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `account_key` VARCHAR(50) NOT NULL,
         `game_id` INT NOT NULL,
@@ -193,9 +238,29 @@ try {
         INDEX `idx_status` (`status`),
         INDEX `idx_created_at` (`created_at`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-} catch (Exception $e) {
-    // 静默处理建表检测过程中的异常
-}
+
+// 3) 再补列（此时表一定已存在）
+// v2.0: games 表新增封面图字段
+ensureColumns($pdo, 'games', [
+    'cover_url' => "VARCHAR(255) DEFAULT '' COMMENT '游戏封面图片链接'",
+]);
+
+// 兼容中间版本部署：补齐 xianyu_config 后续新增的列，
+// 否则 SELECT 引用不存在的列会直接抛异常，管理员控制台整块打不开。
+ensureColumns($pdo, 'xianyu_config', [
+    'xy_account_remark'        => "VARCHAR(100) DEFAULT ''",
+    'publish_original_price'   => "DECIMAL(10,2) DEFAULT 0",
+    'publish_category_id'      => "VARCHAR(64) DEFAULT ''",
+    'publish_category_name'    => "VARCHAR(100) DEFAULT ''",
+    'publish_channel_cat_id'   => "VARCHAR(64) DEFAULT ''",
+    'publish_channel_cat_name' => "VARCHAR(100) DEFAULT ''",
+    'publish_leaf_id'          => "VARCHAR(64) DEFAULT ''",
+    'publish_tb_cat_id'        => "VARCHAR(64) DEFAULT ''",
+    'image_source'             => "VARCHAR(10) DEFAULT 'auto'",
+    'custom_image_url'         => "TEXT",
+    'last_publish_at'          => "DATETIME DEFAULT NULL",
+    'last_publish_status'      => "VARCHAR(20) DEFAULT ''",
+]);
 
 $action = $_GET['action'] ?? '';
 
@@ -491,11 +556,12 @@ switch ($action) {
 
             $pdo->commit();
             jsonResponse(['status' => 'success', 'message' => '游戏及其发布隐藏日志已关联删除']);
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            jsonResponse(['status' => 'error', 'message' => '删除失败: ' . $e->getMessage()], 500);
+            @error_log('ShopTextManager delete_game failed: ' . $e->getMessage());
+            jsonResponse(['status' => 'error', 'message' => '删除失败，详细原因已写入 PHP 错误日志'], 500);
         }
         break;
 
@@ -597,13 +663,22 @@ switch ($action) {
             $stmtLogs = $pdo->prepare("DELETE FROM published_logs WHERE account_key = ?");
             $stmtLogs->execute([$account_key]);
 
+            // 必须一并清理闲鱼配置与发布日志，否则：
+            // 1) 残留行 publish_enabled=1 仍会被 cron 选中，但 templates 已没了文案模板，
+            //    会用空描述发布商品；
+            // 2) 更严重的是 —— 若之后又新建了同名 account_key，
+            //    UPSERT 会命中这条残留记录，新账号直接继承上一任的 xy_secret_key / xy_account_id。
+            $pdo->prepare("DELETE FROM xianyu_config WHERE account_key = ?")->execute([$account_key]);
+            $pdo->prepare("DELETE FROM xianyu_publish_logs WHERE account_key = ?")->execute([$account_key]);
+
             $pdo->commit();
             jsonResponse(['status' => 'success', 'message' => '账号已成功删除']);
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            jsonResponse(['status' => 'error', 'message' => '删除失败: ' . $e->getMessage()], 500);
+            @error_log('ShopTextManager delete_account failed: ' . $e->getMessage());
+            jsonResponse(['status' => 'error', 'message' => '删除失败，详细原因已写入 PHP 错误日志'], 500);
         }
         break;
 
@@ -637,12 +712,20 @@ switch ($action) {
                 $stmtLogs = $pdo->prepare("UPDATE published_logs SET account_key = ? WHERE account_key = ?");
                 $stmtLogs->execute([$new_key, $old_key]);
 
+                // 同步改名闲鱼配置与发布日志，否则改名后该账号的定时发布配置会"消失"
+                // （配置还挂在旧 key 上），管理员会以为是 Bug。
+                $pdo->prepare("UPDATE xianyu_config SET account_key = ? WHERE account_key = ?")
+                    ->execute([$new_key, $old_key]);
+                $pdo->prepare("UPDATE xianyu_publish_logs SET account_key = ? WHERE account_key = ?")
+                    ->execute([$new_key, $old_key]);
+
                 $pdo->commit();
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
-                jsonResponse(['status' => 'error', 'message' => '修改失败: ' . $e->getMessage()], 500);
+                @error_log('ShopTextManager update_account_key failed: ' . $e->getMessage());
+                jsonResponse(['status' => 'error', 'message' => '修改失败，详细原因已写入 PHP 错误日志'], 500);
             }
         }
 
@@ -727,46 +810,74 @@ switch ($action) {
         $ak = trim($input['account_key'] ?? '');
         if (empty($ak)) jsonResponse(['status' => 'error', 'message' => '账号不能为空'], 400);
 
-        // 列表接口返回的是脱敏秘钥。若管理员打开配置后未改动直接保存，
-        // 提交上来的就是脱敏串，此时必须保留库里的原值，否则会把真实秘钥覆盖成 "sk****abc"。
-        $submittedSecret = trim($input['xy_secret_key'] ?? '');
-        $prevSecret = '';
-        $prevStmt = $pdo->prepare("SELECT xy_secret_key FROM xianyu_config WHERE account_key = ?");
-        $prevStmt->execute([$ak]);
-        $prevRow = $prevStmt->fetch();
-        if ($prevRow) {
-            $prevSecret = (string)$prevRow['xy_secret_key'];
-            if ($submittedSecret !== '' && $submittedSecret === maskSecretKey($prevSecret)) {
-                $submittedSecret = $prevSecret; // 未修改，沿用原值
+        // 服务地址协议白名单：允许 http/https（含 127.0.0.1 与内网地址 —— xianyu-auto-reply
+        // 常与本站同机部署，按 SSRF 规则拦截会直接废掉自建场景），
+        // 但拒绝 file://、gopher:// 等，避免发布时把分销秘钥 POST 到非 HTTP 协议。
+        if (isset($input['xy_server_url'])) {
+            $submittedUrl = rtrim(trim((string)$input['xy_server_url']), '/');
+            if ($submittedUrl !== '') {
+                $scheme = strtolower((string)parse_url($submittedUrl, PHP_URL_SCHEME));
+                if (!in_array($scheme, ['http', 'https'], true)) {
+                    jsonResponse(['status' => 'error', 'message' => '服务地址必须以 http:// 或 https:// 开头'], 400);
+                }
             }
         }
 
-        $fields = [
-            'xy_server_url' => trim($input['xy_server_url'] ?? ''),
-            'xy_secret_key' => $submittedSecret,
-            'xy_account_id' => trim($input['xy_account_id'] ?? ''),
-            'xy_account_remark' => trim($input['xy_account_remark'] ?? ''),
-            'publish_enabled' => !empty($input['publish_enabled']) ? 1 : 0,
-            'publish_times' => trim($input['publish_times'] ?? '09:00'),
-            'publish_price' => (float)($input['publish_price'] ?? 9.90),
-            'publish_original_price' => (float)($input['publish_original_price'] ?? 0),
-            'publish_address' => trim($input['publish_address'] ?? ''),
-            'publish_quantity' => (int)($input['publish_quantity'] ?? 1),
-            'publish_shipping_method' => trim($input['publish_shipping_method'] ?? 'free'),
-            'publish_category_id' => trim($input['publish_category_id'] ?? ''),
-            'publish_category_name' => trim($input['publish_category_name'] ?? ''),
-            'publish_channel_cat_id' => trim($input['publish_channel_cat_id'] ?? ''),
-            'publish_channel_cat_name' => trim($input['publish_channel_cat_name'] ?? ''),
-            'publish_leaf_id' => trim($input['publish_leaf_id'] ?? ''),
-            'publish_tb_cat_id' => trim($input['publish_tb_cat_id'] ?? ''),
-            'image_source' => trim($input['image_source'] ?? 'auto'),
-            'custom_image_url' => trim($input['custom_image_url'] ?? ''),
-        ];
+        // 先取旧配置：秘钥回填与「未提交字段保持原值」都要用到
+        $prevStmt = $pdo->prepare("SELECT * FROM xianyu_config WHERE account_key = ?");
+        $prevStmt->execute([$ak]);
+        $prevCfg = $prevStmt->fetch();
+        $exists = is_array($prevCfg);
 
-        // UPSERT: 存在则更新，不存在则插入
-        $check = $pdo->prepare("SELECT id FROM xianyu_config WHERE account_key = ?");
-        $check->execute([$ak]);
-        $exists = $check->fetch();
+        // 列表接口返回的是脱敏秘钥。若管理员打开配置后未改动直接保存，
+        // 提交上来的就是脱敏串，此时必须保留库里的原值，否则会把真实秘钥覆盖成 "sk****abc"。
+        $submittedSecret = trim($input['xy_secret_key'] ?? '');
+        $prevSecret = $exists ? (string)$prevCfg['xy_secret_key'] : '';
+        if ($submittedSecret !== '' && $submittedSecret === maskSecretKey($prevSecret)) {
+            $submittedSecret = $prevSecret; // 未修改，沿用原值
+        }
+
+        /**
+         * 取值策略：请求里带了这个键 → 用提交值（允许主动清空）；
+         * 请求里没带 → 沿用库里的旧值；首次新增 → 用默认值。
+         *
+         * 不能一律写成 `$input['x'] ?? ''`：后台表单并非每个字段都有输入框
+         * （例如 4 个分类 ID 只在需要时才展示），那样保存一次就会把库里的值静默清空。
+         */
+        $pick = static function (string $key, $default) use ($input, $prevCfg) {
+            if (array_key_exists($key, $input)) {
+                $v = $input[$key];
+                return is_string($v) ? trim($v) : $v;
+            }
+            if (is_array($prevCfg) && array_key_exists($key, $prevCfg) && $prevCfg[$key] !== null) {
+                return $prevCfg[$key];
+            }
+            return $default;
+        };
+
+        $fields = [
+            'xy_server_url'            => rtrim((string)$pick('xy_server_url', ''), '/'),
+            'xy_secret_key'            => $submittedSecret,
+            'xy_account_id'            => (string)$pick('xy_account_id', ''),
+            'xy_account_remark'        => (string)$pick('xy_account_remark', ''),
+            'publish_enabled'          => array_key_exists('publish_enabled', $input)
+                                            ? (!empty($input['publish_enabled']) ? 1 : 0)
+                                            : (int)($prevCfg['publish_enabled'] ?? 0),
+            'publish_times'            => (string)$pick('publish_times', '09:00'),
+            'publish_price'            => (float)$pick('publish_price', 9.90),
+            'publish_original_price'   => (float)$pick('publish_original_price', 0),
+            'publish_address'          => (string)$pick('publish_address', ''),
+            'publish_quantity'         => (int)$pick('publish_quantity', 1),
+            'publish_shipping_method'  => (string)$pick('publish_shipping_method', 'free'),
+            'publish_category_id'      => (string)$pick('publish_category_id', ''),
+            'publish_category_name'    => (string)$pick('publish_category_name', ''),
+            'publish_channel_cat_id'   => (string)$pick('publish_channel_cat_id', ''),
+            'publish_channel_cat_name' => (string)$pick('publish_channel_cat_name', ''),
+            'publish_leaf_id'          => (string)$pick('publish_leaf_id', ''),
+            'publish_tb_cat_id'        => (string)$pick('publish_tb_cat_id', ''),
+            'image_source'             => (string)$pick('image_source', 'auto'),
+            'custom_image_url'         => (string)$pick('custom_image_url', ''),
+        ];
 
         if ($exists) {
             $setParts = [];
@@ -841,6 +952,15 @@ switch ($action) {
             jsonResponse(['status' => 'error', 'message' => '服务器未安装或未启用 PHP curl 扩展，无法调用 xianyu-auto-reply 接口。请在 php.ini 中启用 curl 后重试。'], 500);
         }
 
+        // 只做协议白名单校验。
+        // 这里刻意**不**套用 isSafePublicUrl()：xianyu-auto-reply 常常与本站部署在同一台机器上，
+        // 管理员填 127.0.0.1 / 内网地址是正常用法，按 SSRF 规则拦截会直接废掉自建场景。
+        // 但必须挡掉 file://、gopher:// 等协议，避免被当成任意协议探测的跳板。
+        $scheme = strtolower((string)parse_url($server_url, PHP_URL_SCHEME));
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            jsonResponse(['status' => 'error', 'message' => '服务地址必须以 http:// 或 https:// 开头'], 400);
+        }
+
         $apiUrl = $server_url . '/api/v1/external/enabled-accounts';
         $ch = curl_init();
         curl_setopt_array($ch, [
@@ -850,6 +970,10 @@ switch ($action) {
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 15,
+            CURLOPT_CONNECTTIMEOUT => 8,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_SSL_VERIFYPEER => false,
         ]);
         $resp = curl_exec($ch);
@@ -1064,8 +1188,28 @@ switch ($action) {
         $results = [];
         $publishedCount = 0;
 
+        // 整体墙钟预算：cron 每分钟调一次，单个账号最坏可能耗掉 50s(图片) + 30s(分类) + 120s(发布)，
+        // 若不设上限，排在数组前面的"慢账号"会一直饿死后面的账号（队头阻塞），
+        // 并且总耗时可能超过 PHP max_execution_time 被中途杀掉。
+        // 这里同时放宽 PHP 自身时限并给自己设一个更短的截止时间。
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(120);
+        }
+        $runDeadline = microtime(true) + 50;
+
         foreach ($configs as $cfg) {
+            // 预算耗尽：剩下的账号本轮直接跳过，下一分钟 cron 会继续处理
+            if (microtime(true) > $runDeadline) {
+                $results[] = [
+                    'account_key' => $cfg['account_key'] ?? '',
+                    'status' => 'skipped',
+                    'message' => '本轮调度时间预算已耗尽，该账号将在下一分钟继续处理',
+                ];
+                continue;
+            }
             // 单个用户处理异常不能中断整个调度循环，否则会影响其他用户
+            // 注意必须是 Throwable：TypeError/Error 不是 Exception，
+            // 只 catch Exception 会让一个账号的异常直接掀翻整个定时循环。
             try {
                 // 规范化发布时间: 兼容 "9:00" / "9:5" 等写法，统一为 "09:00" 形式
                 $publishTimes = array_filter(array_map(function ($pt) {
@@ -1104,9 +1248,11 @@ switch ($action) {
                 $game = $gameStmt->fetch();
 
                 if (!$game) {
-                    // 没有待发布商品了（使用北京时间保持时区一致）
-                    $pdo->prepare("UPDATE xianyu_config SET last_publish_at = ?, last_publish_status = 'idle' WHERE account_key = ?")
-                        ->execute([getBeijingNow(), $cfg['account_key']]);
+                    // 没有待发布商品了。
+                    // 只更新状态、不写 last_publish_at：该字段同时被上面的"同分钟去重"判断使用，
+                    // 若在这里写入，管理员刚好在這一分钟新增商品也会被判为"已发布"而跳过。
+                    $pdo->prepare("UPDATE xianyu_config SET last_publish_status = 'idle' WHERE account_key = ?")
+                        ->execute([$cfg['account_key']]);
                     $results[] = ['account_key' => $cfg['account_key'], 'status' => 'idle', 'message' => '无待发布商品'];
                     continue;
                 }
@@ -1121,7 +1267,7 @@ switch ($action) {
                     'message' => $result['message'],
                 ];
                 if ($result['success']) $publishedCount++;
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 // 捕获单个用户的异常，记录后继续处理其他用户
                 $results[] = [
                     'account_key' => $cfg['account_key'] ?? '',
@@ -1164,7 +1310,7 @@ function executeXianyuPublish(PDO $pdo, string $account_key, int $game_id, strin
         return executeXianyuPublishInner($pdo, $account_key, $game_id, $triggerType);
     } finally {
         // 无论成功、失败或异常，都必须释放锁
-        try { $pdo->prepare("SELECT RELEASE_LOCK(?)")->execute([$lockName]); } catch (Exception $e) { /* 忽略 */ }
+        try { $pdo->prepare("SELECT RELEASE_LOCK(?)")->execute([$lockName]); } catch (Throwable $e) { /* 忽略 */ }
     }
 }
 
@@ -1255,7 +1401,8 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
                     break;
                 }
                 // 把剩余预算下发给搜索，且只给它一小半，给后面的下载/上传留足时间
-                $detail = searchImagesOnlineDetailed($cn, $en, 8, (int)max(4, $left * 0.4));
+                // 单次请求超时上限 10s：配合内部 35s 硬上限，保证下载/上传仍有时间可用
+                $detail = searchImagesOnlineDetailed($cn, $en, 8, (int)max(4, min(10, $left * 0.4)));
                 $searchDiag = $detail;
                 $queue = $detail['urls'];
                 continue;
@@ -1456,7 +1603,7 @@ function sniffImageType(string $data): ?array {
  *
  * @return array{body:string,code:int,content_type:string}|null
  */
-function safeHttpGet(string $url, int $timeout = 20, int $maxRedirects = 5, array $headers = []): ?array {
+function safeHttpGet(string $url, int $timeout = 20, int $maxRedirects = 5, array $headers = [], int $maxBytes = 0): ?array {
     if (!function_exists('curl_init')) return null;
     $current = $url;
     // 默认请求头：部分图床/搜索引擎会拒绝没有 Accept / Accept-Language 的请求
@@ -1484,13 +1631,38 @@ function safeHttpGet(string $url, int $timeout = 20, int $maxRedirects = 5, arra
             CURLOPT_ENCODING => '', // 自动解压 gzip/br，减少传输耗时
             CURLOPT_HTTPHEADER => array_merge($defaultHeaders, $headers),
         ]);
-        $body = curl_exec($ch);
+
+        // $maxBytes > 0：边收边累计，超过上限立刻中止传输。
+        // 不能等收完再判断大小 —— 对方若返回一个几 GB 的响应，内存会先被打爆。
+        $acc = '';
+        $tooBig = false;
+        $useWriteFn = $maxBytes > 0;
+        if ($useWriteFn) {
+            curl_setopt($ch, CURLOPT_WRITEFUNCTION, static function ($curl, $chunk) use (&$acc, &$tooBig, $maxBytes) {
+                if ($tooBig) return 0; // 通知 libcurl 中止
+                $acc .= $chunk;
+                if (strlen($acc) > $maxBytes) {
+                    $tooBig = true;
+                    $acc = '';
+                    return 0;
+                }
+                return strlen($chunk);
+            });
+        }
+
+        $execRet = curl_exec($ch);
         $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $ct = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
         $next = (string)curl_getinfo($ch, CURLINFO_REDIRECT_URL);
         curl_close($ch);
 
-        if ($body === false) return null;
+        if ($useWriteFn) {
+            if ($tooBig || $execRet === false) return null;
+            $body = $acc;
+        } else {
+            if ($execRet === false) return null;
+            $body = $execRet;
+        }
         if (in_array($code, [301, 302, 303, 307, 308], true) && $next !== '') {
             $current = $next;
             continue;
@@ -1707,8 +1879,10 @@ function searchImagesOnlineDetailed(string $cn, string $en, int $limit = 10, int
         ['name' => 'wikimedia', 'fn' => 'searchProviderWikimedia'],
     ];
 
-    // 整体预算：三个图源 × 每源最多 2 个关键词，因此给到 $timeout 的 3 倍
-    $deadline = microtime(true) + max(8, $timeout * 3);
+    // 整体预算：三个图源 × 每源最多 2 个关键词，理论上限接近 $timeout 的 3 倍。
+    // 必须再夹一个 35 秒的硬上限：调用方（发布主循环）的总预算只有 50 秒，
+    // 若这里按 timeout*3 展开，单是搜图就可能吃掉 60 秒，把下载/上传的时间挤没了。
+    $deadline = microtime(true) + max(6, min($timeout * 3, 35));
     $tried = [];
     $collected = [];
 
@@ -1854,7 +2028,20 @@ function resolveHostIps(string $host): array {
  * 私有网段(10/8、172.16/12、192.168/16)、保留地址、链路本地(169.254/16)一律拒绝。
  */
 function isPublicIp(string $ip): bool {
-    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+    // NO_PRIV_RANGE 覆盖 10/8、172.16/12、192.168/16；
+    // NO_RES_RANGE 覆盖 0/8、127/8、169.254/16、224/4、240/4 等保留段。
+    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+        return false;
+    }
+    // 但 PHP 的过滤标志**不包含**运营商级 NAT 段 100.64.0.0/10 (RFC 6598)，
+    // 这段在不少云主机/容器网络里能直达内网与元数据服务，必须显式拦掉。
+    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        $long = ip2long($ip);
+        if ($long !== false) {
+            if ($long >= ip2long('100.64.0.0') && $long <= ip2long('100.127.255.255')) return false;
+        }
+    }
+    return true;
 }
 
 /**
@@ -1867,7 +2054,9 @@ function isPublicIp(string $ip): bool {
  * @return array{path:string,mime:string,ext:string,size:int}|null
  */
 function downloadImageToTemp(string $url, int $timeout = 20): ?array {
-    $resp = safeHttpGet($url, max(3, min(30, $timeout)));
+    // 6MB 传输硬上限：xianyu 的上传上限是 5MB，超过就该换下一个候选，
+    // 但必须留一点余量以便下面的判断能给出明确原因而不是"下载失败"。
+    $resp = safeHttpGet($url, max(3, min(30, $timeout)), 5, [], 6 * 1024 * 1024);
     if (!$resp) return null;
 
     $data = $resp['body'];
@@ -1951,7 +2140,8 @@ function getXianyuCategoryRecommend(string $serverUrl, string $secretKey, string
         ]),
         CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 30,
+        CURLOPT_TIMEOUT => 20,
+        CURLOPT_CONNECTTIMEOUT => 10, // 服务不可达时快速失败，避免占满定时调度的墙钟预算
         CURLOPT_SSL_VERIFYPEER => false,
     ]);
     $resp = curl_exec($ch);
@@ -1969,7 +2159,10 @@ function publishSingleToXianyu(string $serverUrl, array $payload): array {
         CURLOPT_POSTFIELDS => json_encode($payload),
         CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 120,
+        // 发布本身可能较慢（对方要真实调用闲鱼），但 120s 过久：
+        // cron 每分钟一次，一次卡住就会饿死后续账号。60s 足够，另加连接超时快速失败。
+        CURLOPT_TIMEOUT => 60,
+        CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_SSL_VERIFYPEER => false,
     ]);
     $resp = curl_exec($ch);
@@ -2033,7 +2226,9 @@ function safeTruncate(string $s, int $max): string {
  * 若把 secret_key 原样返回，任何匿名请求者都能拿到他人 xianyu-auto-reply 的分销秘钥。
  * 这里只回显首尾几位，保存时若前端原样提交了这个脱敏值，则视为"未修改"并保留原值。
  */
-function maskSecretKey(string $key): string {
+function maskSecretKey(?string $key): string {
+    // 允许 null：老库里 xy_secret_key 可能是可空列，传 null 会让 string 形参抛 TypeError 掀翻整个接口
+    $key = (string)$key;
     if ($key === '') return '';
     $len = strlen($key);
     if ($len <= 8) return str_repeat('*', $len);

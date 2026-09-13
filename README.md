@@ -200,6 +200,22 @@ ShopTextManager 定时发布时会依次调用以下 xianyu-auto-reply 公开接
 
 > 📖 详细 API 文档请参考 [xianyu-auto-reply README](https://github.com/hanabi1314/xianyu-auto-reply) 的「公开商品发布相关接口」章节。
 
+#### 联网搜图自检
+
+发布依赖"自动联网搜图"（依次尝试 **Bing → DuckDuckGo → Wikimedia**，结果按关键词缓存 6 小时）。
+若发布报「未能获取商品图片」，可在后台 **【手动发布商品到闲鱼】** 弹窗中点 **【测试联网搜图】**，
+或直接调用接口排查：
+
+```bash
+curl -X POST "http://your-domain/api.php?action=test_image_search" \
+  -H "Content-Type: application/json" -d '{"game_id": 1}'
+```
+
+返回里 `providers` 会逐个图源给出成败，`downloaded` 表示是否真的下载到了可用图片字节
+（搜到 URL 不等于能用，所以这一步会实际下载校验）。
+
+> 部署后请先确认 PHP 已启用 `curl` 扩展，且服务器能出网：`curl -I https://www.bing.com`
+
 #### 常见问题
 
 | 问题 | 原因 | 解决方案 |
@@ -256,7 +272,7 @@ The system uses a strict tiered storage architecture to **prevent data confusion
 
 ##### ⚙️ Database Configuration:
 - **Option A (Environment Variables, Recommended)**: Copy `.env.example` to `.env` and set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`.
-- **Option B (Direct Config)**: Edit database connection parameters directly in `api.php` (lines 18–22).
+- **Option B (Direct Config)**: Edit database connection parameters directly in `api.php` (lines 84–88).
 
 ---
 

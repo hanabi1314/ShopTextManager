@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ShopTextManager - 商品文案管理与快速发布系统</title>
+  <meta name="description" content="ShopTextManager - 商品文案管理与快速发布系统">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     /* =========================================================
@@ -366,6 +367,34 @@
     html.dark-mode .stats-badge {
       background-color: #334155 !important;
       color: #f8fafc !important;
+    }
+
+    /* 上面那条 `html.dark-mode strong { color: inherit }` 的权重是 (0,1,2)，
+       高于 `.stats-badge strong` 的 (0,1,1)，会把统计数字从主题黄压成白色。
+       这里显式提权补回来。 */
+    html.dark-mode .stats-badge strong {
+      color: var(--xianyu-yellow) !important;
+    }
+
+    /* 次要/危险按钮在暗色下原本保持浅底，与整体深色调不一致 */
+    html.dark-mode .btn-secondary {
+      background-color: #334155 !important;
+      color: #f8fafc !important;
+      border-color: #475569 !important;
+    }
+
+    html.dark-mode .btn-secondary:hover {
+      background-color: #475569 !important;
+    }
+
+    html.dark-mode .btn-danger {
+      background-color: #451a1a !important;
+      color: #fca5a5 !important;
+      border-color: #7f1d1d !important;
+    }
+
+    html.dark-mode .btn-danger:hover {
+      background-color: #5b2121 !important;
     }
 
     html.dark-mode .sponsor-banner {
@@ -741,6 +770,11 @@
       top: 50%;
       transform: translateY(-50%);
       color: var(--xianyu-black);
+    }
+
+    /* 暗色下输入框底色变深，放大镜图标原本是纯黑(--xianyu-black)，会几乎看不见 */
+    html.dark-mode .search-input-wrapper i {
+      color: var(--text-muted) !important;
     }
 
     .search-input {
@@ -1534,27 +1568,27 @@
         <!-- 登录账号信息指示牌 -->
         <div class="user-pill" id="userPill">
           <i class="fa-solid fa-user"></i>
-          <span><span class="user-prefix" data-i18n="loginUserPrefix">用户名:</span> <strong id="currentAccountKeyDisplay" style="color: var(--xianyu-yellow);">未登录</strong></span>
+          <span><span class="user-prefix" data-i18n="loginUserPrefix">用户名:</span> <strong id="currentAccountKeyDisplay" style="color: var(--xianyu-yellow);" data-i18n="notLoggedIn">未登录</strong></span>
           <span id="adminBadgeTag" class="badge-admin" style="display:none;">ADMIN</span>
         </div>
 
         <!-- 深色/灰暗模式切换 -->
-        <button class="btn btn-black" id="themeToggleBtn" onclick="toggleTheme()" title="切换主题 / Toggle Theme">
+        <button class="btn btn-black" id="themeToggleBtn" onclick="toggleTheme()" data-i18n-title="themeToggleTitle" title="切换主题">
           <i class="fa-solid fa-moon" id="themeIcon"></i> <span id="themeText" class="btn-text" data-i18n="themeDark">暗黑模式</span>
         </button>
 
         <!-- 中英文切换 -->
-        <button class="btn btn-black" id="langToggleBtn" onclick="toggleLanguage()" title="Language / 语言切换">
+        <button class="btn btn-black" id="langToggleBtn" onclick="toggleLanguage()" data-i18n-title="langToggleTitle" title="语言切换">
           <i class="fa-solid fa-globe"></i> <span id="langText" class="btn-text">English</span>
         </button>
 
         <!-- 管理员控制台 (仅 admin 可见) -->
-        <button class="btn btn-black" id="adminConsoleBtn" onclick="openAdminModal()" style="display: none;" title="管理员控制台">
+        <button class="btn btn-black" id="adminConsoleBtn" onclick="openAdminModal()" style="display: none;" data-i18n-title="adminConsoleTitle" title="管理员控制台">
           <i class="fa-solid fa-gauge-high"></i> <span class="btn-text" data-i18n="adminConsole">管理员控制台</span>
         </button>
 
         <!-- 退出登录按钮 -->
-        <button class="btn btn-danger" id="logoutBtn" onclick="logout()" style="display: none;" title="退出登录">
+        <button class="btn btn-danger" id="logoutBtn" onclick="logout()" style="display: none;" data-i18n-title="logoutTitle" title="退出登录">
           <i class="fa-solid fa-right-from-bracket"></i> <span class="btn-text" data-i18n="logout">退出登录</span>
         </button>
       </div>
@@ -1601,7 +1635,7 @@
       <div class="search-input-wrapper" style="position: relative; display: flex; align-items: center; flex: 1;">
         <i class="fa-solid fa-magnifying-glass"></i>
         <input type="text" id="gameSearchInput" class="search-input" placeholder="输入商品名称/副名搜索..." data-i18n-placeholder="searchPlaceholder" oninput="onSearchInput()">
-        <button id="clearSearchBtn" onclick="clearSearch()" style="display: none; position: absolute; right: 12px; background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 14px; padding: 4px;" title="清空搜索">
+        <button id="clearSearchBtn" onclick="clearSearch()" style="display: none; position: absolute; right: 12px; background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 14px; padding: 4px;" data-i18n-title="clearSearchTitle" title="清空搜索">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -1655,7 +1689,9 @@
 
         <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700;">
           <span data-i18n="perPageLabel">每页:</span>
-          <select id="pageSizeSelect" style="padding: 4px 8px; border-radius: 6px; border: 2px solid var(--xianyu-black); font-weight: 800;" onchange="changePageSize()">
+          <!-- class="page-select" 不能少：暗色主题的下拉底色/文字色规则都挂在这个类上，
+               少了它，暗色模式下这个下拉会渲染成浅底浅字（几乎不可读）。 -->
+          <select id="pageSizeSelect" class="page-select" style="padding: 4px 8px; border-radius: 6px; border: 2px solid var(--xianyu-black); font-weight: 800;" onchange="changePageSize()">
             <option value="6">6</option>
             <option value="12" selected>12</option>
             <option value="24">24</option>
@@ -1679,7 +1715,7 @@
           <i class="fa-solid fa-user-lock"></i> <span data-i18n="loginModalTitle">用户登录</span>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <button class="btn btn-black" id="loginModalLangBtn" onclick="toggleLanguage()" title="Language / 语言切换" style="padding: 4px 10px; font-size: 12px; height: auto;">
+          <button class="btn btn-black" id="loginModalLangBtn" onclick="toggleLanguage()" data-i18n-title="langToggleTitle" title="语言切换" style="padding: 4px 10px; font-size: 12px; height: auto;">
             <i class="fa-solid fa-globe"></i> <span id="loginLangText">English</span>
           </button>
           <button class="modal-close" id="loginModalCloseBtn" onclick="closeModal('loginModal')" style="display:none;">&times;</button>
@@ -2099,7 +2135,9 @@
           <label class="form-label" data-i18n="templateContentLabel">文案模板内容：</label>
           <textarea id="adminEditTemplateTextarea" class="form-textarea" rows="8" placeholder="在这里编辑该用户的文案模板..."></textarea>
         </div>
-        <div class="tip-box-info" style="font-size: 12px; line-height: 1.5;">
+        <!-- id 必须存在：applySceneModeUI() 会按场景/语言整体重写这段占位符说明。
+             早期版本漏了这个 id，导致英文界面下这块永远显示中文。 -->
+        <div id="adminTemplateTagsTip" class="tip-box-info" style="font-size: 12px; line-height: 1.5;">
           💡 <strong>占位符说明:</strong><br>
           • <code>{{VAR_1}}</code> - 替换为商品主名称<br>
           • <code>{{VAR_2}}</code> - 替换为商品副名称<br>
@@ -2311,7 +2349,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="confirmDialogCancelBtn" onclick="closeConfirmDialog(false)" data-i18n="cancelBtn">取消</button>
-        <button class="btn btn-xianyu" id="confirmDialogOkBtn" onclick="closeConfirmDialog(true)"><i class="fa-solid fa-circle-check"></i> <span>确认</span></button>
+        <button class="btn btn-xianyu" id="confirmDialogOkBtn" onclick="closeConfirmDialog(true)"><i class="fa-solid fa-circle-check"></i> <span data-i18n="confirmBtn">确认</span></button>
       </div>
     </div>
   </div>
@@ -2324,12 +2362,18 @@
     const I18N = {
       cn: {
         appSubtitle: "Shop Copy Studio",
+        appTitle: "ShopTextManager - 商品文案管理与快速发布系统",
         sponsorTag: "赞助推荐",
         sponsorDesc: "🚀 NodeHK VPN - 专为跨境电商、外贸及节点加速打造的高速稳定 VPN 服务：",
         themeDark: "暗黑模式",
         themeLight: "明亮模式",
         loginUserPrefix: "用户名:",
         notLoggedIn: "未登录",
+        adminConsoleTitle: "管理员控制台",
+        logoutTitle: "退出登录",
+        clearSearchTitle: "清空搜索",
+        themeToggleTitle: "切换主题",
+        langToggleTitle: "语言切换",
         adminConsole: "管理员控制台",
         logout: "退出登录",
         loggedUserKey: "当前登录用户 Key:",
@@ -2563,12 +2607,18 @@
       },
       en: {
         appSubtitle: "Shop Copy Studio",
+        appTitle: "ShopTextManager - Product Copy Management & Fast Publish",
         sponsorTag: "Sponsor",
         sponsorDesc: "🚀 NodeHK VPN - Fast & Stable Network Acceleration Service for Cross-Border Sellers:",
         themeDark: "Dark Mode",
         themeLight: "Light Mode",
         loginUserPrefix: "User:",
         notLoggedIn: "Not Logged In",
+        adminConsoleTitle: "Admin Console",
+        logoutTitle: "Log Out",
+        clearSearchTitle: "Clear search",
+        themeToggleTitle: "Toggle theme",
+        langToggleTitle: "Switch language",
         adminConsole: "Admin Console",
         logout: "Logout",
         loggedUserKey: "Current User Key:",
@@ -2811,8 +2861,11 @@
       } else {
         document.documentElement.classList.remove('dark-mode');
       }
-      updateThemeUI();
+      // 顺序很重要：必须先 applyLanguage() 把 data-i18n 文案铺好，再 updateThemeUI()。
+      // 主题按钮文字带 data-i18n，若先刷 UI 后铺语言，暗色模式下首次加载会显示成
+      // "暗黑模式"（本该显示"明亮模式"），要等用户手动切一次才正常。
       applyLanguage(currentLang);
+      updateThemeUI();
     }
 
     function toggleTheme() {
@@ -2884,6 +2937,17 @@
         }
       });
 
+      // 浏览器标签页标题也要跟随语言，否则英文界面下标签页仍是中文
+      if (I18N[lang] && I18N[lang].appTitle) document.title = I18N[lang].appTitle;
+
+      // title 属性（原生 tooltip）同样要翻译，否则英文界面下鼠标悬停仍弹中文
+      document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        if (I18N[lang] && I18N[lang][key] !== undefined) {
+          el.title = I18N[lang][key];
+        }
+      });
+
       if (typeof applySceneModeUI === 'function') applySceneModeUI();
       if (typeof renderMainView === 'function') renderMainView();
       if (typeof refreshAdminDashboard === 'function') refreshAdminDashboard();
@@ -2893,6 +2957,11 @@
       // 定时发布 / 发布日志表格由 JS 动态生成，切换语言时必须重渲染
       if (typeof renderXianyuConfigTable === 'function') renderXianyuConfigTable();
       if (typeof renderXianyuLogsTable === 'function' && Array.isArray(xianyuLogsData)) renderXianyuLogsTable(xianyuLogsData);
+      // 手动发布弹窗的下拉项由 t() 动态生成，开着弹窗切语言时必须重建
+      const mpModal = document.getElementById('manualPublishModal');
+      if (mpModal && mpModal.classList.contains('active') && typeof refreshManualPublishOptions === 'function') {
+        refreshManualPublishOptions();
+      }
     }
 
     // ========================================================
@@ -3352,7 +3421,8 @@
         ? `Active Copy Template for Account [${currentUser.account_key}]` 
         : `当前账号【${currentUser.account_key}】应用中的文案模版`;
 
-      box.innerHTML = `<div><strong>${labelText} <span style="font-size: 11px; background: var(--xianyu-black); color: var(--xianyu-yellow); padding: 2px 6px; border-radius: 4px; margin-left: 6px;">${profile.badge}</span>:</strong></div>\n${textHtml}`;
+      // account_key 来自数据库，可能含引号/尖括号，拼进 innerHTML 前必须转义
+      box.innerHTML = `<div><strong>${escapeHtml(labelText)} <span style="font-size: 11px; background: var(--xianyu-black); color: var(--xianyu-yellow); padding: 2px 6px; border-radius: 4px; margin-left: 6px;">${escapeHtml(profile.badge)}</span>:</strong></div>\n${textHtml}`;
     }
 
     // 加载游戏数据
@@ -4225,6 +4295,7 @@
 
     // 保存商品封面图 URL (定时发布时会优先使用该图片)
     async function saveGameCover(gameId, coverUrl) {
+      const isEn = currentLang === 'en';
       try {
         const res = await fetch(`${API_BASE}?action=update_game_cover`, {
           method: 'POST',
@@ -4366,12 +4437,20 @@
         return;
       }
 
+      // 先夹取页码：筛选后总数变少时 currentPage 可能已越界，
+      // 不夹取会切出空数组 —— 表现为"复制成功但剪贴板是空的"。
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
       const startIndex = (currentPage - 1) * pageSize;
       const pageItems = filtered.slice(startIndex, startIndex + pageSize);
 
       const allTexts = pageItems.map(g => generateGameText(g)).join('\n\n' + '='.repeat(30) + '\n\n');
       copyToClipboard(allTexts);
-      showToast(`已成功批量复制本页 ${pageItems.length} 条商品文案！`);
+      showToast(isEn
+        ? `Copied ${pageItems.length} product description(s) on this page!`
+        : `已成功批量复制本页 ${pageItems.length} 条商品文案！`);
     }
 
     // ========================================================
@@ -4671,7 +4750,8 @@
     }
 
     function escapeHtml(str) {
-      if (!str) return '';
+      // 注意不能用 !str：0 / false / '' 都会被吞掉，数字 0 会被渲染成空白
+      if (str === null || str === undefined) return '';
       return String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -4939,25 +5019,51 @@
       if (!xianyuConfigsData.length) {
         await loadXianyuConfigs();
       }
-      // Load accounts into select (仅列出已配置闲鱼账号的用户)
       const accSelect = document.getElementById('manualPublishAccountSelect');
-      const configured = xianyuConfigsData.filter(c => c.xy_account_id);
-      accSelect.innerHTML = `<option value="">${escapeHtml(t('xySelectUserPlaceholder'))}</option>` +
-        (configured.length
-          ? configured.map(c =>
-            `<option value="${escapeHtml(c.account_key)}" ${preselectedAccount === c.account_key ? 'selected' : ''}>${escapeHtml(c.account_key)}</option>`
-          ).join('')
-          : `<option value="">${escapeHtml(t('xyNoConfiguredAccount'))}</option>`);
-
-      // Load games for the preselected account
-      if (preselectedAccount) {
-        await loadManualPublishGames(preselectedAccount);
-      } else {
-        document.getElementById('manualPublishGameSelect').innerHTML = `<option value="">${escapeHtml(t('xySelectUserFirst'))}</option>`;
-      }
-      accSelect.onchange = () => loadManualPublishGames(accSelect.value);
+      if (accSelect) accSelect.onchange = () => loadManualPublishGames(accSelect.value);
+      // preselectedAccount 为空时也要走 refresh，让商品下拉正确显示「请先选择用户」
+      await refreshManualPublishOptions(preselectedAccount || '');
       openModal('manualPublishModal');
     }
+
+    /**
+     * 重建「手动发布」弹窗的两个下拉框。
+     * 选项文案是打开弹窗时用 t() 生成的；弹窗保持打开时切换语言不会自动刷新，
+     * 所以 applyLanguage() 里也会回调这里，否则英文界面下选项仍显示中文。
+     */
+    async function refreshManualPublishOptions(preselectedAccount) {
+      const accSelect = document.getElementById('manualPublishAccountSelect');
+      const gameSelect = document.getElementById('manualPublishGameSelect');
+      if (!accSelect || !gameSelect) return;
+      const prevAcc = accSelect.value;
+      const prevGame = gameSelect.value;
+      const wantAcc = (preselectedAccount !== undefined && preselectedAccount !== null) ? preselectedAccount : prevAcc;
+
+      const configured = xianyuConfigsData.filter(c => c.xy_account_id);
+      // 没有已配置账号时不再叠加占位项，否则会出现两个 value="" 的 option
+      accSelect.innerHTML = configured.length
+        ? `<option value="">${escapeHtml(t('xySelectUserPlaceholder'))}</option>` +
+          configured.map(c =>
+            `<option value="${escapeHtml(c.account_key)}">${escapeHtml(c.account_key)}</option>`
+          ).join('')
+        : `<option value="">${escapeHtml(t('xyNoConfiguredAccount'))}</option>`;
+      accSelect.value = wantAcc;
+
+      if (accSelect.value) {
+        await loadManualPublishGames(accSelect.value);
+        // 只有「账号没换」才回填原来选中的商品：换了账号后旧 game_id 在新列表里不存在，
+        // 直接赋值会让 select 变成未选中状态（selectedIndex = -1），下拉框显示空白。
+        if (prevGame && wantAcc === prevAcc &&
+            [...gameSelect.options].some(o => o.value === String(prevGame))) {
+          gameSelect.value = prevGame;
+        }
+      } else {
+        gameSelect.innerHTML = `<option value="">${escapeHtml(t('xySelectUserFirst'))}</option>`;
+      }
+    }
+
+    // 商品下拉的请求序号：连续切语言/切账号时，慢响应后到会覆盖新列表
+    let manualGamesSeq = 0;
 
     async function loadManualPublishGames(accountKey) {
       const gameSelect = document.getElementById('manualPublishGameSelect');
@@ -4965,9 +5071,11 @@
         gameSelect.innerHTML = `<option value="">${escapeHtml(t('xySelectUserFirst'))}</option>`;
         return;
       }
+      const seq = ++manualGamesSeq;
       try {
         const res = await fetch(`${API_BASE}?action=get_games&account_key=${encodeURIComponent(accountKey)}`);
         const data = await res.json();
+        if (seq !== manualGamesSeq) return;   // 已有更新的请求，丢弃本次过期响应
         if (data.status === 'success') {
           const unpublished = (data.games || []).filter(g => !g.is_published);
           if (!unpublished.length) {

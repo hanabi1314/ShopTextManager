@@ -46,6 +46,8 @@ async function startServer() {
 
   // dev 模式下闲鱼配置的进程内存储（仅内存，重启即丢）
   const devXianyuConfigs: Record<string, any> = {};
+  // 必须与 api.php / schema.sql 的 xianyu_config 列保持一致，
+  // 否则 dev 模式下前端拿不到这些字段，联调出来的界面和 PHP 生产环境不一致。
   const devXianyuDefault = (accountKey: string) => ({
     account_key: accountKey,
     xy_server_url: "",
@@ -59,11 +61,25 @@ async function startServer() {
     publish_address: "",
     publish_quantity: 1,
     publish_shipping_method: "free",
+    publish_category_id: "",
+    publish_category_name: "",
+    publish_channel_cat_id: "",
+    publish_channel_cat_name: "",
+    publish_leaf_id: "",
+    publish_tb_cat_id: "",
     image_source: "auto",
     custom_image_url: "",
     last_publish_at: null,
     last_publish_status: "",
   });
+
+  // 与 api.php 的 maskSecretKey() 保持一致：
+  // dev 模式若不脱敏，前端在 dev 下"看起来正常"，到生产才发现秘钥被脱敏导致回填逻辑有问题。
+  const maskSecretKeyDev = (key: string): string => {
+    if (!key) return "";
+    if (key.length <= 8) return "*".repeat(key.length);
+    return key.slice(0, 3) + "*".repeat(6) + key.slice(-3);
+  };
 
   // 内存数据服务 (与 MySQL 保持一致)
   let games: Game[] = [
@@ -146,11 +162,16 @@ async function startServer() {
           .filter(l => l.account_key === account_key)
           .map(l => l.game_id);
 
-        const result = games.map(g => ({
-          ...g,
-          game_name: g.game_name_en ? `${g.game_name_cn} (${g.game_name_en})` : g.game_name_cn,
-          is_published: publishedIds.includes(g.id)
-        }));
+        // 与 PHP 一致：只返回 is_active=1 的商品，且 cover_url 恒定为空字符串（不是 undefined）。
+        // 否则 dev 下能渲染、生产却少了字段，属于"联调骗人"的差异。
+        const result = games
+          .filter(g => (g as any).is_active !== 0)
+          .map(g => ({
+            ...g,
+            cover_url: (g as any).cover_url ?? "",
+            game_name: g.game_name_en ? `${g.game_name_cn} (${g.game_name_en})` : g.game_name_cn,
+            is_published: publishedIds.includes(g.id)
+          }));
 
         return res.json({ status: "success", games: result });
       }
@@ -328,7 +349,15 @@ async function startServer() {
       if (action === "delete_game") {
         const { game_id } = body;
         const gid = Number(game_id);
+        // 与 api.php 一致：非法 id 返回 400，否则 dev 下"删什么都成功"，掩盖真实错误路径
+        if (!Number.isFinite(gid) || gid <= 0) {
+          return res.status(400).json({ status: "error", message: "参数错误" });
+        }
+        const before = games.length;
         games = games.filter(g => g.id !== gid);
+        if (games.length === before) {
+          return res.status(404).json({ status: "error", message: "商品不存在" });
+        }
         publishedLogs = publishedLogs.filter(l => l.game_id !== gid);
         return res.json({ status: "success", message: "游戏已彻底从数据库与已隐藏记录中删除" });
       }
@@ -443,12 +472,22 @@ async function startServer() {
       if (action === "get_xianyu_configs") {
         return res.json({
           status: "success",
-          configs: accounts.map(a => ({
-            account_key: a.account_key,
-            is_admin: !!(a.is_admin || a.account_key === "admin"),
-            ...devXianyuDefault(a.account_key),
-            ...(devXianyuConfigs[a.account_key] || {}),
-          }))
+          configs: accounts.map(a => {
+            const merged = {
+              ...devXianyuDefault(a.account_key),
+              ...(devXianyuConfigs[a.account_key] || {}),
+            };
+            const rawSecret = String(merged.xy_secret_key || "");
+            return {
+              account_key: a.account_key,
+              is_admin: !!(a.is_admin || a.account_key === "admin"),
+              ...merged,
+              // 与 PHP 一致：回显脱敏秘钥 + 是否已配置的标志
+              xy_secret_key: maskSecretKeyDev(rawSecret),
+              xy_secret_key_set: rawSecret ? 1 : 0,
+              xy_configured: !!(merged.xy_server_url && merged.xy_account_id) ? 1 : 0,
+            };
+          })
         });
       }
 
@@ -476,7 +515,8 @@ async function startServer() {
       if (action === "test_xianyu_connection") {
         const { xy_server_url, xy_secret_key } = body;
         if (!xy_server_url || !xy_secret_key) {
-          return res.json({ status: "error", message: "服务地址和分销秘钥不能为空" });
+          // 与 api.php 一致：参数缺失是 400，不是 200 + status:"error"
+          return res.status(400).json({ status: "error", message: "服务地址和分销秘钥不能为空" });
         }
         try {
           const resp = await fetch(xy_server_url.replace(/\/$/, "") + "/api/v1/external/enabled-accounts", {

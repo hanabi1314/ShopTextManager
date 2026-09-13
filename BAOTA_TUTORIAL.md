@@ -29,6 +29,9 @@
 - **Web 服务器**：Nginx (推荐 Nginx 1.20+)
 - **数据库**：MySQL (推荐 5.7 或 8.0)
 - **PHP**：PHP 7.4 或 PHP 8.0/8.1/8.2（需安装 `pdo_mysql` 扩展，默认开启）
+- **PHP 扩展（必需）**：`curl` —— 「自动联网搜图上传」和调用 xianyu-auto-reply 都依赖它。
+  在【软件商店】-> 已安装的 PHP -> 【安装扩展】里确认 `curl` 已勾选；缺少它发布时会提示「服务器未安装或未启用 PHP curl 扩展」。
+- **PHP 扩展（建议）**：`mbstring`（用于中文按字符截断，缺失时代码有降级处理，不影响使用）
 - **Node.js**（若选择 Node.js 模式）：在软件商店安装 **【Node.js 版本管理器】** 或 **【PM2 管理器】**
 
 ---
@@ -44,7 +47,12 @@
 3. 点击 **【确定】** 创建数据库。
 4. 在数据库列表中找到刚创建的数据库，点击右侧的 **【导入】** 按钮。
 5. 上传并导入项目根目录下的 `schema.sql` 文件。
-6. 导入成功后，数据库中会自动创建 `games`、`templates` 和 `published_logs` 三张表及初始化数据。
+6. 导入成功后，数据库中会创建 **5 张表**：`games`、`templates`、`published_logs`（基础）
+   以及 `xianyu_config`、`xianyu_publish_logs`（v2.0 定时发布功能）。
+
+> ⚠️ 如果导入报错 `Access denied` 或 `No database selected`：本脚本**不会**自动建库，
+> 请确认是在【数据库】列表里选中了你的库之后再点【导入】。命令行导入请用
+> `mysql -u 用户名 -p 你的库名 < schema.sql`。
 
 ---
 
@@ -101,9 +109,46 @@ PHP 模式非常省资源，适合大多数宝塔服务器环境。
 > 🔐 **安全安全与修改提示（重要）**：
 > 系统默认初始管理员账号为 `admin`。部署成功后，请务必立即在 **【管理员控制台】 -> 【用户名与模板管理】** 中修改 `admin` 账号 Key（用户名），或重新添加您的专属管理员账号。更改后，系统将拒绝使用原 `admin` 登录，有效保障您的管理权限安全！
 
+### 第三步：配置定时任务（启用"定时自动发布商品"）
+
+这是 v2.0 的核心功能。到点后系统会自动挑选该账号下一个未发布商品 → **自动联网搜索图片并上传** → 发布到闲鱼。
+
+1. 宝塔面板左侧 **【计划任务】** -> **任务类型** 选 `访问URL`。
+2. **执行周期** 选 `每1分钟`（系统内部按配置的发布时间点精确匹配，并自带去重与并发锁，每分钟访问是安全的）。
+3. **URL** 填写（把域名换成你自己的）：
+
+```
+http://你的域名/api.php?action=run_scheduled_publish
+```
+
+4. 点【添加任务】后，可点右侧【执行】手动跑一次验证。
+
+然后在前台 **【管理员控制台】->【闲鱼发布配置】** 里为每个账号：填 `xianyu-auto-reply` 服务地址、分销秘钥、闲鱼账号 ID，打开"启用定时发布"开关，设置发布时间（如 `09:00,18:00`）与价格即可。
+
+> 🔍 **发布报"未能获取商品图片"怎么办？**
+> 在【手动发布商品到闲鱼】弹窗里先点 **【测试联网搜图】**，它会逐个图源（Bing / DuckDuckGo / Wikimedia）
+> 给出成败并实际下载一张验证。若三个都失败，说明服务器出网被防火墙拦截 —— 在服务器上执行
+> `curl -I https://www.bing.com` 确认；临时解决办法是在【单个商品管理】里给商品手动填封面图 URL。
+
+### 第四步：保护 .env（重要）
+
+若你用 `.env` 存放数据库密码，务必禁止外部访问（仓库已自带 `.htaccess`）：
+
+- **Apache**：自动生效。
+- **Nginx**：在站点配置 `server{}` 内加入：
+  ```
+  location ~ /\. { deny all; }
+  location = /.env { deny all; }
+  location ~* \.(sql|log)$ { deny all; }
+  ```
+
 ---
 
-## 5. 方案二：Node.js 部署模式 (备选)
+## 5. 方案二：Node.js 部署模式 (仅用于本地开发/联调，**不建议生产**)
+
+> ⚠️ **Node.js 后端 (`server.ts`) 没有接数据库**，所有数据都存在进程内存里，重启即丢失，
+> 也无法真正发布商品到闲鱼。它只用于本地改前端时免装 PHP。
+> **生产环境请务必使用方案一（PHP + MySQL）。**
 
 如果你希望使用 Node.js (`server.ts` / `server.cjs`) 运行服务端：
 
@@ -226,7 +271,7 @@ The system supports both **`.env` Environment File** and **Direct `api.php` Edit
   `api.php` includes a zero-dependency `.env` parser that automatically loads these settings.
 
 - **Option B: Direct Editing in `api.php`**
-  If you prefer double-clicking files directly in aaPanel File Manager, open `api.php` and modify the default fallback values around lines 25–30:
+  If you prefer double-clicking files directly in aaPanel File Manager, open `api.php` and modify the default fallback values around lines 84–88:
   ```php
   $db_host = getenv('DB_HOST') ?: '127.0.0.1';
   $db_port = getenv('DB_PORT') ?: '3306';
