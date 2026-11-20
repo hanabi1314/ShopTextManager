@@ -224,7 +224,12 @@ location ^~ /node_modules/            { deny all; }
    - 闲鱼要求 **频道分类 ID + 频道分类名称 + 淘宝分类 ID** 三者同时存在，缺任一都会被拒绝并报「请先根据商品描述重新选择完整的平台商品分类」。
    - 点「智能获取分类」从 xianyu-auto-reply 拉取候选，选中后字段自动填好。
    - 勾选「每单按商品描述自动匹配分类」后，即使此处留空，发布时也会按描述自动获取并回写；不勾选则固定用手工填写的分类。
+   - 游戏服务器搭建或出租文案会优先匹配服务器和技术服务分类。若没有合适的候选，可手动选定完整的服务分类并关闭自动匹配。
 8. 点「保存配置」
+
+定时发布和立即发布均使用账号文案模板渲染后的首个非空行作为商品标题。例如，将模板首行设为 `接【{{VAR_1}}】开服搭建/出租云服务器`，发布泰拉瑞亚时标题就是「接【泰拉瑞亚】开服搭建/出租云服务器」。完整文案仍作为商品描述发送。
+
+xianyu-auto-reply 的公开发布接口支持设置平台商品分类。闲鱼原生「发服务」发布入口需要单独的上游接口支持。详见[公开单品发布参数](https://github.com/zhinianboke/xianyu-auto-reply#4-发布单个商品)。
 
 > 页签名称是「**定时发布**」，配置弹窗标题是「闲鱼定时发布配置」。
 
@@ -510,7 +515,12 @@ Integrates [xianyu-auto-reply](https://github.com/zhinianboke/xianyu-auto-reply)
    - Xianyu requires **channel category ID + channel category name + Taobao category ID** together. Missing any one is rejected with "请先根据商品描述重新选择完整的平台商品分类".
    - "Fetch Category" pulls candidates from xianyu-auto-reply and fills the fields for you.
    - With "Auto-match category per item" enabled, publishing auto-resolves the category from the description and writes it back; otherwise the manual values are used as-is.
+   - Game server setup and rental listings prioritize server and technical service categories. If no suitable candidate is available, select a complete service category manually and disable auto-matching.
 8. Click **Save**
+
+Scheduled and immediate publishing use the first nonblank line of the rendered account template as the item title. For example, `接【{{VAR_1}}】开服搭建/出租云服务器` renders as `接【泰拉瑞亚】开服搭建/出租云服务器` for Terraria. The full rendered template is sent as the description.
+
+The xianyu-auto-reply public publish API supports setting the platform category. Xianyu's dedicated service listing flow requires separate upstream API support. See the [public single-item publish parameters](https://github.com/zhinianboke/xianyu-auto-reply#4-发布单个商品).
 
 > The tab is named **"定时发布 / Scheduled Publish"**; the modal title is "闲鱼定时发布配置 / Xianyu Scheduled Publish Config".
 

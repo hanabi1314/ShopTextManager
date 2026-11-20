@@ -1083,33 +1083,39 @@ switch ($action) {
             jsonResponse(['status' => 'error', 'message' => '该账号尚未配置闲鱼服务地址 / 分销秘钥 / 账号ID'], 400);
         }
 
-        // 商品描述：优先用选中商品的真实文案，其次用户手输关键词，最后退回账号模板
-        $description = '';
-        if ($game_id > 0) {
-            $stmt = $pdo->prepare("SELECT game_name_cn, game_name_en FROM games WHERE id = ?");
-            $stmt->execute([$game_id]);
-            $g = $stmt->fetch();
-            if ($g) {
-                $description = trim((string)$g['game_name_cn'] . ' ' . (string)$g['game_name_en']);
-            }
-        }
-        if ($description === '') $description = $keyword;
+        // 手输关键词优先，其次用选中商品渲染文案，最后用账号模板。
+        $description = $keyword;
         if ($description === '') {
             $stmt = $pdo->prepare("SELECT template_text FROM templates WHERE account_key = ?");
             $stmt->execute([$account_key]);
             $tpl = $stmt->fetch();
-            // 模板里可能有 {{VAR_1}} 之类的占位符，清掉后再交给推荐接口，避免干扰语义
-            $description = trim(preg_replace('/\{\{[A-Z_]+\}\}/', '', (string)($tpl['template_text'] ?? '')));
+            $templateText = (string)($tpl['template_text'] ?? '');
+            $game = false;
+            if ($game_id > 0) {
+                $stmt = $pdo->prepare("SELECT game_name_cn, game_name_en FROM games WHERE id = ?");
+                $stmt->execute([$game_id]);
+                $game = $stmt->fetch();
+            }
+            if ($game) {
+                $cn = (string)$game['game_name_cn'];
+                $en = (string)$game['game_name_en'];
+                $description = trim(renderXianyuDescription($templateText, $cn, $en));
+                if ($description === '') $description = trim($cn . ' ' . $en);
+            } else {
+                $description = trim(preg_replace('/\{\{[A-Z0-9_]+\}\}/', '', $templateText));
+            }
         }
         if ($description === '') {
             jsonResponse(['status' => 'error', 'message' => '请先选择商品或输入商品描述关键词，分类推荐需要商品描述'], 400);
         }
 
+        $serverService = isXianyuGameServerService(buildXianyuListingTitle($description, ''));
         $resp = getXianyuCategoryRecommend(
             (string)$cfg['xy_server_url'],
             (string)$cfg['xy_secret_key'],
             (string)$cfg['xy_account_id'],
-            $description
+            $description,
+            $serverService
         );
 
         if (empty($resp['success'])) {
@@ -1124,7 +1130,15 @@ switch ($action) {
             if (!is_array($raw)) continue;
             $c = normalizeXianyuCategoryCandidate($raw);
             $c['usable'] = xianyuCandidateUsable($c);
+            if ($serverService) {
+                $c['matches_service'] = xianyuServerServiceCategoryRank($c) > 0;
+            }
             $list[] = $c;
+        }
+        if ($serverService) {
+            usort($list, static fn(array $a, array $b): int =>
+                xianyuServerServiceCategoryRank($b) <=> xianyuServerServiceCategoryRank($a)
+            );
         }
 
         jsonResponse([
@@ -1428,17 +1442,11 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
     $tpl = $stmt->fetch();
     $templateText = $tpl ? $tpl['template_text'] : '';
 
-    // 替换模板占位符
     $cn = $game['game_name_cn'];
-    $en = $game['game_name_en'];
-    $combined = $en ? "{$cn} ({$en})" : $cn;
-    $description = str_replace(
-        ['{{VAR_1}}', '{{VAR_2}}', '{{VAR}}'],
-        [$cn, $en, $combined],
-        $templateText
-    );
-    // 标题: 使用组合名
-    $title = safeTruncate($combined, 60); // 闲鱼标题最长200，截断至60字符更安全
+    $en = $game['game_name_en'] ?? '';
+    $description = renderXianyuDescription($templateText, $cn, $en);
+    // 文案模板的第一行非空内容是商品标题，完整文案仍随描述发送。
+    $title = buildXianyuListingTitle($description, xianyuCombinedName($cn, $en));
 
     // 4. 获取商品图片
     // 注意: 使用 ?? '' 做空值保护，老部署的 games 表可能尚无 cover_url 字段，
@@ -1583,7 +1591,7 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
     // 注意：闲鱼发布接口要求 channel_cat_id / channel_cat_name / tb_cat_id 三者齐全，
     // 只给 platform_category_id 会被判为「分类不完整」而拒绝发布。
     $catDiag = [];
-    $catResult = resolveXianyuCategory($pdo, $cfg, $description, $catDiag);
+    $catResult = resolveXianyuCategory($pdo, $cfg, $description, isXianyuGameServerService($title), $catDiag);
     if (!$catResult['ok']) {
         $errMsg = $catResult['message'];
         logXianyuPublish($pdo, $account_key, $game_id, $cn, 'failed', $triggerType, $errMsg, '', '', $catDiag);
@@ -1657,6 +1665,44 @@ function executeXianyuPublishInner(PDO $pdo, string $account_key, int $game_id, 
 }
 
 // --- 辅助函数 ---
+
+function xianyuCombinedName(string $cn, string $en): string {
+    return $en !== '' ? "{$cn} ({$en})" : $cn;
+}
+
+function renderXianyuDescription(string $templateText, string $cn, string $en): string {
+    $cn = trim($cn);
+    $en = trim($en);
+
+    // 与 generateGameText() 一样，兼容各商品模式的旧模板变量。
+    $mainVariables = ['VAR_1', 'GAME_CN', 'BRAND', 'COLOR', 'TITLE_MAIN'];
+    $subtitleVariables = ['VAR_2', 'GAME_EN', 'MODEL', 'SIZE', 'TITLE_SUB'];
+    $combinedVariables = ['VAR', 'GAME', 'CONDITION', 'MATERIAL', 'SPEC'];
+
+    if ($en === '') {
+        $subtitle = '\{\{(?:' . implode('|', $subtitleVariables) . ')\}\}';
+        $templateText = preg_replace('/[(（]\h*' . $subtitle . '\h*[)）]|\h*' . $subtitle . '/u', '', $templateText) ?? $templateText;
+    }
+
+    $values = array_fill_keys($mainVariables, $cn)
+        + array_fill_keys($subtitleVariables, $en)
+        + array_fill_keys($combinedVariables, xianyuCombinedName($cn, $en));
+
+    return preg_replace_callback('/\{\{([A-Z0-9_]+)\}\}/', static function (array $match) use ($values): string {
+        return $values[$match[1]] ?? $match[0];
+    }, $templateText) ?? $templateText;
+}
+
+function buildXianyuListingTitle(string $description, string $fallbackName): string {
+    foreach (preg_split('/\R/u', $description) ?: [] as $line) {
+        $title = preg_replace('/^\h+|\h+$/u', '', $line);
+        if ($title !== '') {
+            return safeTruncate($title, 200);
+        }
+    }
+
+    return safeTruncate($fallbackName, 200);
+}
 
 /**
  * 按魔术字节判断图片真实格式。
@@ -2257,15 +2303,44 @@ function xianyuCandidateUsable(array $c): bool {
     return $c['channel_cat_id'] !== '' && $c['channel_cat_name'] !== '' && $c['tb_cat_id'] !== '';
 }
 
-/** 在候选里挑最佳：优先平台已选中的，其次得分最高的，最后才是第一条 */
-function pickBestXianyuCategory(array $candidates): ?array {
-    $usable = array_values(array_filter($candidates, 'xianyuCandidateUsable'));
-    if (!$usable) return null;
-    $selected = array_values(array_filter($usable, static fn($c) => $c['is_selected']));
-    if ($selected) return $selected[0];
-    $best = $usable[0];
-    foreach ($usable as $c) {
-        if ($c['score'] > $best['score']) $best = $c;
+function isXianyuGameServerService(string $description): bool {
+    return preg_match(
+        '~(?:代开服|开服\s*(?:搭建|部署|托管|出租|租赁|租用|服务)'
+        . '|服务器\s*(?:的|代|一键|快速|远程)?\s*(?:搭建|部署|托管|出租|租赁|租用)'
+        . '|(?:搭建|部署|托管|出租|租赁|租用)\s*(?:游戏|联机|云|专用)?\s*服务器'
+        . '|\b(?:game|cloud|dedicated)\s+server\s+(?:setup|deployment|hosting|rental)\b)~iu',
+        $description
+    ) === 1;
+}
+
+/** 服务器类服务优先，其次是平台返回的适用技术服务；仅商品分类不可用。 */
+function xianyuServerServiceCategoryRank(array $category): int {
+    $label = implode(' / ', [
+        $category['category_name'], $category['channel_cat_name'], $category['path'] ?? '',
+    ]);
+    if (preg_match('~游戏\s*(?:账号|帐号|账户|点卡|充值|代练|陪玩|道具|激活码|兑换码|安装包)|服务器\s*(?:整机|配件|硬件)|(?:二手|物理)服务器~u', $label)) {
+        return 0;
+    }
+    if (isXianyuGameServerService($label) || preg_match('~(?:游戏|云)服务器服务~u', $label)) {
+        return 2;
+    }
+    return preg_match('~(?:技术|网络|软件|云计算|虚拟|游戏|技能|IT)\s*服务|软件\s*(?:安装|开发)|编程开发|其他技能~iu', $label) ? 1 : 0;
+}
+
+/** 服务文案仅使用适合的候选。同等匹配时保留平台推荐的优先级。 */
+function pickBestXianyuCategory(array $candidates, bool $serverService = false): ?array {
+    $best = null;
+    $bestPriority = [];
+    foreach ($candidates as $candidate) {
+        if (!xianyuCandidateUsable($candidate)) continue;
+        $rank = $serverService ? xianyuServerServiceCategoryRank($candidate) : 0;
+        if ($serverService && $rank === 0) continue;
+        $selected = $candidate['is_selected'];
+        $priority = [$rank, (int)$selected, $selected ? 0.0 : $candidate['score']];
+        if ($best === null || $priority > $bestPriority) {
+            $best = $candidate;
+            $bestPriority = $priority;
+        }
     }
     return $best;
 }
@@ -2274,14 +2349,14 @@ function pickBestXianyuCategory(array $candidates): ?array {
  * 解析本次发布要用的分类。
  *
  * - 配置里分类三件套齐全 且 未开启「按商品描述自动匹配」→ 直接用配置（不发网络请求）
- * - 否则调用对方分类推荐接口，取最佳候选；推荐失败时若配置本身完整则回退到配置
+ * - 否则调用对方分类推荐接口，服务文案只自动采用匹配的服务分类
  * - 解析结果若与配置不同则回写数据库，让管理员在后台能看到实际生效的分类
  *
  * @param array $cfg   xianyu_config 行（含 xy_* 与 publish_*）
  * @param array &$diag 输出诊断信息，便于把失败原因写进发布日志
  * @return array{ok:bool, message:string, category:array}
  */
-function resolveXianyuCategory(PDO $pdo, array $cfg, string $description, array &$diag): array {
+function resolveXianyuCategory(PDO $pdo, array $cfg, string $description, bool $serverService, array &$diag): array {
     $blank = ['category_id' => '', 'category_name' => '', 'channel_cat_id' => '',
               'channel_cat_name' => '', 'leaf_id' => '', 'tb_cat_id' => ''];
     $fromCfg = [
@@ -2305,7 +2380,8 @@ function resolveXianyuCategory(PDO $pdo, array $cfg, string $description, array 
         (string)$cfg['xy_server_url'],
         (string)$cfg['xy_secret_key'],
         (string)$cfg['xy_account_id'],
-        $description
+        $description,
+        $serverService
     );
     $diag['category_api_message'] = safeTruncate((string)($resp['message'] ?? ''), 200);
     $diag['category_api_code'] = $resp['code'] ?? null;
@@ -2320,7 +2396,7 @@ function resolveXianyuCategory(PDO $pdo, array $cfg, string $description, array 
     }
     $diag['category_candidates'] = count($candidates);
 
-    $best = pickBestXianyuCategory($candidates);
+    $best = pickBestXianyuCategory($candidates, $serverService);
     if ($best) {
         $resolved = [
             'category_id'      => $best['category_id'],
@@ -2351,10 +2427,19 @@ function resolveXianyuCategory(PDO $pdo, array $cfg, string $description, array 
         return ['ok' => true, 'message' => '', 'category' => $resolved];
     }
 
-    // 推荐拿不到可用候选：配置本身完整就退回配置，否则明确报错
-    if ($cfgReady) {
+    if ($cfgReady && (!$serverService || xianyuServerServiceCategoryRank($fromCfg) > 0)) {
         $diag['category_source'] = 'config_fallback';
         return ['ok' => true, 'message' => '', 'category' => $fromCfg];
+    }
+
+    if ($serverService) {
+        $diag['category_error'] = '未获得完整且匹配游戏服务器搭建或租用的分类';
+        return [
+            'ok' => false,
+            'message' => '未获取到适用于游戏服务器搭建或租用的闲鱼分类，已跳过发布。'
+                . '请在「闲鱼定时发布配置」中选择完整的服务分类，并关闭「每单按描述自动匹配分类」以固定该分类。',
+            'category' => $blank,
+        ];
     }
 
     $apiMsg = safeTruncate((string)($resp['message'] ?? ''), 200);
@@ -2373,7 +2458,10 @@ function resolveXianyuCategory(PDO $pdo, array $cfg, string $description, array 
     ];
 }
 
-function getXianyuCategoryRecommend(string $serverUrl, string $secretKey, string $accountId, string $description): array {
+function getXianyuCategoryRecommend(string $serverUrl, string $secretKey, string $accountId, string $description, bool $serverService): array {
+    if ($serverService) {
+        $description = "游戏联机服务器技术服务，线上远程交付。\n" . $description;
+    }
     $ch = curl_init();
     curl_setopt_array($ch, [
         CURLOPT_URL => $serverUrl . '/api/v1/external/category/recommend',

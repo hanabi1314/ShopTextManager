@@ -2638,6 +2638,7 @@
         xyCatFetchFailed: "获取分类失败",
         xyCatNoUsable: "未返回可用分类",
         xyCatNoUsableMsg: "未返回完整分类，请换一个更具体的商品描述再试。",
+        xyCatChooseService: "未匹配到服务器服务分类，请手动选择",
         xyCatFetched: "已获取 {n} 个候选分类",
         xyCatComplete: "✅ 分类信息完整。若已勾选自动匹配，发布时仍会按商品描述重新匹配并回写；否则固定使用该分类。",
         xyCatAutoWarn: "⚠️ 分类信息不完整。开启自动匹配时，每次发布会按商品描述自动获取分类（依赖 xianyu-auto-reply 的分类推荐接口）。",
@@ -2904,6 +2905,7 @@
         xyCatFetchFailed: "Failed to fetch categories",
         xyCatNoUsable: "No usable category returned",
         xyCatNoUsableMsg: "No complete category returned. Please try again with a more specific item description.",
+        xyCatChooseService: "No server service category matched. Choose a category manually.",
         xyCatFetched: "Fetched {n} categories",
         xyCatComplete: "✅ Category is complete. With auto-match on it is re-matched from the item description on each publish; otherwise this category is used as-is.",
         xyCatAutoWarn: "⚠️ Category is incomplete. With auto-match on, it will be fetched from the item description on each publish (needs the xianyu-auto-reply category API).",
@@ -5167,8 +5169,10 @@
         btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t('xyCatFetching'))}`;
       }
       try {
-        const keyword = (document.getElementById('xyCategoryNameInput').value || '').trim()
-          || (document.getElementById('gameSearchInput') ? document.getElementById('gameSearchInput').value.trim() : '');
+        const currentName = document.getElementById('xyCategoryNameInput').value.trim();
+        const savedConfig = xianyuConfigsData.find(c => c.account_key === accountKey);
+        const savedName = (savedConfig?.publish_category_name || '').trim();
+        const keyword = currentName === savedName ? '' : currentName;
         const res = await fetch(`${API_BASE}?action=recommend_xianyu_category`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -5189,11 +5193,15 @@
           showToast(t('xyCatNoUsableMsg'), true, 5000);
           return;
         }
-        sel.innerHTML = list.map((c, i) => {
+        const requiresSelection = list.every(c => c.matches_service === false);
+        const options = list.map((c, i) => {
           const score = c.score ? ` (${(c.score * 100).toFixed(0)}%)` : '';
           const path = c.path ? ` · ${escapeHtml(c.path)}` : '';
           return `<option value="${i}">${escapeHtml(c.category_name || c.channel_cat_name)}${escapeHtml(score)}${path}</option>`;
         }).join('');
+        sel.innerHTML = requiresSelection
+          ? `<option value="" disabled>${escapeHtml(t('xyCatChooseService'))}</option>${options}`
+          : options;
         sel.selectedIndex = 0;
         document.getElementById('xyCategoryPickBox').style.display = 'block';
         applyPickedCategory();
